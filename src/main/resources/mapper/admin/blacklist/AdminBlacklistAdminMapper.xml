@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.blacklist.mapper.AdminBlacklistAdminMapper">
+
+    <resultMap id="blacklistEntryResultMap" type="com.researchi.admin.blacklist.domain.BlacklistEntry">
+        <id property="id" column="id"/>
+        <result property="blackName" column="black_name"/>
+        <result property="blackMobilePhoneHash" column="black_mobile_phone_hash"/>
+        <result property="blackBirthDate" column="black_birth_date"/>
+        <result property="blackReason" column="black_reason"/>
+        <result property="blackMode" column="black_mode"/>
+        <result property="activeYn" column="active_yn"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="matchCount" column="match_count"/>
+    </resultMap>
+
+    <resultMap id="blacklistMatchLogResultMap" type="com.researchi.admin.blacklist.domain.BlacklistMatchLogItem">
+        <id property="id" column="id"/>
+        <result property="applicationId" column="application_id"/>
+        <result property="blacklistId" column="blacklist_id"/>
+        <result property="applicantName" column="applicant_name"/>
+        <result property="documentSrl" column="document_srl"/>
+        <result property="applicationStatus" column="application_status"/>
+        <result property="blackModeApplied" column="black_mode_applied"/>
+        <result property="matchType" column="match_type"/>
+        <result property="actionTaken" column="action_taken"/>
+        <result property="matchedAt" column="matched_at"/>
+    </resultMap>
+
+    <resultMap id="blacklistActionLogResultMap" type="com.researchi.admin.blacklist.domain.BlacklistActionLogItem">
+        <id property="id" column="id"/>
+        <result property="adminUserId" column="admin_user_id"/>
+        <result property="actionType" column="action_type"/>
+        <result property="targetId" column="target_id"/>
+        <result property="actionDetail" column="action_detail"/>
+        <result property="ipAddress" column="ip_address"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findEntries" resultMap="blacklistEntryResultMap">
+        SELECT
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at,
+            COUNT(match_log.id) AS match_count
+        FROM admin_blacklist blacklist
+        LEFT JOIN admin_blacklist_match_log match_log ON match_log.blacklist_id = blacklist.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (
+                    blacklist.black_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR blacklist.black_reason LIKE CONCAT('%', #{keyword}, '%')
+                    OR CAST(blacklist.id AS CHAR) = #{keyword}
+                )
+            </if>
+            <if test="activeYn != null and activeYn != ''">
+                AND blacklist.active_yn = #{activeYn}
+            </if>
+            <if test="blackMode != null and blackMode != ''">
+                AND blacklist.black_mode = #{blackMode}
+            </if>
+        </where>
+        GROUP BY
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at
+        ORDER BY blacklist.updated_at DESC, blacklist.id DESC
+    </select>
+
+    <select id="findById" resultMap="blacklistEntryResultMap">
+        SELECT
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at,
+            COUNT(match_log.id) AS match_count
+        FROM admin_blacklist blacklist
+        LEFT JOIN admin_blacklist_match_log match_log ON match_log.blacklist_id = blacklist.id
+        WHERE blacklist.id = #{id}
+        GROUP BY
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.blacklist.domain.BlacklistEntry" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_blacklist (
+            black_name,
+            black_mobile_phone_hash,
+            black_birth_date,
+            black_reason,
+            black_mode,
+            active_yn,
+            created_by,
+            created_at,
+            updated_at,
+            expires_at
+        ) VALUES (
+            #{blackName},
+            #{blackMobilePhoneHash},
+            #{blackBirthDate},
+            #{blackReason},
+            #{blackMode},
+            #{activeYn},
+            #{createdBy},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            #{expiresAt}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE admin_blacklist
+        SET
+            black_name = #{blackName},
+            black_mobile_phone_hash = #{blackMobilePhoneHash},
+            black_birth_date = #{blackBirthDate},
+            black_reason = #{blackReason},
+            black_mode = #{blackMode},
+            expires_at = #{expiresAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateActiveStatus">
+        UPDATE admin_blacklist
+        SET
+            active_yn = #{activeYn},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findExpiredActiveEntries" resultMap="blacklistEntryResultMap">
+        SELECT
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at,
+            COUNT(match_log.id) AS match_count
+        FROM admin_blacklist blacklist
+        LEFT JOIN admin_blacklist_match_log match_log ON match_log.blacklist_id = blacklist.id
+        WHERE blacklist.active_yn = 'Y'
+          AND blacklist.expires_at IS NOT NULL
+          AND blacklist.expires_at &lt;= #{expiresAt}
+        GROUP BY
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at
+        ORDER BY blacklist.expires_at ASC, blacklist.id ASC
+    </select>
+
+    <select id="findRecentMatchLogs" resultMap="blacklistMatchLogResultMap">
+        SELECT
+            match_log.id,
+            match_log.application_id,
+            match_log.blacklist_id,
+            application.applicant_name,
+            application.document_srl,
+            application.application_status,
+            application.black_mode_applied,
+            match_log.match_type,
+            match_log.action_taken,
+            match_log.matched_at
+        FROM admin_blacklist_match_log match_log
+        INNER JOIN admin_job_application application ON application.id = match_log.application_id
+        <where>
+            <if test="blacklistId != null">
+                match_log.blacklist_id = #{blacklistId}
+            </if>
+        </where>
+        ORDER BY match_log.matched_at DESC, match_log.id DESC
+    </select>
+
+    <select id="findRecentActionLogs" resultMap="blacklistActionLogResultMap">
+        SELECT
+            id,
+            admin_user_id,
+            action_type,
+            target_id,
+            action_detail,
+            ip_address,
+            created_at
+        FROM admin_action_log
+        WHERE target_type = 'BLACKLIST'
+        <if test="targetId != null and targetId != ''">
+            AND target_id = #{targetId}
+        </if>
+        ORDER BY created_at DESC, id DESC
+    </select>
+</mapper>

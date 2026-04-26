@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.publicform.mapper.AdminBlacklistMapper">
+
+    <resultMap id="blacklistResultMap" type="com.researchi.admin.publicform.domain.AdminBlacklist">
+        <id property="id" column="id"/>
+        <result property="blackName" column="black_name"/>
+        <result property="blackMobilePhoneHash" column="black_mobile_phone_hash"/>
+        <result property="blackBirthDate" column="black_birth_date"/>
+        <result property="blackReason" column="black_reason"/>
+        <result property="blackMode" column="black_mode"/>
+        <result property="activeYn" column="active_yn"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="matchType" column="match_type"/>
+    </resultMap>
+
+    <select id="findActiveMatches" resultMap="blacklistResultMap">
+        SELECT
+            id,
+            black_name,
+            black_mobile_phone_hash,
+            black_birth_date,
+            black_reason,
+            black_mode,
+            active_yn,
+            expires_at,
+            CASE
+                WHEN black_mobile_phone_hash = #{blackMobilePhoneHash} THEN 'MOBILE_PHONE_HASH'
+                ELSE 'NAME_BIRTH_DATE'
+            END AS match_type
+        FROM admin_blacklist
+        WHERE active_yn = 'Y'
+          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+          AND (
+            (#{blackMobilePhoneHash} IS NOT NULL AND black_mobile_phone_hash = #{blackMobilePhoneHash})
+            OR
+            (#{blackName} IS NOT NULL AND #{blackBirthDate} IS NOT NULL
+                AND black_name = #{blackName}
+                AND black_birth_date = #{blackBirthDate})
+          )
+        ORDER BY id DESC
+    </select>
+</mapper>

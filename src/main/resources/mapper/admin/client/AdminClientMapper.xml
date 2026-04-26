@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.client.mapper.AdminClientMapper">
+
+    <resultMap id="adminClientResultMap" type="com.researchi.admin.client.domain.AdminClient">
+        <id property="id" column="id"/>
+        <result property="clientName" column="client_name"/>
+        <result property="departmentName" column="department_name"/>
+        <result property="replyToEmail" column="reply_to_email"/>
+        <result property="activeYn" column="active_yn"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findAllActive" resultMap="adminClientResultMap">
+        SELECT *
+        FROM admin_client
+        WHERE active_yn = 'Y'
+        ORDER BY client_name ASC, id ASC
+    </select>
+
+    <select id="findAll" resultMap="adminClientResultMap">
+        SELECT *
+        FROM admin_client
+        ORDER BY active_yn DESC, client_name ASC, id ASC
+    </select>
+
+    <select id="findById" resultMap="adminClientResultMap">
+        SELECT *
+        FROM admin_client
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.client.domain.AdminClient" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_client (
+            client_name,
+            department_name,
+            reply_to_email,
+            active_yn,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{clientName},
+            #{departmentName},
+            #{replyToEmail},
+            #{activeYn},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="update" parameterType="com.researchi.admin.client.domain.AdminClient">
+        UPDATE admin_client
+        SET
+            client_name = #{clientName},
+            department_name = #{departmentName},
+            reply_to_email = #{replyToEmail},
+            active_yn = #{activeYn},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM admin_client
+        WHERE id = #{id}
+    </delete>
+</mapper>

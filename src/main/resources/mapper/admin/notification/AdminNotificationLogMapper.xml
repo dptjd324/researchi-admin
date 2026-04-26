@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.notification.mapper.AdminNotificationLogMapper">
+
+    <resultMap id="adminNotificationLogResultMap" type="com.researchi.admin.notification.domain.AdminNotificationLog">
+        <id property="id" column="id"/>
+        <result property="applicationId" column="application_id"/>
+        <result property="documentSrl" column="document_srl"/>
+        <result property="channelType" column="channel_type"/>
+        <result property="targetAddressMasked" column="target_address_masked"/>
+        <result property="keywordSummary" column="keyword_summary"/>
+        <result property="sendStatus" column="send_status"/>
+        <result property="failReason" column="fail_reason"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.researchi.admin.notification.domain.AdminNotificationLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_notification_log (
+            application_id,
+            document_srl,
+            channel_type,
+            target_address_masked,
+            keyword_summary,
+            send_status,
+            fail_reason
+        ) VALUES (
+            #{applicationId},
+            #{documentSrl},
+            #{channelType},
+            #{targetAddressMasked},
+            #{keywordSummary},
+            #{sendStatus},
+            #{failReason}
+        )
+    </insert>
+
+    <select id="findByDocumentSrl" resultMap="adminNotificationLogResultMap">
+        SELECT
+            id,
+            application_id,
+            document_srl,
+            channel_type,
+            target_address_masked,
+            keyword_summary,
+            send_status,
+            fail_reason,
+            created_at
+        FROM admin_notification_log
+        WHERE document_srl = #{documentSrl}
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="findAll" resultMap="adminNotificationLogResultMap">
+        SELECT
+            id,
+            application_id,
+            document_srl,
+            channel_type,
+            target_address_masked,
+            keyword_summary,
+            send_status,
+            fail_reason,
+            created_at
+        FROM admin_notification_log
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="countSuccessfulDuplicate" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_notification_log
+        WHERE document_srl = #{documentSrl}
+          AND application_id = #{applicationId}
+          AND channel_type = #{channelType}
+          AND keyword_summary = #{keywordSummary}
+          AND send_status = 'SENT'
+    </select>
+</mapper>

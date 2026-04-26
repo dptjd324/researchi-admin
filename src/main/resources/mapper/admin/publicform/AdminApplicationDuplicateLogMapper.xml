@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.publicform.mapper.AdminApplicationDuplicateLogMapper">
+
+    <resultMap id="duplicateLogResultMap" type="com.researchi.admin.publicform.domain.AdminApplicationDuplicateLog">
+        <id property="id" column="id"/>
+        <result property="documentSrl" column="document_srl"/>
+        <result property="applicantName" column="applicant_name"/>
+        <result property="genderCode" column="gender_code"/>
+        <result property="birthDate" column="birth_date"/>
+        <result property="mobilePhoneHash" column="mobile_phone_hash"/>
+        <result property="duplicateFound" column="duplicate_found"/>
+        <result property="matchedApplicationId" column="matched_application_id"/>
+        <result property="checkedAt" column="checked_at"/>
+    </resultMap>
+
+    <select id="findLatestByDocumentSrlAndMobilePhoneHash" resultMap="duplicateLogResultMap">
+        SELECT *
+        FROM admin_application_duplicate_log
+        WHERE document_srl = #{documentSrl}
+          AND mobile_phone_hash = #{mobilePhoneHash}
+          AND matched_application_id IS NOT NULL
+        ORDER BY checked_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <select id="countPrimaryByMobilePhoneHash" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_application_duplicate_log
+        WHERE mobile_phone_hash = #{mobilePhoneHash}
+          AND duplicate_found = 'N'
+          AND matched_application_id IS NOT NULL
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.publicform.domain.AdminApplicationDuplicateLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_application_duplicate_log (
+            document_srl,
+            applicant_name,
+            gender_code,
+            birth_date,
+            mobile_phone_hash,
+            duplicate_found,
+            matched_application_id,
+            checked_at
+        ) VALUES (
+            #{documentSrl},
+            #{applicantName},
+            #{genderCode},
+            #{birthDate},
+            #{mobilePhoneHash},
+            #{duplicateFound},
+            #{matchedApplicationId},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+</mapper>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.scheduler.mapper.OperationsCleanupMapper">
+
+    <delete id="deleteDuplicateLogsBefore">
+        DELETE FROM admin_application_duplicate_log
+        WHERE checked_at &lt; #{cutoff}
+    </delete>
+
+    <delete id="deleteBlacklistMatchLogsForExpiredApplications">
+        DELETE FROM admin_blacklist_match_log
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deletePrivacyConsentsForExpiredApplications">
+        DELETE FROM admin_privacy_consent
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deleteFormAnswersForExpiredApplications">
+        DELETE FROM admin_form_submission_answer
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deleteApplicationKeywordsForExpiredApplications">
+        DELETE FROM admin_application_keyword
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deleteNotificationLogsForExpiredApplications">
+        DELETE FROM admin_notification_log
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deleteMailTargetsForExpiredApplications">
+        DELETE FROM admin_mail_send_target
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deleteKeywordMatchTargetsForExpiredApplications">
+        DELETE FROM admin_keyword_match_target
+        WHERE application_id IN (
+            SELECT id
+            FROM (
+                SELECT id
+                FROM admin_job_application
+                WHERE applied_at &lt; #{cutoff}
+            ) expired_applications
+        )
+    </delete>
+
+    <delete id="deleteApplicationsBefore">
+        DELETE FROM admin_job_application
+        WHERE applied_at &lt; #{cutoff}
+    </delete>
+</mapper>

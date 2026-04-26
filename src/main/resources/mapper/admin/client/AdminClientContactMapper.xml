@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.client.mapper.AdminClientContactMapper">
+
+    <resultMap id="adminClientContactResultMap" type="com.researchi.admin.client.domain.AdminClientContact">
+        <id property="id" column="id"/>
+        <result property="clientId" column="client_id"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="email" column="email"/>
+        <result property="primaryYn" column="primary_yn"/>
+        <result property="activeYn" column="active_yn"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByClientId" resultMap="adminClientContactResultMap">
+        SELECT *
+        FROM admin_client_contact
+        WHERE client_id = #{clientId}
+        ORDER BY primary_yn DESC, id ASC
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.client.domain.AdminClientContact" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_client_contact (
+            client_id,
+            contact_name,
+            email,
+            primary_yn,
+            active_yn,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{clientId},
+            #{contactName},
+            #{email},
+            #{primaryYn},
+            #{activeYn},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <delete id="deleteByClientId">
+        DELETE FROM admin_client_contact
+        WHERE client_id = #{clientId}
+    </delete>
+
+    <delete id="deleteById">
+        DELETE FROM admin_client_contact
+        WHERE id = #{id}
+    </delete>
+</mapper>

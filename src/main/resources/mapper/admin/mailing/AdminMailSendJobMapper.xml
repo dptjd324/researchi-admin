@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.mailing.mapper.AdminMailSendJobMapper">
+
+    <resultMap id="adminMailSendJobResultMap" type="com.researchi.admin.mailing.domain.AdminMailSendJob">
+        <id property="id" column="id"/>
+        <result property="documentSrl" column="document_srl"/>
+        <result property="sendType" column="send_type"/>
+        <result property="triggerType" column="trigger_type"/>
+        <result property="templateId" column="template_id"/>
+        <result property="attachmentType" column="attachment_type"/>
+        <result property="recipientCount" column="recipient_count"/>
+        <result property="excludedCount" column="excluded_count"/>
+        <result property="blacklistExcludedCount" column="blacklist_excluded_count"/>
+        <result property="sendStatus" column="send_status"/>
+        <result property="scheduledAt" column="scheduled_at"/>
+        <result property="sentAt" column="sent_at"/>
+        <result property="thresholdSnapshot" column="threshold_snapshot"/>
+        <result property="targetSnapshotCount" column="target_snapshot_count"/>
+        <result property="duplicatePreventKey" column="duplicate_prevent_key"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="templateName" column="template_name"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.researchi.admin.mailing.domain.AdminMailSendJob" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_mail_send_job (
+            document_srl,
+            send_type,
+            trigger_type,
+            template_id,
+            attachment_type,
+            recipient_count,
+            excluded_count,
+            blacklist_excluded_count,
+            send_status,
+            scheduled_at,
+            sent_at,
+            threshold_snapshot,
+            target_snapshot_count,
+            duplicate_prevent_key,
+            created_by,
+            created_at
+        ) VALUES (
+            #{documentSrl},
+            #{sendType},
+            #{triggerType},
+            #{templateId},
+            #{attachmentType},
+            #{recipientCount},
+            #{excludedCount},
+            #{blacklistExcludedCount},
+            #{sendStatus},
+            #{scheduledAt},
+            #{sentAt},
+            #{thresholdSnapshot},
+            #{targetSnapshotCount},
+            #{duplicatePreventKey},
+            #{createdBy},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateStatus" parameterType="com.researchi.admin.mailing.domain.AdminMailSendJob">
+        UPDATE admin_mail_send_job
+        SET
+            send_status = #{sendStatus},
+            sent_at = #{sentAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatusIfCurrent">
+        UPDATE admin_mail_send_job
+        SET
+            send_status = #{sendStatus},
+            sent_at = #{sentAt}
+        WHERE id = #{id}
+          AND send_status = #{currentStatus}
+    </update>
+
+    <select id="findByDuplicatePreventKey" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        WHERE job.duplicate_prevent_key = #{duplicatePreventKey}
+        ORDER BY job.id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findById" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        WHERE job.id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        ORDER BY COALESCE(job.sent_at, job.scheduled_at, job.created_at) DESC, job.id DESC
+    </select>
+
+    <select id="findByDocumentSrl" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        WHERE job.document_srl = #{documentSrl}
+        ORDER BY COALESCE(job.sent_at, job.scheduled_at, job.created_at) DESC, job.id DESC
+    </select>
+
+    <select id="findDueScheduled" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        WHERE job.send_status = 'SCHEDULED'
+          AND job.scheduled_at IS NOT NULL
+          AND job.scheduled_at &lt;= #{scheduledAt}
+        ORDER BY job.scheduled_at ASC, job.id ASC
+    </select>
+</mapper>

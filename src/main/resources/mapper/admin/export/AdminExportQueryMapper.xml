@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.export.mapper.AdminExportQueryMapper">
+
+    <resultMap id="exportApplicationSourceResultMap" type="com.researchi.admin.export.domain.ExportApplicationSource">
+        <id property="id" column="id"/>
+        <result property="documentSrl" column="document_srl"/>
+        <result property="applicantName" column="applicant_name"/>
+        <result property="genderCode" column="gender_code"/>
+        <result property="birthDate" column="birth_date"/>
+        <result property="ageText" column="age_text"/>
+        <result property="jobText" column="job_text"/>
+        <result property="organizationText" column="organization_text"/>
+        <result property="mobilePhoneEnc" column="mobile_phone_enc"/>
+        <result property="telPhoneEnc" column="tel_phone_enc"/>
+        <result property="regionText" column="region_text"/>
+        <result property="addressEnc" column="address_enc"/>
+        <result property="extraComment" column="extra_comment"/>
+        <result property="priorResearchText" column="prior_research_text"/>
+        <result property="emailAddressEnc" column="email_address_enc"/>
+        <result property="notifyEmailYn" column="notify_email_yn"/>
+        <result property="notifySmsYn" column="notify_sms_yn"/>
+        <result property="notifyKeywordYn" column="notify_keyword_yn"/>
+        <result property="applicationStatus" column="application_status"/>
+        <result property="isNewApplicant" column="is_new_applicant"/>
+        <result property="isBlacklisted" column="is_blacklisted"/>
+        <result property="blackModeApplied" column="black_mode_applied"/>
+        <result property="provideYn" column="provide_yn"/>
+        <result property="deliveryStatus" column="delivery_status"/>
+        <result property="appliedAt" column="applied_at"/>
+    </resultMap>
+
+    <resultMap id="exportAnswerSourceResultMap" type="com.researchi.admin.export.domain.ExportAnswerSource">
+        <result property="applicationId" column="application_id"/>
+        <result property="fieldId" column="field_id"/>
+        <result property="answerText" column="answer_text"/>
+        <result property="answerJson" column="answer_json"/>
+    </resultMap>
+
+    <select id="findApplicationsByDocumentSrl" resultMap="exportApplicationSourceResultMap">
+        SELECT
+            id,
+            document_srl,
+            applicant_name,
+            gender_code,
+            birth_date,
+            age_text,
+            job_text,
+            organization_text,
+            mobile_phone_enc,
+            tel_phone_enc,
+            region_text,
+            address_enc,
+            extra_comment,
+            prior_research_text,
+            email_address_enc,
+            notify_email_yn,
+            notify_sms_yn,
+            notify_keyword_yn,
+            application_status,
+            is_new_applicant,
+            is_blacklisted,
+            black_mode_applied,
+            provide_yn,
+            delivery_status,
+            applied_at
+        FROM admin_job_application
+        WHERE document_srl = #{documentSrl}
+        ORDER BY applied_at DESC, id DESC
+    </select>
+
+    <select id="findAnswersByDocumentSrl" resultMap="exportAnswerSourceResultMap">
+        SELECT
+            answer.application_id,
+            answer.field_id,
+            answer.answer_text,
+            answer.answer_json
+        FROM admin_form_submission_answer answer
+        INNER JOIN admin_job_application application ON application.id = answer.application_id
+        WHERE application.document_srl = #{documentSrl}
+        ORDER BY answer.application_id ASC, answer.id ASC
+    </select>
+</mapper>

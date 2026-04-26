@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel">
+            <div class="dashboard-head">
+                <div>
+                    <p class="eyebrow">Phase 3</p>
+                    <h2 class="h3 mb-2" th:text="${jobDetail.document.title}">공고 제목</h2>
+                    <p class="dashboard-copy mb-0">공고 본문과 운영 메타 정보를 확인할 수 있습니다.</p>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/jobs}" class="secondary-link">목록으로</a>
+                    <a th:href="@{/jobs/{documentSrl}/applications(documentSrl=${jobDetail.document.documentSrl})}" class="secondary-link">지원서</a>
+                    <a th:href="@{/matching/jobs/{documentSrl}(documentSrl=${jobDetail.document.documentSrl})}" class="secondary-link">매칭</a>
+                    <a th:href="@{/mail/send/history(documentSrl=${jobDetail.document.documentSrl})}" class="secondary-link">메일</a>
+                    <a th:href="@{/jobs/{documentSrl}/edit(documentSrl=${jobDetail.document.documentSrl})}" class="secondary-link">수정</a>
+                </div>
+            </div>
+
+            <div class="job-meta-grid">
+                <span><strong>문서번호</strong><span th:text="${jobDetail.document.documentSrl}">1</span></span>
+                <span><strong>공고유형</strong><span th:text="${@uiLabels.jobBoard(jobDetail.document.mid)}">신규 공고</span></span>
+                <span><strong>모집 상태</strong><span th:text="${@uiLabels.recruitStatus(jobDetail.meta != null ? jobDetail.meta.recruitStatus : 'WAITING')}">대기</span></span>
+                <span><strong>지원 가능</strong><span th:text="${@uiLabels.yesNo(jobDetail.meta != null ? jobDetail.meta.applicationEnabled : 'Y')}">예</span></span>
+                <span><strong>등록 시각</strong><span th:text="${jobDetail.document.regdate ?: '-'}">-</span></span>
+                <span><strong>수정 시각</strong><span th:text="${jobDetail.document.lastUpdate ?: '-'}">-</span></span>
+            </div>
+
+            <section class="panel" style="margin-top: 1rem;">
+                <div class="dashboard-head dashboard-head--row">
+                    <div class="dashboard-head__copy">
+                        <h3 class="h5 mb-2">신청서 링크</h3>
+                        <p class="dashboard-copy mb-0" th:text="${publicApplyAvailable ? '현재 바로 신청 가능한 공고 링크입니다.' : publicApplyMessage}">신청서 상태</p>
+                    </div>
+                    <div class="actions">
+                        <a class="secondary-link" th:href="${publicApplyUrl}" target="_blank" rel="noopener">링크 열기</a>
+                        <button type="button" class="secondary-link" onclick="copyPublicApplyUrl('job-detail-public-apply-url', this)">주소 복사</button>
+                    </div>
+                </div>
+                <label style="display:block;">
+                    <span>신청서 주소</span>
+                    <input id="job-detail-public-apply-url" type="text" th:value="${publicApplyUrl}" readonly>
+                </label>
+                <div th:if="${!publicApplyAvailable}" class="notice error" th:text="${publicApplyMessage}" style="margin-top: 0.75rem;">신청 불가 사유</div>
+            </section>
+
+            <div class="note detail-body" th:text="${jobDetail.document.content}">공고 본문</div>
+
+            <div class="detail-grid" th:if="${jobDetail.meta != null}">
+                <div><strong>리워드</strong><span th:text="${jobDetail.meta.rewardText ?: '-'}">-</span></div>
+                <div><strong>장소</strong><span th:text="${jobDetail.meta.placeText ?: '-'}">-</span></div>
+                <div><strong>지역</strong><span th:text="${jobDetail.meta.regionText ?: '-'}">-</span></div>
+                <div><strong>브랜드</strong><span th:text="${jobDetail.meta.brandText ?: '-'}">-</span></div>
+                <div><strong>최소 연령</strong><span th:text="${jobDetail.meta.ageMin ?: '-'}">-</span></div>
+                <div><strong>최대 연령</strong><span th:text="${jobDetail.meta.ageMax ?: '-'}">-</span></div>
+                <div><strong>성별 코드</strong><span th:text="${jobDetail.meta.genderCode ?: '-'}">-</span></div>
+                <div><strong>모집 인원</strong><span th:text="${jobDetail.meta.recruitLimit ?: '-'}">-</span></div>
+                <div><strong>마감일</strong><span th:text="${jobDetail.meta.closeDate ?: '-'}">-</span></div>
+                <div><strong>거래처명</strong><span th:text="${jobDetail.meta.clientName ?: '-'}">-</span></div>
+                <div><strong>거래처 이메일</strong><span th:text="${jobDetail.meta.clientEmail ?: '-'}">-</span></div>
+                <div><strong>자동 발송</strong><span th:text="${@uiLabels.yesNo(jobDetail.meta.autoSendEnabled)}">아니오</span></div>
+            </div>
+
+            <div class="detail-grid" th:if="${jobDetail.meta != null}">
+                <div><strong>추가 이메일</strong><span th:text="${jobDetail.meta.clientEmails ?: '-'}">-</span></div>
+                <div><strong>지원 안내</strong><span th:text="${jobDetail.meta.applicationFormNotice ?: '-'}">-</span></div>
+                <div><strong>자동 발송 방식</strong><span th:text="${jobDetail.meta.autoSendMode ?: '-'}">-</span></div>
+                <div><strong>자동 발송 임계치</strong><span th:text="${jobDetail.meta.autoSendThreshold ?: '-'}">-</span></div>
+                <div><strong>자동 발송 시각</strong><span th:text="${jobDetail.meta.autoSendTime ?: '-'}">-</span></div>
+                <div><strong>반복 여부</strong><span th:text="${@uiLabels.yesNo(jobDetail.meta.autoSendRepeatYn)}">아니오</span></div>
+                <div><strong>반복 단위</strong><span th:text="${jobDetail.meta.autoSendRepeatUnit ?: '-'}">-</span></div>
+                <div><strong>첨부 형식</strong><span th:text="${jobDetail.meta.autoSendAttachmentType ?: '-'}">-</span></div>
+                <div><strong>내부 메모</strong><span th:text="${jobDetail.meta.internalMemo ?: '-'}">-</span></div>
+            </div>
+
+            <div th:if="${jobDetail.meta == null}" class="note">
+                운영 메타 정보가 아직 등록되지 않았습니다. 필요한 경우 수정 화면에서 메타 정보를 입력할 수 있습니다.
+            </div>
+        </section>
+        <script>
+            function copyPublicApplyUrl(inputId, trigger) {
+                const input = document.getElementById(inputId);
+                if (!input) {
+                    return;
+                }
+                const fallbackCopy = function () {
+                    input.focus();
+                    input.select();
+                    input.setSelectionRange(0, input.value.length);
+                    document.execCommand('copy');
+                };
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(input.value).then(function () {
+                        if (trigger) {
+                            trigger.textContent = '복사됨';
+                            window.setTimeout(function () { trigger.textContent = '주소 복사'; }, 1500);
+                        }
+                    }, fallbackCopy);
+                    return;
+                }
+                fallbackCopy();
+                if (trigger) {
+                    trigger.textContent = '복사됨';
+                    window.setTimeout(function () { trigger.textContent = '주소 복사'; }, 1500);
+                }
+            }
+        </script>
+    </th:block>
+</th:block>
+</html>

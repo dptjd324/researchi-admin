@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel">
+            <div class="dashboard-head">
+                <div>
+                    <p class="eyebrow">Phase 9</p>
+                    <h2 class="h3 mb-2">메일 발송 이력</h2>
+                    <p class="dashboard-copy mb-0">수동 발송, 예약 발송, 임계치 발송 실행 결과와 수신자 스냅샷을 확인합니다.</p>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/mail/templates}" class="secondary-link">템플릿</a>
+                    <a th:if="${selectedDocumentSrl != null}" th:href="@{/matching/jobs/{documentSrl}(documentSrl=${selectedDocumentSrl})}" class="secondary-link">매칭</a>
+                    <a th:href="@{/jobs}" class="secondary-link">공고</a>
+                    <a th:href="@{/applications}" class="secondary-link">지원서</a>
+                </div>
+            </div>
+
+            <div th:if="${param.manualSent}" class="notice success">수동 메일 발송이 완료되었습니다.</div>
+            <div th:if="${param.scheduled}" class="notice success">예약 메일 발송이 등록되었습니다.</div>
+            <div th:if="${param.thresholdSent}" class="notice success">임계치 메일 발송이 완료되었습니다.</div>
+            <div th:if="${param.cancelled}" class="notice success">예약 메일 발송을 취소했습니다.</div>
+            <div th:if="${cancelError != null}" class="notice error" th:text="${cancelError}">메일 발송 취소 오류</div>
+
+            <div class="list-toolbar">
+                <form method="get" th:action="@{/mail/send/history}" class="search-form">
+                    <select name="documentSrl">
+                        <option value="">전체 공고</option>
+                        <option th:each="job : ${jobOptions}" th:value="${job.documentSrl}" th:text="${job.title}" th:selected="${selectedDocumentSrl == job.documentSrl}">공고</option>
+                    </select>
+                    <button type="submit">필터 적용</button>
+                    <a th:href="@{/mail/send/history}" class="secondary-link">초기화</a>
+                </form>
+            </div>
+
+            <div class="form-layout">
+                <div class="panel">
+                    <h3 class="h5 mb-3">수동 발송</h3>
+                    <form th:action="@{/mail/send/manual}" method="post" th:object="${manualForm}" class="job-form">
+                        <div th:if="${#fields.hasGlobalErrors()}" class="notice error" th:each="error : ${#fields.globalErrors()}" th:text="${error}">수동 발송 오류</div>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <div class="form-grid triple">
+                            <label>
+                                <span>공고</span>
+                                <th:block th:if="${selectedDocumentSrl != null}">
+                                    <input type="hidden" th:field="*{documentSrl}">
+                                    <input type="text" th:value="${manualPreview != null ? manualPreview.jobTitle() : '선택된 공고'}" readonly>
+                                </th:block>
+                                <select th:if="${selectedDocumentSrl == null}" th:field="*{documentSrl}">
+                                    <option value="">공고 선택</option>
+                                    <option th:each="job : ${jobOptions}" th:value="${job.documentSrl}" th:text="${job.title}">공고</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>템플릿</span>
+                                <select th:field="*{templateId}">
+                                    <option value="">템플릿 선택</option>
+                                    <option th:each="template : ${templateOptions}" th:value="${template.id}" th:text="${template.templateName}">템플릿</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>첨부 형식</span>
+                                <select th:field="*{attachmentType}">
+                                    <option th:each="type : ${attachmentTypes}" th:value="${type.name()}" th:text="${type.label}">첨부 형식</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div th:if="${manualPreview != null}" class="note">
+                            <strong th:text="${manualPreview.jobTitle()}">공고명</strong>
+                            <div class="job-meta-grid" style="margin-top: 0.75rem;">
+                                <span><strong>수신 이메일</strong><span th:text="${manualPreview.recipientCount() + '명'}">0명</span></span>
+                                <span><strong>발송 대상 지원서</strong><span th:text="${manualPreview.eligibleApplicationCount() + '건'}">0건</span></span>
+                                <span><strong>블랙리스트 제외</strong><span th:text="${manualPreview.blacklistExcludedCount() + '건'}">0건</span></span>
+                                <span><strong>제외된 이메일</strong><span th:text="${manualPreview.excludedRecipientCount() + '건'}">0건</span></span>
+                            </div>
+                            <p class="summary" style="margin-top: 0.75rem;" th:text="${#lists.isEmpty(manualPreview.recipients()) ? '등록된 거래처 이메일이 없습니다.' : '발송 예정 이메일: ' + manualPreview.recipientsSummary()}">발송 예정 이메일</p>
+                            <p th:if="${#lists.isEmpty(manualPreview.recipients()) and selectedDocumentSrl != null}" class="helper">
+                                거래처 이메일은 공고 수정 화면에서 등록합니다.
+                                <a th:href="@{/jobs/{documentSrl}/edit(documentSrl=${selectedDocumentSrl})}" class="secondary-link">공고 수정으로 이동</a>
+                            </p>
+                        </div>
+                        <div th:if="${manualPreview != null and manualPreview.eligibleApplicationCount() == 0}" class="notice error">
+                            발송 대상 지원서가 없어 메일을 보낼 수 없습니다. 지원서가 1건 이상 등록된 후 다시 발송해 주세요.
+                        </div>
+                        <div class="actions">
+                            <button type="submit" th:disabled="${manualPreview != null and (manualPreview.eligibleApplicationCount() == 0 or #lists.isEmpty(manualPreview.recipients()))}">지금 발송</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="panel">
+                    <h3 class="h5 mb-3">예약 발송</h3>
+                    <form th:action="@{/mail/send/schedule}" method="post" th:object="${scheduleForm}" class="job-form">
+                        <div th:if="${#fields.hasGlobalErrors()}" class="notice error" th:each="error : ${#fields.globalErrors()}" th:text="${error}">예약 발송 오류</div>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <div class="form-grid">
+                            <label>
+                                <span>공고</span>
+                                <th:block th:if="${selectedDocumentSrl != null}">
+                                    <input type="hidden" th:field="*{documentSrl}">
+                                    <input type="text" th:value="${schedulePreview != null ? schedulePreview.jobTitle() : '선택된 공고'}" readonly>
+                                </th:block>
+                                <select th:if="${selectedDocumentSrl == null}" th:field="*{documentSrl}">
+                                    <option value="">공고 선택</option>
+                                    <option th:each="job : ${jobOptions}" th:value="${job.documentSrl}" th:text="${job.title}">공고</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>템플릿</span>
+                                <select th:field="*{templateId}">
+                                    <option value="">템플릿 선택</option>
+                                    <option th:each="template : ${templateOptions}" th:value="${template.id}" th:text="${template.templateName}">템플릿</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>첨부 형식</span>
+                                <select th:field="*{attachmentType}">
+                                    <option th:each="type : ${attachmentTypes}" th:value="${type.name()}" th:text="${type.label}">첨부 형식</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>예약 시각</span>
+                                <input type="datetime-local" th:field="*{scheduledAt}">
+                            </label>
+                        </div>
+                        <div th:if="${schedulePreview != null}" class="note">
+                            <strong th:text="${schedulePreview.jobTitle()}">공고명</strong>
+                            <div class="job-meta-grid" style="margin-top: 0.75rem;">
+                                <span><strong>수신 이메일</strong><span th:text="${schedulePreview.recipientCount() + '명'}">0명</span></span>
+                                <span><strong>발송 대상 지원서</strong><span th:text="${schedulePreview.eligibleApplicationCount() + '건'}">0건</span></span>
+                                <span><strong>블랙리스트 제외</strong><span th:text="${schedulePreview.blacklistExcludedCount() + '건'}">0건</span></span>
+                                <span><strong>제외된 이메일</strong><span th:text="${schedulePreview.excludedRecipientCount() + '건'}">0건</span></span>
+                            </div>
+                            <p class="summary" style="margin-top: 0.75rem;" th:text="${#lists.isEmpty(schedulePreview.recipients()) ? '등록된 거래처 이메일이 없습니다.' : '발송 예정 이메일: ' + schedulePreview.recipientsSummary()}">발송 예정 이메일</p>
+                            <p th:if="${#lists.isEmpty(schedulePreview.recipients()) and selectedDocumentSrl != null}" class="helper">
+                                거래처 이메일은 공고 수정 화면에서 등록합니다.
+                                <a th:href="@{/jobs/{documentSrl}/edit(documentSrl=${selectedDocumentSrl})}" class="secondary-link">공고 수정으로 이동</a>
+                            </p>
+                        </div>
+                        <div class="actions">
+                            <button type="submit">예약 등록</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <section class="panel">
+                <h3 class="h5 mb-3">임계치 발송</h3>
+                <form th:action="@{/mail/send/threshold-trigger}" method="post" th:object="${thresholdForm}" class="job-form">
+                    <div th:if="${#fields.hasGlobalErrors()}" class="notice error" th:each="error : ${#fields.globalErrors()}" th:text="${error}">임계치 발송 오류</div>
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <div class="form-grid triple">
+                        <label>
+                            <span>공고</span>
+                            <th:block th:if="${selectedDocumentSrl != null}">
+                                <input type="hidden" th:field="*{documentSrl}">
+                                <input type="text" th:value="${thresholdPreview != null ? thresholdPreview.jobTitle() : '선택된 공고'}" readonly>
+                            </th:block>
+                            <select th:if="${selectedDocumentSrl == null}" th:field="*{documentSrl}">
+                                <option value="">공고 선택</option>
+                                <option th:each="job : ${jobOptions}" th:value="${job.documentSrl}" th:text="${job.title}">공고</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>템플릿</span>
+                            <select th:field="*{templateId}">
+                                <option value="">템플릿 선택</option>
+                                <option th:each="template : ${templateOptions}" th:value="${template.id}" th:text="${template.templateName}">템플릿</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>첨부 형식</span>
+                            <select th:field="*{attachmentType}">
+                                <option th:each="type : ${attachmentTypes}" th:value="${type.name()}" th:text="${type.label}">첨부 형식</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div th:if="${thresholdPreview != null}" class="note">
+                        <strong th:text="${thresholdPreview.jobTitle()}">공고명</strong>
+                        <div class="job-meta-grid" style="margin-top: 0.75rem;">
+                            <span><strong>수신 이메일</strong><span th:text="${thresholdPreview.recipientCount() + '명'}">0명</span></span>
+                            <span><strong>발송 대상 지원서</strong><span th:text="${thresholdPreview.eligibleApplicationCount() + '건'}">0건</span></span>
+                            <span><strong>블랙리스트 제외</strong><span th:text="${thresholdPreview.blacklistExcludedCount() + '건'}">0건</span></span>
+                            <span><strong>제외된 이메일</strong><span th:text="${thresholdPreview.excludedRecipientCount() + '건'}">0건</span></span>
+                        </div>
+                        <p class="summary" style="margin-top: 0.75rem;" th:text="${#lists.isEmpty(thresholdPreview.recipients()) ? '등록된 거래처 이메일이 없습니다.' : '발송 예정 이메일: ' + thresholdPreview.recipientsSummary()}">발송 예정 이메일</p>
+                        <p th:if="${#lists.isEmpty(thresholdPreview.recipients()) and selectedDocumentSrl != null}" class="helper">
+                            거래처 이메일은 공고 수정 화면에서 등록합니다.
+                            <a th:href="@{/jobs/{documentSrl}/edit(documentSrl=${selectedDocumentSrl})}" class="secondary-link">공고 수정으로 이동</a>
+                        </p>
+                    </div>
+                    <p th:if="${thresholdPreview != null and thresholdPreview.eligibleApplicationCount() == 0}" class="helper">
+                        발송 대상 지원서가 0건이면 실제 메일은 전송되지 않습니다. 지원서가 등록된 후 다시 실행해 주세요.
+                    </p>
+                    <div class="actions">
+                        <button type="submit" th:disabled="${thresholdPreview != null and (thresholdPreview.eligibleApplicationCount() == 0 or #lists.isEmpty(thresholdPreview.recipients()))}">임계치 발송 실행</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="dashboard-head dashboard-head--row">
+                    <div class="dashboard-head__copy">
+                        <h3 class="h5 mb-2">발송 이력 상세</h3>
+                        <p class="dashboard-copy mb-0">누구에게 몇 건의 지원서 데이터가 발송되었는지, 블랙리스트 제외 수와 실패 사유까지 확인합니다.</p>
+                    </div>
+                </div>
+
+                <div class="job-list" th:if="${!#lists.isEmpty(historyItems)}">
+                    <article class="job-item" th:each="item : ${historyItems}">
+                        <div class="job-item-head">
+                            <div>
+                                <p class="eyebrow trigger-badge" th:classappend="${@uiLabels.triggerToneClass(item.sendJob.triggerType)}" th:text="${@uiLabels.triggerType(item.sendJob.triggerType)}">수동발송</p>
+                                <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'SCHEDULED' and item.sendJob.createdAt != null}" th:text="${@uiLabels.dateTime(item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
+                                <h4 class="h5 mb-2" th:text="${item.sendJob.jobTitle}">공고명</h4>
+                                <p class="summary mb-0" th:text="${(item.sendJob.templateName != null ? item.sendJob.templateName : '템플릿 없음') + ' · ' + (item.sendJob.attachmentType != null ? item.sendJob.attachmentType : '-') }">템플릿 · 첨부 형식</p>
+                            </div>
+                            <div class="actions">
+                                <span class="send-status-badge"
+                                      th:classappend="${@uiLabels.sendStatusToneClass(item.sendJob.sendStatus)}"
+                                      th:text="${@uiLabels.sendStatus(item.sendJob.sendStatus)}">발송완료</span>
+                                <form th:if="${item.cancellable()}" th:action="@{/mail/send/cancel}" method="post" class="cancel-send-form">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <input type="hidden" name="sendJobId" th:value="${item.sendJob.id}">
+                                    <input type="hidden" name="documentSrl" th:value="${selectedDocumentSrl}">
+                                    <button type="submit" class="cancel-send-button">예약 취소</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="job-meta-grid">
+                            <span><strong>발송 유형</strong><span th:text="${@uiLabels.triggerType(item.sendJob.triggerType)}">수동발송</span></span>
+                            <span><strong>발송 시각</strong><span th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : (item.sendJob.scheduledAt != null ? item.sendJob.scheduledAt : item.sendJob.createdAt))}">2026-04-26 - 01:00</span></span>
+                            <span><strong>수신 이메일 수</strong><span th:text="${(item.sendJob.recipientCount != null ? item.sendJob.recipientCount : 0) + '명'}">0명</span></span>
+                            <span><strong>발송 지원서 수</strong><span th:text="${(item.sendJob.targetSnapshotCount != null ? item.sendJob.targetSnapshotCount : 0) + '건'}">0건</span></span>
+                            <span><strong>블랙리스트 제외</strong><span th:text="${(item.sendJob.blacklistExcludedCount != null ? item.sendJob.blacklistExcludedCount : 0) + '건'}">0건</span></span>
+                            <span><strong>제외된 이메일</strong><span th:text="${(item.sendJob.excludedCount != null ? item.sendJob.excludedCount : 0) + '건'}">0건</span></span>
+                        </div>
+
+                        <div class="detail-grid" style="margin-top: 1rem;">
+                            <div>
+                                <strong>수신자 스냅샷</strong>
+                                <span th:text="${#lists.isEmpty(item.maskedRecipients()) ? '저장된 수신자 정보가 없습니다.' : item.maskedRecipientsSummary()}">수신자</span>
+                            </div>
+                            <div>
+                                <strong>발송 데이터 범위</strong>
+                                <span th:text="${item.uniqueApplicationCount() > 0 ? '지원서 ' + item.uniqueApplicationCount() + '건 · ID ' + item.applicationSummary() : '발송 대상 지원서가 없습니다.'}">지원서 범위</span>
+                            </div>
+                            <div th:if="${item.failReasonSummary() != null && !item.failReasonSummary().isBlank()}">
+                                <strong>실패 사유</strong>
+                                <span th:text="${item.failReasonSummary()}">실패 사유</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div th:if="${#lists.isEmpty(historyItems)}" class="note">
+                    선택한 공고에 대한 메일 발송 이력이 없습니다.
+                </div>
+            </section>
+
+            <style>
+                .trigger-badge {
+                    display: inline-block;
+                    margin: 0 0.45rem 0.35rem 0;
+                    letter-spacing: 0.14em;
+                    font-size: 1.5rem;
+                }
+
+                .trigger-badge--manual {
+                    color: #2563eb;
+                }
+
+                .trigger-badge--threshold {
+                    color: #d97706;
+                }
+
+                .trigger-badge--scheduled {
+                    color: #0f766e;
+                }
+
+                .trigger-badge--default {
+                    color: #475569;
+                }
+
+                .scheduled-at-note {
+                    display: inline-block;
+                    margin: 0 0 0.35rem;
+                    font-size: 1rem;
+                    font-weight: 700;
+                }
+
+                .send-status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 2.4rem;
+                    padding: 0 0.9rem;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 999px;
+                    background: #f8fafc;
+                    color: #334155;
+                    font-size: 0.95rem;
+                    font-weight: 800;
+                    white-space: nowrap;
+                }
+
+                .send-status-badge--scheduled {
+                    border-color: #5eead4;
+                    background: #ccfbf1;
+                    color: #0f766e;
+                    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
+                }
+
+                .send-status-badge--running {
+                    border-color: #bfdbfe;
+                    background: #dbeafe;
+                    color: #1d4ed8;
+                }
+
+                .send-status-badge--sent {
+                    border-color: #bbf7d0;
+                    background: #dcfce7;
+                    color: #15803d;
+                }
+
+                .send-status-badge--failed {
+                    border-color: #fecaca;
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+
+                .send-status-badge--cancelled {
+                    border-color: #e2e8f0;
+                    background: #f1f5f9;
+                    color: #64748b;
+                }
+
+                .cancel-send-form {
+                    display: inline-flex;
+                }
+
+                .cancel-send-button {
+                    min-height: 2.4rem;
+                    padding: 0 1rem;
+                    border: 1px solid #fca5a5;
+                    border-radius: 0.8rem;
+                    background: #fff1f2;
+                    color: #be123c;
+                    font-size: 0.95rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+                }
+
+                .cancel-send-button:hover {
+                    border-color: #fb7185;
+                    background: #ffe4e6;
+                    transform: translateY(-1px);
+                }
+
+                .cancel-send-button:focus-visible {
+                    outline: 3px solid rgba(244, 63, 94, 0.25);
+                    outline-offset: 2px;
+                }
+            </style>
+        </section>
+    </th:block>
+</th:block>
+</html>

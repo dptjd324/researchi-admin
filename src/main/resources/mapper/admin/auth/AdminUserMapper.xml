@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.auth.mapper.AdminUserMapper">
+
+    <resultMap id="adminUserResultMap" type="com.researchi.admin.auth.domain.AdminUser">
+        <id property="id" column="id"/>
+        <result property="loginId" column="login_id"/>
+        <result property="passwordHash" column="password_hash"/>
+        <result property="userName" column="user_name"/>
+        <result property="activeYn" column="active_yn"/>
+        <result property="loginFailCount" column="login_fail_count"/>
+        <result property="lockedUntil" column="locked_until"/>
+        <result property="lastLoginAt" column="last_login_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByLoginId" parameterType="string" resultMap="adminUserResultMap">
+        SELECT
+            id,
+            login_id,
+            password_hash,
+            user_name,
+            active_yn,
+            login_fail_count,
+            locked_until,
+            last_login_at,
+            created_at,
+            updated_at
+        FROM admin_user
+        WHERE login_id = #{loginId}
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="adminUserResultMap">
+        SELECT
+            id,
+            login_id,
+            password_hash,
+            user_name,
+            active_yn,
+            login_fail_count,
+            locked_until,
+            last_login_at,
+            created_at,
+            updated_at
+        FROM admin_user
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateLoginSuccess">
+        UPDATE admin_user
+        SET
+            login_fail_count = 0,
+            locked_until = NULL,
+            last_login_at = #{lastLoginAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateLoginFailure">
+        UPDATE admin_user
+        SET
+            login_fail_count = #{loginFailCount},
+            locked_until = #{lockedUntil},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updatePasswordHash">
+        UPDATE admin_user
+        SET
+            password_hash = #{passwordHash},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

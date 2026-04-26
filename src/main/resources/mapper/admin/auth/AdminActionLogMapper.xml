@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.auth.mapper.AdminActionLogMapper">
+
+    <resultMap id="actionLogItemResultMap" type="com.researchi.admin.log.domain.ActionLogItem">
+        <id property="id" column="id"/>
+        <result property="adminUserId" column="admin_user_id"/>
+        <result property="loginId" column="login_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="actionType" column="action_type"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetId" column="target_id"/>
+        <result property="actionDetail" column="action_detail"/>
+        <result property="ipAddress" column="ip_address"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.researchi.admin.auth.domain.AdminActionLog">
+        INSERT INTO admin_action_log (
+            admin_user_id,
+            action_type,
+            target_type,
+            target_id,
+            action_detail,
+            ip_address,
+            created_at
+        ) VALUES (
+            #{adminUserId},
+            #{actionType},
+            #{targetType},
+            #{targetId},
+            #{actionDetail},
+            #{ipAddress},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findAll" resultMap="actionLogItemResultMap">
+        SELECT
+            log.id,
+            log.admin_user_id,
+            user.login_id,
+            user.user_name,
+            log.action_type,
+            log.target_type,
+            log.target_id,
+            log.action_detail,
+            log.ip_address,
+            log.created_at
+        FROM admin_action_log log
+        LEFT JOIN admin_user user ON user.id = log.admin_user_id
+        ORDER BY log.created_at DESC, log.id DESC
+    </select>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.mailing.mapper.AdminMailSendTargetMapper">
+
+    <resultMap id="adminMailSendTargetResultMap" type="com.researchi.admin.mailing.domain.AdminMailSendTarget">
+        <id property="id" column="id"/>
+        <result property="sendJobId" column="send_job_id"/>
+        <result property="applicationId" column="application_id"/>
+        <result property="targetEmailMasked" column="target_email_masked"/>
+        <result property="targetName" column="target_name"/>
+        <result property="sendResult" column="send_result"/>
+        <result property="failReason" column="fail_reason"/>
+        <result property="sentAt" column="sent_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.researchi.admin.mailing.domain.AdminMailSendTarget" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_mail_send_target (
+            send_job_id,
+            application_id,
+            target_email_masked,
+            target_name,
+            send_result,
+            fail_reason,
+            sent_at
+        ) VALUES (
+            #{sendJobId},
+            #{applicationId},
+            #{targetEmailMasked},
+            #{targetName},
+            #{sendResult},
+            #{failReason},
+            #{sentAt}
+        )
+    </insert>
+
+    <select id="findBySendJobIds" resultMap="adminMailSendTargetResultMap">
+        SELECT *
+        FROM admin_mail_send_target
+        WHERE send_job_id IN
+        <foreach collection="sendJobIds" item="sendJobId" open="(" separator="," close=")">
+            #{sendJobId}
+        </foreach>
+        ORDER BY send_job_id DESC, application_id ASC, id ASC
+    </select>
+
+    <select id="findBySendJobId" resultMap="adminMailSendTargetResultMap">
+        SELECT *
+        FROM admin_mail_send_target
+        WHERE send_job_id = #{sendJobId}
+        ORDER BY application_id ASC, id ASC
+    </select>
+
+    <update id="updateResultBySendJobId">
+        UPDATE admin_mail_send_target
+        SET
+            send_result = #{sendResult},
+            fail_reason = #{failReason},
+            sent_at = #{sentAt}
+        WHERE send_job_id = #{sendJobId}
+    </update>
+</mapper>

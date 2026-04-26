@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:fragment="shell(title, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Researchi Admin</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/dist/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/material_green.css">
+    <link rel="stylesheet" th:href="@{/css/admin-ui.css}">
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+    <header class="admin-header border-bottom" th:if="${hideNavigation == null || !hideNavigation}">
+        <div class="container-fluid admin-container">
+            <nav class="admin-navbar" aria-label="&#xAD00;&#xB9AC;&#xC790; &#xC0C1;&#xB2E8; &#xBA54;&#xB274;">
+                <div class="admin-header__hero" th:if="${hidePageHeader == null || !hidePageHeader}">
+                    <div class="admin-header__title">
+                        <div class="admin-header__eyebrow">&#82;&#69;&#83;&#69;&#65;&#82;&#67;&#72;&#73; &#xC6B4;&#xC601; &#xAD00;&#xB9AC;</div>
+                        <h1 class="admin-page-title h4 mb-1" th:text="${title}">Researchi Admin</h1>
+                        <p class="admin-page-description mb-0" th:text="${pageDescription}">&#xACF5;&#xACE0;, &#xC9C0;&#xC6D0;&#xC11C;, &#xBA54;&#xC77C;, &#xB85C;&#xADF8;, &#xAE30;&#xAC04; &#xAC80;&#xC0C9;&#xC744; &#xD55C; &#xD654;&#xBA74; &#xC548;&#xC5D0;&#xC11C; &#xAD00;&#xB9AC;&#xD569;&#xB2C8;&#xB2E4;.</p>
+                    </div>
+                </div>
+                <ul class="navbar-nav mb-0 admin-nav-list">
+                    <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}">&#xB300;&#xC2DC;&#xBCF4;&#xB4DC;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/jobs}">&#xACF5;&#xACE0;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/clients}">&#xAC70;&#xB798;&#xCC98;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/applications}">&#xC9C0;&#xC6D0;&#xC11C;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/blacklist}">&#xBE14;&#xB799;&#xB9AC;&#xC2A4;&#xD2B8;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/search}">&#xAE30;&#xAC04; &#xAC80;&#xC0C9;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/mail/send/history}">&#xBA54;&#xC77C;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/logs/actions}">&#xB85C;&#xADF8;</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container-fluid admin-container py-4 py-lg-5" th:classappend="${contentContainerClass != null ? ' ' + contentContainerClass : ''}">
+        <main th:replace="${content}">
+            <div>content</div>
+        </main>
+    </div>
+
+    <aside class="admin-status-dock border-top" th:if="${statusBarSummary != null and (hideStatusDock == null || !hideStatusDock)}">
+        <div class="container-fluid admin-container py-3">
+            <div class="admin-status-row">
+                <div class="admin-status-card">
+                    <span class="admin-status-card__label">&#xC561;&#xC158; &#xB85C;&#xADF8;</span>
+                    <strong th:text="${statusBarSummary.actionCount + '건'}">0건</strong>
+                    <span th:text="${statusBarSummary.latestActionAt != null ? statusBarSummary.latestActionAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                </div>
+                <div class="admin-status-card">
+                    <span class="admin-status-card__label">&#xBA54;&#xC77C; &#xB85C;&#xADF8;</span>
+                    <strong th:text="${statusBarSummary.mailCount + '건'}">0건</strong>
+                    <span th:text="${statusBarSummary.latestMailAt != null ? statusBarSummary.latestMailAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                </div>
+                <div class="admin-status-card">
+                    <span class="admin-status-card__label">&#xAC80;&#xC0C9; &#xB85C;&#xADF8;</span>
+                    <strong th:text="${statusBarSummary.searchCount + '건'}">0건</strong>
+                    <span th:text="${statusBarSummary.latestSearchAt != null ? statusBarSummary.latestSearchAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                </div>
+                <div class="admin-status-card">
+                    <span class="admin-status-card__label">&#xC54C;&#xB9BC; &#xB85C;&#xADF8;</span>
+                    <strong th:text="${statusBarSummary.notificationCount + '건'}">0건</strong>
+                    <span th:text="${statusBarSummary.latestNotificationAt != null ? statusBarSummary.latestNotificationAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+<script th:src="@{/webjars/bootstrap/5.3.3/dist/js/bootstrap.bundle.min.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ko.js"></script>
+<script>
+    (function initializeFlatpickrInputs() {
+        function createOptions(input) {
+            const isDateTime = input.type === 'datetime-local';
+            return {
+                locale: (window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.ko) ? window.flatpickr.l10ns.ko : undefined,
+                allowInput: false,
+                disableMobile: true,
+                altInput: true,
+                altInputClass: isDateTime
+                    ? 'flatpickr-alt-input flatpickr-alt-input--datetime'
+                    : 'flatpickr-alt-input flatpickr-alt-input--date',
+                dateFormat: isDateTime ? 'Y-m-d\\TH:i' : 'Y-m-d',
+                altFormat: isDateTime ? 'Y.m.d H:i' : 'Y.m.d',
+                enableTime: isDateTime,
+                noCalendar: false,
+                time_24hr: true,
+                minuteIncrement: 5
+            };
+        }
+
+        function bindDateInputs(root) {
+            if (typeof window.flatpickr !== 'function') {
+                return;
+            }
+            root.querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach(function (input) {
+                if (input.dataset.flatpickrBound === 'true' || input.dataset.flatpickrIgnore === 'true') {
+                    return;
+                }
+                input.dataset.flatpickrBound = 'true';
+                window.flatpickr(input, createOptions(input));
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            bindDateInputs(document);
+        });
+    }());
+</script>
+</body>
+</html>

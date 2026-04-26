@@ -1,0 +1,240 @@
+package com.researchi.admin.blacklist.service;
+
+import com.researchi.admin.auth.service.AdminActionLogService;
+import com.researchi.admin.auth.service.AdminPrincipal;
+import com.researchi.admin.blacklist.domain.BlacklistActionLogItem;
+import com.researchi.admin.blacklist.domain.BlacklistEntry;
+import com.researchi.admin.blacklist.domain.BlacklistMatchLogItem;
+import com.researchi.admin.blacklist.domain.BlacklistPageData;
+import com.researchi.admin.blacklist.mapper.AdminBlacklistAdminMapper;
+import com.researchi.admin.blacklist.web.BlacklistForm;
+import com.researchi.admin.publicform.service.PublicFormProtectionService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.Errors;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+
+@Service
+public class BlacklistService {
+
+    private static final int LOG_LIMIT = 30;
+
+    private final AdminBlacklistAdminMapper adminBlacklistAdminMapper;
+    private final AdminActionLogService adminActionLogService;
+    private final PublicFormProtectionService protectionService;
+
+    public BlacklistService(
+            AdminBlacklistAdminMapper adminBlacklistAdminMapper,
+            AdminActionLogService adminActionLogService,
+            PublicFormProtectionService protectionService
+    ) {
+        this.adminBlacklistAdminMapper = adminBlacklistAdminMapper;
+        this.adminActionLogService = adminActionLogService;
+        this.protectionService = protectionService;
+    }
+
+    public BlacklistPageData getPageData(Long selectedId, String keyword, String activeYn, String blackMode) {
+        List<BlacklistEntry> entries = findEntries(keyword, activeYn, blackMode);
+        return new BlacklistPageData(
+                entries,
+                limitMatchLogs(adminBlacklistAdminMapper.findRecentMatchLogs(selectedId)),
+                limitActionLogs(adminBlacklistAdminMapper.findRecentActionLogs(selectedId == null ? null : String.valueOf(selectedId)))
+        );
+    }
+
+    public List<BlacklistEntry> findEntries(String keyword, String activeYn, String blackMode) {
+        String normalizedKeyword = trimToNull(keyword);
+        String normalizedActiveYn = normalizeActiveYn(activeYn);
+        String normalizedMode = normalizeModeFilter(blackMode);
+        return adminBlacklistAdminMapper.findEntries(normalizedKeyword, normalizedActiveYn, normalizedMode);
+    }
+
+    public BlacklistEntry getEntry(Long id) {
+        return id == null ? null : adminBlacklistAdminMapper.findById(id);
+    }
+
+    public List<String> getAllowedModes() {
+        return BlacklistModePolicy.allowedModes();
+    }
+
+    public List<String> getAllowedActiveStatuses() {
+        return List.of("Y", "N");
+    }
+
+    public void validate(BlacklistForm form, Errors errors) {
+        String mode = BlacklistModePolicy.normalize(form.getBlackMode());
+        if (!BlacklistModePolicy.allowedModes().contains(mode)) {
+            errors.rejectValue("blackMode", "blackMode.invalid", "지원하는 블랙리스트 모드를 선택해 주세요.");
+        }
+
+        String normalizedPhone = protectionService.normalizePhone(form.getMobilePhone());
+        String blackName = trimToNull(form.getBlackName());
+        boolean hasBirthDate = form.getBlackBirthDate() != null;
+
+        if (normalizedPhone == null && (blackName == null || !hasBirthDate)) {
+            errors.reject("criteria.required", "휴대전화를 입력하거나 이름과 생년월일을 함께 입력해 주세요.");
+        }
+        if ((blackName == null) != !hasBirthDate) {
+            errors.reject("criteria.partial", "Name and birth date must be entered together when using personal matching.");
+        }
+        if (BlacklistModePolicy.TEMPORARY_BLOCK.equals(mode)) {
+            if (form.getExpiresAt() == null) {
+                errors.rejectValue("expiresAt", "expiresAt.required", "임시 차단은 만료 일시가 필요합니다.");
+            } else if (!form.getExpiresAt().isAfter(LocalDateTime.now())) {
+                errors.rejectValue("expiresAt", "expiresAt.future", "Temporary block expiry must be in the future.");
+            }
+        }
+    }
+
+    @Transactional("adminTransactionManager")
+    public Long save(BlacklistForm form, AdminPrincipal principal, HttpServletRequest request) {
+        BlacklistEntry existing = form.getId() == null ? null : requireEntry(form.getId());
+        BlacklistEntry entry = existing == null ? new BlacklistEntry() : existing;
+        applyForm(entry, form, existing);
+
+        if (existing == null) {
+            entry.setActiveYn("Y");
+            entry.setCreatedBy(principal.getId());
+            adminBlacklistAdminMapper.insert(entry);
+            adminActionLogService.log(
+                    principal.getId(),
+                    "BLACKLIST_CREATE",
+                    "BLACKLIST",
+                    String.valueOf(entry.getId()),
+                    "블랙리스트 등록: " + displayBlackMode(entry.getBlackMode()),
+                    request
+            );
+            return entry.getId();
+        }
+
+        int updated = adminBlacklistAdminMapper.update(entry);
+        if (updated != 1) {
+            throw new IllegalStateException("블랙리스트 정보를 수정하지 못했습니다.");
+        }
+        adminActionLogService.log(
+                principal.getId(),
+                "BLACKLIST_UPDATE",
+                "BLACKLIST",
+                String.valueOf(entry.getId()),
+                "블랙리스트 수정: " + displayBlackMode(entry.getBlackMode()),
+                request
+        );
+        return entry.getId();
+    }
+
+    @Transactional("adminTransactionManager")
+    public void updateActiveStatus(Long id, String activeYn, AdminPrincipal principal, HttpServletRequest request) {
+        BlacklistEntry existing = requireEntry(id);
+        String normalizedActiveYn = normalizeActiveYn(activeYn);
+        if (normalizedActiveYn == null) {
+            throw new IllegalArgumentException("지원하지 않는 활성 상태입니다.");
+        }
+        int updated = adminBlacklistAdminMapper.updateActiveStatus(id, normalizedActiveYn, LocalDateTime.now());
+        if (updated != 1) {
+            throw new IllegalStateException("블랙리스트 상태를 변경하지 못했습니다.");
+        }
+        adminActionLogService.log(
+                principal.getId(),
+                "BLACKLIST_STATUS_UPDATE",
+                "BLACKLIST",
+                String.valueOf(existing.getId()),
+                "블랙리스트 상태 변경: " + ("Y".equals(normalizedActiveYn) ? "활성" : "비활성"),
+                request
+        );
+    }
+
+    @Transactional("adminTransactionManager")
+    public int expireExpiredEntries(LocalDateTime now) {
+        int expiredCount = 0;
+        for (BlacklistEntry entry : adminBlacklistAdminMapper.findExpiredActiveEntries(now)) {
+            int updated = adminBlacklistAdminMapper.updateActiveStatus(entry.getId(), "N", now);
+            if (updated != 1) {
+                continue;
+            }
+            expiredCount++;
+            adminActionLogService.log(
+                    null,
+                    "BLACKLIST_EXPIRE",
+                    "BLACKLIST",
+                    String.valueOf(entry.getId()),
+                    "임시 블랙리스트가 만료되어 자동 비활성화되었습니다.",
+                    null
+            );
+        }
+        return expiredCount;
+    }
+
+    private void applyForm(BlacklistEntry entry, BlacklistForm form, BlacklistEntry existing) {
+        String normalizedPhone = protectionService.normalizePhone(form.getMobilePhone());
+        entry.setBlackName(trimToNull(form.getBlackName()));
+        entry.setBlackBirthDate(form.getBlackBirthDate());
+        entry.setBlackReason(trimToNull(form.getBlackReason()));
+        entry.setBlackMode(BlacklistModePolicy.normalize(form.getBlackMode()));
+        entry.setExpiresAt(BlacklistModePolicy.TEMPORARY_BLOCK.equals(entry.getBlackMode()) ? form.getExpiresAt() : null);
+
+        if (normalizedPhone != null) {
+            entry.setBlackMobilePhoneHash(protectionService.sha256(normalizedPhone));
+        } else if (existing == null) {
+            entry.setBlackMobilePhoneHash(null);
+        }
+    }
+
+    private BlacklistEntry requireEntry(Long id) {
+        BlacklistEntry entry = adminBlacklistAdminMapper.findById(id);
+        if (entry == null) {
+            throw new IllegalArgumentException("블랙리스트 정보를 찾을 수 없습니다.");
+        }
+        return entry;
+    }
+
+    private String displayBlackMode(String blackMode) {
+        if (BlacklistModePolicy.TEMPORARY_BLOCK.equals(blackMode)) {
+            return "임시 차단";
+        }
+        if (BlacklistModePolicy.PERMANENT_BLOCK.equals(blackMode)) {
+            return "영구 차단";
+        }
+        if (BlacklistModePolicy.MANUAL_REVIEW.equals(blackMode)) {
+            return "수동 검토";
+        }
+        return blackMode;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeActiveYn(String activeYn) {
+        String normalized = trimToNull(activeYn);
+        if (normalized == null) {
+            return null;
+        }
+        normalized = normalized.toUpperCase(Locale.ROOT);
+        return List.of("Y", "N").contains(normalized) ? normalized : null;
+    }
+
+    private String normalizeModeFilter(String blackMode) {
+        String normalized = trimToNull(blackMode);
+        if (normalized == null) {
+            return null;
+        }
+        normalized = BlacklistModePolicy.normalize(normalized);
+        return BlacklistModePolicy.allowedModes().contains(normalized) ? normalized : null;
+    }
+
+    private List<BlacklistMatchLogItem> limitMatchLogs(List<BlacklistMatchLogItem> logs) {
+        return logs.size() <= LOG_LIMIT ? logs : logs.subList(0, LOG_LIMIT);
+    }
+
+    private List<BlacklistActionLogItem> limitActionLogs(List<BlacklistActionLogItem> logs) {
+        return logs.size() <= LOG_LIMIT ? logs : logs.subList(0, LOG_LIMIT);
+    }
+}

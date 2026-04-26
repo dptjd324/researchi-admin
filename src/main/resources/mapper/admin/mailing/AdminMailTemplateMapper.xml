@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.mailing.mapper.AdminMailTemplateMapper">
+
+    <resultMap id="adminMailTemplateResultMap" type="com.researchi.admin.mailing.domain.AdminMailTemplate">
+        <id property="id" column="id"/>
+        <result property="templateName" column="template_name"/>
+        <result property="mailSubject" column="mail_subject"/>
+        <result property="mailBody" column="mail_body"/>
+        <result property="activeYn" column="active_yn"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="adminMailTemplateResultMap">
+        SELECT *
+        FROM admin_mail_template
+        ORDER BY updated_at DESC, id DESC
+    </select>
+
+    <select id="findActive" resultMap="adminMailTemplateResultMap">
+        SELECT *
+        FROM admin_mail_template
+        WHERE active_yn = 'Y'
+        ORDER BY updated_at DESC, id DESC
+    </select>
+
+    <select id="findById" resultMap="adminMailTemplateResultMap">
+        SELECT *
+        FROM admin_mail_template
+        WHERE id = #{id}
+    </select>
+
+    <select id="findActiveByName" resultMap="adminMailTemplateResultMap">
+        SELECT *
+        FROM admin_mail_template
+        WHERE active_yn = 'Y'
+          AND template_name = #{templateName}
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.mailing.domain.AdminMailTemplate" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_mail_template (
+            template_name,
+            mail_subject,
+            mail_body,
+            active_yn,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{templateName},
+            #{mailSubject},
+            #{mailBody},
+            #{activeYn},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="update" parameterType="com.researchi.admin.mailing.domain.AdminMailTemplate">
+        UPDATE admin_mail_template
+        SET
+            template_name = #{templateName},
+            mail_subject = #{mailSubject},
+            mail_body = #{mailBody},
+            active_yn = #{activeYn},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

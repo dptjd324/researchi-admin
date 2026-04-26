@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.publicform.mapper.AdminFormSubmissionAnswerMapper">
+
+    <insert id="insert" parameterType="com.researchi.admin.publicform.domain.AdminFormSubmissionAnswer" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_form_submission_answer (
+            application_id,
+            field_id,
+            answer_text,
+            answer_json,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{applicationId},
+            #{fieldId},
+            #{answerText},
+            #{answerJson},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+</mapper>

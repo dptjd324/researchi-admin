@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: researchi-admin
+
+  profiles:
+    active: local
+
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS_ENABLE:true}
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-request: true
+      force-response: true
+    session:
+      timeout: ${APP_SECURITY_SESSION_TIMEOUT:30m}
+
+logging:
+  level:
+    root: info
+    com.researchi.admin: debug
+
+mybatis:
+  mapper-locations: classpath:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+app:
+  export:
+    path: ./exports
+  upload:
+    path: ./uploads
+  public-form:
+    encryption-key: ${ENCRYPTION_KEY:dev-only-phase5-key-change-me}
+    captcha-enabled: ${APP_PUBLIC_FORM_CAPTCHA_ENABLED:true}
+    rate-limit-count: ${APP_PUBLIC_FORM_RATE_LIMIT_COUNT:5}
+    rate-limit-window-seconds: ${APP_PUBLIC_FORM_RATE_LIMIT_WINDOW_SECONDS:300}
+  mail:
+    simulate-send: ${APP_MAIL_SIMULATE_SEND:true}
+    from-address: ${APP_MAIL_FROM_ADDRESS:no-reply@researchi.local}
+  keyword:
+    min-length: ${APP_KEYWORD_MIN_LENGTH:2}
+    max-length: ${APP_KEYWORD_MAX_LENGTH:40}
+    max-keywords-per-source: ${APP_KEYWORD_MAX_PER_SOURCE:40}
+  notification:
+    base-url: ${APP_BASE_URL:http://localhost:8082}
+    secondary-email-enabled: ${APP_NOTIFICATION_SECONDARY_EMAIL_ENABLED:false}
+    secondary-email-subject: ${APP_NOTIFICATION_SECONDARY_EMAIL_SUBJECT:[Researchi] 추천 일감 다시 안내드립니다}
+  sms:
+    simulate-send: ${APP_SMS_SIMULATE_SEND:true}
+    sender-id: ${APP_SMS_SENDER_ID:researchi}
+    provider: ${APP_SMS_PROVIDER:naver-sens}
+    access-key: ${APP_SMS_ACCESS_KEY:}
+    secret-key: ${APP_SMS_SECRET_KEY:}
+    service-id: ${APP_SMS_SERVICE_ID:}
+    from-number: ${APP_SMS_FROM_NUMBER:}
+    base-url: ${APP_SMS_BASE_URL:https://sens.apigw.ntruss.com}
+    message-type: ${APP_SMS_MESSAGE_TYPE:LMS}
+  scheduler:
+    #예약발송 : true
+    enabled: ${APP_SCHEDULER_ENABLED:true}
+    scheduled-send-cron: ${APP_SCHEDULER_SCHEDULED_SEND_CRON:0 * * * * *}
+    threshold-cron: ${APP_SCHEDULER_THRESHOLD_CRON:30 * * * * *}
+    cleanup-cron: ${APP_SCHEDULER_CLEANUP_CRON:0 0 3 * * *}
+    blacklist-expiry-cron: ${APP_SCHEDULER_BLACKLIST_EXPIRY_CRON:0 15 * * * *}
+    keyword-match-cron: ${APP_SCHEDULER_KEYWORD_MATCH_CRON:0 30 * * * *}
+    retention-months: ${APP_SCHEDULER_RETENTION_MONTHS:6}
+  security:
+    login-fail-limit: 5
+    lock-minutes: 15
+    session-timeout: 30m

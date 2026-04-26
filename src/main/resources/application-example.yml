@@ -1,0 +1,82 @@
+
+
+# Example configuration file.
+# Do not put real secrets in this file.
+# Copy required values into application-local.yml or environment variables.
+# Amazon SES SMTP notes:
+# - Use the SMTP endpoint for the SES region you will send from.
+# - The from-address must belong to a verified SES identity or verified domain.
+# - If your SES account is still in sandbox, sending is limited to verified recipients.
+
+spring:
+  mail:
+    host: ${SMTP_HOST:email-smtp.ap-northeast-2.amazonaws.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS_ENABLE:true}
+
+  datasource:
+    xe:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/spirit0419?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      username: your_xe_db_username
+      password: your_xe_db_password
+
+    admin:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/researchi_admin?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      username: your_admin_db_username
+      password: your_admin_db_password
+
+app:
+  export:
+    path: ./exports
+
+  upload:
+    path: ./uploads
+
+  public-form:
+    encryption-key: ${ENCRYPTION_KEY:change-me-before-production}
+    captcha-enabled: true
+    rate-limit-count: 5
+    rate-limit-window-seconds: 300
+  mail:
+    simulate-send: ${APP_MAIL_SIMULATE_SEND:true}
+    from-address: ${APP_MAIL_FROM_ADDRESS:no-reply@your-verified-domain.example}
+  keyword:
+    min-length: 2
+    max-length: 40
+    max-keywords-per-source: 40
+  notification:
+    base-url: ${APP_BASE_URL:http://localhost:8082}
+    secondary-email-enabled: false
+    secondary-email-subject: "[Researchi] 추천 일감 다시 안내드립니다"
+  sms:
+    simulate-send: ${APP_SMS_SIMULATE_SEND:true}
+    sender-id: ${APP_SMS_SENDER_ID:researchi}
+    provider: ${APP_SMS_PROVIDER:naver-sens}
+    access-key: ${APP_SMS_ACCESS_KEY:}
+    secret-key: ${APP_SMS_SECRET_KEY:}
+    service-id: ${APP_SMS_SERVICE_ID:}
+    from-number: ${APP_SMS_FROM_NUMBER:}
+    base-url: ${APP_SMS_BASE_URL:https://sens.apigw.ntruss.com}
+    message-type: ${APP_SMS_MESSAGE_TYPE:LMS}
+  scheduler:
+    enabled: ${APP_SCHEDULER_ENABLED:false}
+    scheduled-send-cron: ${APP_SCHEDULER_SCHEDULED_SEND_CRON:0 * * * * *}
+    threshold-cron: ${APP_SCHEDULER_THRESHOLD_CRON:30 * * * * *}
+    cleanup-cron: ${APP_SCHEDULER_CLEANUP_CRON:0 0 3 * * *}
+    blacklist-expiry-cron: ${APP_SCHEDULER_BLACKLIST_EXPIRY_CRON:0 15 * * * *}
+    keyword-match-cron: ${APP_SCHEDULER_KEYWORD_MATCH_CRON:0 30 * * * *}
+    retention-months: ${APP_SCHEDULER_RETENTION_MONTHS:6}
+
+  security:
+    login-fail-limit: 5
+    lock-minutes: 15
+    session-timeout: 30m

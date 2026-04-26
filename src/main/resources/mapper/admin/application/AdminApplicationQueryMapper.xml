@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.application.mapper.AdminApplicationQueryMapper">
+
+    <resultMap id="applicationRecordResultMap" type="com.researchi.admin.application.domain.ApplicationRecord">
+        <id property="id" column="id"/>
+        <result property="documentSrl" column="document_srl"/>
+        <result property="applicantName" column="applicant_name"/>
+        <result property="genderCode" column="gender_code"/>
+        <result property="birthDate" column="birth_date"/>
+        <result property="ageText" column="age_text"/>
+        <result property="jobText" column="job_text"/>
+        <result property="organizationText" column="organization_text"/>
+        <result property="mobilePhoneMasked" column="mobile_phone_masked"/>
+        <result property="telPhoneMasked" column="tel_phone_masked"/>
+        <result property="regionText" column="region_text"/>
+        <result property="addressMasked" column="address_masked"/>
+        <result property="extraComment" column="extra_comment"/>
+        <result property="priorResearchText" column="prior_research_text"/>
+        <result property="emailAddressMasked" column="email_address_masked"/>
+        <result property="notifyEmailYn" column="notify_email_yn"/>
+        <result property="notifySmsYn" column="notify_sms_yn"/>
+        <result property="notifyKeywordYn" column="notify_keyword_yn"/>
+        <result property="applicationStatus" column="application_status"/>
+        <result property="isNewApplicant" column="is_new_applicant"/>
+        <result property="isBlacklisted" column="is_blacklisted"/>
+        <result property="blackModeApplied" column="black_mode_applied"/>
+        <result property="provideYn" column="provide_yn"/>
+        <result property="deliveryStatus" column="delivery_status"/>
+        <result property="deliveredAt" column="delivered_at"/>
+        <result property="deliveryJobId" column="delivery_job_id"/>
+        <result property="appliedAt" column="applied_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="applicationAnswerItemResultMap" type="com.researchi.admin.application.domain.ApplicationAnswerItem">
+        <id property="fieldId" column="field_id"/>
+        <result property="fieldKey" column="field_key"/>
+        <result property="fieldLabel" column="field_label"/>
+        <result property="fieldType" column="field_type"/>
+        <result property="fieldOrder" column="field_order"/>
+        <result property="answerText" column="answer_text"/>
+        <result property="answerJson" column="answer_json"/>
+    </resultMap>
+
+    <sql id="applicationColumns">
+        id,
+        document_srl,
+        applicant_name,
+        gender_code,
+        birth_date,
+        age_text,
+        job_text,
+        organization_text,
+        mobile_phone_masked,
+        tel_phone_masked,
+        region_text,
+        address_masked,
+        extra_comment,
+        prior_research_text,
+        email_address_masked,
+        notify_email_yn,
+        notify_sms_yn,
+        notify_keyword_yn,
+        application_status,
+        is_new_applicant,
+        is_blacklisted,
+        black_mode_applied,
+        provide_yn,
+        delivery_status,
+        delivered_at,
+        delivery_job_id,
+        applied_at,
+        updated_at
+    </sql>
+
+    <select id="findAll" resultMap="applicationRecordResultMap">
+        SELECT
+        <include refid="applicationColumns"/>
+        FROM admin_job_application
+        ORDER BY applied_at DESC, id DESC
+    </select>
+
+    <select id="findByDocumentSrl" resultMap="applicationRecordResultMap">
+        SELECT
+        <include refid="applicationColumns"/>
+        FROM admin_job_application
+        WHERE document_srl = #{documentSrl}
+        ORDER BY applied_at DESC, id DESC
+    </select>
+
+    <select id="findById" resultMap="applicationRecordResultMap">
+        SELECT
+        <include refid="applicationColumns"/>
+        FROM admin_job_application
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAnswersByApplicationId" resultMap="applicationAnswerItemResultMap">
+        SELECT
+            answer.field_id,
+            field.field_key,
+            field.field_label,
+            field.field_type,
+            field.field_order,
+            answer.answer_text,
+            answer.answer_json
+        FROM admin_form_submission_answer answer
+        INNER JOIN admin_form_field field ON field.id = answer.field_id
+        WHERE answer.application_id = #{applicationId}
+        ORDER BY field.field_order ASC, answer.id ASC
+    </select>
+
+    <update id="updateStatus">
+        UPDATE admin_job_application
+        SET
+            application_status = #{applicationStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>
