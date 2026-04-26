@@ -107,7 +107,7 @@ class PeriodSearchServiceTest {
         ActionLogItem matched = new ActionLogItem();
         matched.setActionType("LOGIN_SUCCESS");
         matched.setActionDetail("관리자 로그인 성공");
-        matched.setCreatedAt(LocalDateTime.now().minusDays(1));
+        matched.setCreatedAt(LocalDateTime.now());
 
         ActionLogItem oldLog = new ActionLogItem();
         oldLog.setActionType("LOGIN_SUCCESS");

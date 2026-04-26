@@ -12,7 +12,6 @@
                 <div class="dashboard-actions">
                     <a th:href="@{/jobs}" class="secondary-link">목록으로</a>
                     <a th:href="@{/clients}" class="secondary-link">거래처</a>
-                    <a th:if="${documentSrl != null}" th:href="@{/jobs/{documentSrl}/fields(documentSrl=${documentSrl})}" class="secondary-link">동적 필드</a>
                     <a th:if="${documentSrl != null}" th:href="@{/jobs/{documentSrl}/applications(documentSrl=${documentSrl})}" class="secondary-link">지원서</a>
                     <a th:if="${documentSrl != null}" th:href="@{/matching/jobs/{documentSrl}(documentSrl=${documentSrl})}" class="secondary-link">매칭</a>
                     <a th:if="${documentSrl != null}" th:href="@{/mail/send/history(documentSrl=${documentSrl})}" class="secondary-link">메일</a>
@@ -149,10 +148,8 @@
                         </div>
                     </div>
                     <input type="hidden" id="application-form-notice-source" th:field="*{applicationFormNotice}">
-                    <div class="application-notice-builder__list"
-                         id="application-form-notice-list"
-                         th:attr="data-items=${#strings.listJoin(applicationFormNoticeItems, '||')}"></div>
-                    <small class="field-help">예: 결혼여부, 자녀유무, 알러지 유무, 최근 구입 과자류, 구입 빈도</small>
+                    <div class="application-notice-builder__list" id="application-form-notice-list"></div>
+                    <small class="field-help">옵션은 선택형 질문에서만 사용합니다. 한 줄에 하나씩 입력하세요. 예: 평일 가능</small>
                 </section>
 
                 <div class="form-grid triple">
@@ -212,9 +209,25 @@
 
             .application-notice-item {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-columns: minmax(0, 1fr) 160px auto;
                 gap: 0.75rem;
-                align-items: center;
+                align-items: start;
+                padding: 0.75rem;
+                border: 1px solid rgba(148, 163, 184, 0.35);
+                border-radius: 8px;
+            }
+
+            .application-notice-item__body {
+                display: grid;
+                gap: 0.5rem;
+            }
+
+            .application-notice-item__options {
+                display: none;
+            }
+
+            .application-notice-item--options .application-notice-item__options {
+                display: block;
             }
 
             .application-notice-item__remove {
@@ -251,14 +264,80 @@
 
             function syncApplicationNoticeItems() {
                 const source = document.getElementById('application-form-notice-source');
-                const inputs = document.querySelectorAll('.application-notice-item__input');
+                const rows = document.querySelectorAll('.application-notice-item');
                 if (!source) {
                     return;
                 }
-                const values = Array.from(inputs)
-                    .map(function (input) { return input.value.trim(); })
+                const values = Array.from(rows)
+                    .map(function (row) {
+                        const label = row.querySelector('.application-notice-item__input').value.trim();
+                        const type = row.querySelector('.application-notice-item__type').value;
+                        const rawOptions = row.querySelector('.application-notice-item__options').value;
+                        if (!label) {
+                            return '';
+                        }
+                        const options = rawOptions.split(/\r?\n/)
+                            .map(function (line) { return line.trim(); })
+                            .filter(function (line) { return line.length > 0; })
+                            .map(escapeNoticePart)
+                            .join(';');
+                        if (type === 'TEXT' && !options) {
+                            return escapeNoticePart(label);
+                        }
+                        return escapeNoticePart(label) + '|' + type + '|' + options;
+                    })
                     .filter(function (value) { return value.length > 0; });
                 source.value = values.join('\n');
+            }
+
+            function escapeNoticePart(value) {
+                return String(value || '')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/\|/g, '\\|')
+                    .replace(/;/g, '\\;')
+                    .replace(/=/g, '\\=');
+            }
+
+            function splitEscaped(value, separator) {
+                const parts = [];
+                let current = '';
+                let escaping = false;
+                for (let index = 0; index < value.length; index += 1) {
+                    const ch = value.charAt(index);
+                    if (escaping) {
+                        current += ch;
+                        escaping = false;
+                    } else if (ch === '\\') {
+                        escaping = true;
+                    } else if (ch === separator) {
+                        parts.push(current);
+                        current = '';
+                    } else {
+                        current += ch;
+                    }
+                }
+                if (escaping) {
+                    current += '\\';
+                }
+                parts.push(current);
+                return parts;
+            }
+
+            function parseNoticeItem(raw) {
+                const parts = splitEscaped(raw, '|');
+                const label = parts[0] || '';
+                const type = parts[1] || 'TEXT';
+                const options = splitEscaped(parts[2] || '', ';')
+                    .map(function (option) {
+                        const optionParts = splitEscaped(option, '=');
+                        if (!optionParts[0]) {
+                            return '';
+                        }
+                        return optionParts[1] || optionParts[0];
+                    })
+                    .filter(function (option) { return option.length > 0; })
+                    .join('\n');
+                return { label: label, type: type, options: options };
             }
 
             function removeApplicationNoticeItem(button) {
@@ -273,20 +352,61 @@
                 syncApplicationNoticeItems();
             }
 
+            function updateApplicationNoticeOptionsState(row) {
+                const type = row.querySelector('.application-notice-item__type').value;
+                if (type === 'RADIO' || type === 'CHECKBOX' || type === 'SELECT') {
+                    row.classList.add('application-notice-item--options');
+                } else {
+                    row.classList.remove('application-notice-item--options');
+                }
+            }
+
             function addApplicationNoticeItem(value) {
                 const list = document.getElementById('application-form-notice-list');
                 if (!list) {
                     return;
                 }
+                const item = typeof value === 'object' && value !== null ? value : { label: (typeof value === 'string' ? value : ''), type: 'TEXT', options: '' };
                 const row = document.createElement('div');
                 row.className = 'application-notice-item';
+
+                const body = document.createElement('div');
+                body.className = 'application-notice-item__body';
 
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.className = 'application-notice-item__input';
-                input.placeholder = '예: 결혼여부';
-                input.value = typeof value === 'string' ? value : '';
+                input.placeholder = '질문 라벨';
+                input.value = item.label || '';
                 input.addEventListener('input', syncApplicationNoticeItems);
+
+                const typeSelect = document.createElement('select');
+                typeSelect.className = 'application-notice-item__type';
+                ['TEXT', 'RADIO', 'CHECKBOX', 'SELECT', 'DATE', 'NUMBER'].forEach(function (type) {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = {
+                        TEXT: '텍스트',
+                        RADIO: '라디오',
+                        CHECKBOX: '체크박스',
+                        SELECT: '셀렉트',
+                        DATE: '날짜',
+                        NUMBER: '숫자'
+                    }[type];
+                    typeSelect.appendChild(option);
+                });
+                typeSelect.value = item.type || 'TEXT';
+                typeSelect.addEventListener('change', function () {
+                    updateApplicationNoticeOptionsState(row);
+                    syncApplicationNoticeItems();
+                });
+
+                const options = document.createElement('textarea');
+                options.className = 'application-notice-item__options';
+                options.rows = 3;
+                options.placeholder = 'ex)평일 가능\n주말 가능';
+                options.value = item.options || '';
+                options.addEventListener('input', syncApplicationNoticeItems);
 
                 const removeButton = document.createElement('button');
                 removeButton.type = 'button';
@@ -296,9 +416,13 @@
                     removeApplicationNoticeItem(removeButton);
                 });
 
-                row.appendChild(input);
+                body.appendChild(input);
+                body.appendChild(options);
+                row.appendChild(body);
+                row.appendChild(typeSelect);
                 row.appendChild(removeButton);
                 list.appendChild(row);
+                updateApplicationNoticeOptionsState(row);
                 syncApplicationNoticeItems();
             }
 
@@ -307,8 +431,10 @@
                 if (!list) {
                     return;
                 }
-                const rawItems = list.dataset.items ? list.dataset.items.split('||') : [];
-                const items = rawItems.filter(function (item) { return item.trim().length > 0; });
+                const source = document.getElementById('application-form-notice-source');
+                const rawValue = source ? source.value : '';
+                const rawItems = rawValue.indexOf('\n') >= 0 ? rawValue.split(/\r?\n/) : rawValue.split(/\s*\/\s*/);
+                const items = rawItems.filter(function (item) { return item.trim().length > 0; }).map(parseNoticeItem);
                 if (items.length === 0) {
                     addApplicationNoticeItem('');
                     return;

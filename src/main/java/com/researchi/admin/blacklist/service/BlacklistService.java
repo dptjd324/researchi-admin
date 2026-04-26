@@ -1,5 +1,7 @@
 package com.researchi.admin.blacklist.service;
 
+import com.researchi.admin.application.domain.ApplicationRecord;
+import com.researchi.admin.application.mapper.AdminApplicationQueryMapper;
 import com.researchi.admin.auth.service.AdminActionLogService;
 import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.blacklist.domain.BlacklistActionLogItem;
@@ -24,15 +26,18 @@ public class BlacklistService {
     private static final int LOG_LIMIT = 30;
 
     private final AdminBlacklistAdminMapper adminBlacklistAdminMapper;
+    private final AdminApplicationQueryMapper adminApplicationQueryMapper;
     private final AdminActionLogService adminActionLogService;
     private final PublicFormProtectionService protectionService;
 
     public BlacklistService(
             AdminBlacklistAdminMapper adminBlacklistAdminMapper,
+            AdminApplicationQueryMapper adminApplicationQueryMapper,
             AdminActionLogService adminActionLogService,
             PublicFormProtectionService protectionService
     ) {
         this.adminBlacklistAdminMapper = adminBlacklistAdminMapper;
+        this.adminApplicationQueryMapper = adminApplicationQueryMapper;
         this.adminActionLogService = adminActionLogService;
         this.protectionService = protectionService;
     }
@@ -127,6 +132,44 @@ public class BlacklistService {
     }
 
     @Transactional("adminTransactionManager")
+    public Long registerApplication(Long applicationId, AdminPrincipal principal, HttpServletRequest request) {
+        ApplicationRecord application = adminApplicationQueryMapper.findById(applicationId);
+        if (application == null) {
+            throw new IllegalArgumentException("지원서를 찾을 수 없습니다.");
+        }
+        if ("Y".equals(application.getIsBlacklisted())) {
+            return null;
+        }
+
+        String normalizedPhone = decryptAndNormalizePhone(application.getMobilePhoneEnc());
+        String mobilePhoneHash = normalizedPhone == null ? null : protectionService.sha256(normalizedPhone);
+        String applicantName = trimToNull(application.getApplicantName());
+
+        BlacklistEntry existing = findExistingActiveEntry(mobilePhoneHash, applicantName, application.getBirthDate());
+        Long blacklistId = existing == null
+                ? createApplicationBlacklist(application, mobilePhoneHash, applicantName, principal, request)
+                : existing.getId();
+
+        int updated = adminApplicationQueryMapper.updateBlacklistState(
+                applicationId,
+                BlacklistModePolicy.applicationStatus(BlacklistModePolicy.PERMANENT_BLOCK),
+                BlacklistModePolicy.PERMANENT_BLOCK
+        );
+        if (updated != 1) {
+            throw new IllegalStateException("지원서를 블랙리스트 상태로 변경하지 못했습니다.");
+        }
+        adminActionLogService.log(
+                principal.getId(),
+                "APPLICATION_BLACKLIST_REGISTER",
+                "APPLICATION",
+                String.valueOf(applicationId),
+                "지원자 목록에서 블랙리스트 등록",
+                request
+        );
+        return blacklistId;
+    }
+
+    @Transactional("adminTransactionManager")
     public void updateActiveStatus(Long id, String activeYn, AdminPrincipal principal, HttpServletRequest request) {
         BlacklistEntry existing = requireEntry(id);
         String normalizedActiveYn = normalizeActiveYn(activeYn);
@@ -183,6 +226,56 @@ public class BlacklistService {
         }
     }
 
+    private Long createApplicationBlacklist(
+            ApplicationRecord application,
+            String mobilePhoneHash,
+            String applicantName,
+            AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        if (mobilePhoneHash == null && (applicantName == null || application.getBirthDate() == null)) {
+            throw new IllegalStateException("블랙리스트 등록에 필요한 휴대전화 또는 이름/생년월일 정보가 없습니다.");
+        }
+        BlacklistEntry entry = new BlacklistEntry();
+        entry.setBlackName(applicantName);
+        entry.setBlackBirthDate(application.getBirthDate());
+        entry.setBlackMobilePhoneHash(mobilePhoneHash);
+        entry.setBlackReason("지원자 목록에서 수동 등록");
+        entry.setBlackMode(BlacklistModePolicy.PERMANENT_BLOCK);
+        entry.setActiveYn("Y");
+        entry.setCreatedBy(principal.getId());
+        adminBlacklistAdminMapper.insert(entry);
+        adminActionLogService.log(
+                principal.getId(),
+                "BLACKLIST_CREATE",
+                "BLACKLIST",
+                String.valueOf(entry.getId()),
+                "지원자 목록에서 블랙리스트 등록",
+                request
+        );
+        return entry.getId();
+    }
+
+    private BlacklistEntry findExistingActiveEntry(String mobilePhoneHash, String applicantName, java.time.LocalDate birthDate) {
+        if (mobilePhoneHash != null) {
+            BlacklistEntry existing = adminBlacklistAdminMapper.findActiveByMobilePhoneHash(mobilePhoneHash);
+            if (existing != null) {
+                return existing;
+            }
+        }
+        if (applicantName != null && birthDate != null) {
+            return adminBlacklistAdminMapper.findActiveByNameAndBirthDate(applicantName, birthDate);
+        }
+        return null;
+    }
+
+    private String decryptAndNormalizePhone(String encryptedPhone) {
+        if (encryptedPhone == null || encryptedPhone.isBlank()) {
+            return null;
+        }
+        return protectionService.normalizePhone(protectionService.decrypt(encryptedPhone));
+    }
+
     private BlacklistEntry requireEntry(Long id) {
         BlacklistEntry entry = adminBlacklistAdminMapper.findById(id);
         if (entry == null) {
@@ -199,7 +292,7 @@ public class BlacklistService {
             return "영구 차단";
         }
         if (BlacklistModePolicy.MANUAL_REVIEW.equals(blackMode)) {
-            return "수동 검토";
+            return "관리자 검토";
         }
         return blackMode;
     }

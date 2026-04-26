@@ -14,8 +14,16 @@
     <section class="public-header">
         <div class="public-header__eyebrow">Researchi Application</div>
         <h1 class="public-header__title" th:text="${jobDetail.document.title}">공고 제목</h1>
-        <p class="public-header__meta" th:if="${publicClientEmail != null and !publicClientEmail.isBlank()}" th:text="${publicClientEmail}">client@example.com</p>
-        <p class="public-header__meta" th:if="${publicScheduleText != null}" th:text="${publicScheduleText}">2026.04.10. 오후 06:31 ~ 2026.04.30. 오후 08:30</p>
+        <div class="public-period" th:if="${publicStartText != null or publicDeadlineText != null}">
+            <div class="public-period__item" th:if="${publicStartText != null}">
+                <span class="public-period__label">모집 시작일</span>
+                <span class="public-period__value" th:text="${publicStartText}">2026.04.10. 오후 06:31</span>
+            </div>
+            <div class="public-period__item">
+                <span class="public-period__label">모집 마감일</span>
+                <span class="public-period__value" th:text="${publicDeadlineText != null ? publicDeadlineText : '마감일 미설정'}">2026.04.30. 오후 11:59</span>
+            </div>
+        </div>
         <p class="public-header__meta" th:if="${publicRewardText != null and !publicRewardText.isBlank()}" th:text="${publicRewardText}">3만원</p>
     </section>
 
@@ -104,22 +112,56 @@
                 <div class="public-field">
                     <div class="public-field__required">답변 필수</div>
                     <label class="public-field__label">9. 추가기재사항</label>
-                    <div class="public-choice-list" th:if="${!#lists.isEmpty(applicationFormNoticeItems)}">
-                        <div class="public-extra-item public-extra-item--answer" th:each="noticeItem, iterStat : ${applicationFormNoticeItems}">
+                    <div class="public-choice-list" th:if="${!#lists.isEmpty(applicationFormNoticeDetails)}">
+                        <div class="public-extra-item public-extra-item--answer" th:each="noticeItem, iterStat : ${applicationFormNoticeDetails}">
                             <span class="public-extra-item__index" th:text="${iterStat.count + '.'}">1.</span>
                             <div class="public-extra-item__content">
-                                <span class="public-extra-item__text" th:text="${noticeItem}">추가기재사항</span>
+                                <span class="public-extra-item__text" th:text="${noticeItem.label()}">추가기재사항</span>
                                 <input class="public-input"
+                                       th:if="${noticeItem.type() == 'TEXT'}"
                                        type="text"
                                        th:field="*{extraAnswers[__${iterStat.index}__]}"
                                        placeholder="답변을 입력해주세요.">
+                                <input class="public-input"
+                                       th:if="${noticeItem.type() == 'NUMBER'}"
+                                       type="number"
+                                       th:field="*{extraAnswers[__${iterStat.index}__]}"
+                                       placeholder="숫자를 입력해주세요.">
+                                <input class="public-input"
+                                       th:if="${noticeItem.type() == 'DATE'}"
+                                       type="date"
+                                       th:field="*{extraAnswers[__${iterStat.index}__]}">
+                                <select class="public-input"
+                                        th:if="${noticeItem.type() == 'SELECT'}"
+                                        th:field="*{extraAnswers[__${iterStat.index}__]}">
+                                    <option value="">선택</option>
+                                    <option th:each="option : ${noticeItem.options()}" th:value="${option.value()}" th:text="${option.label()}">옵션</option>
+                                </select>
+                                <div class="public-choice-list" th:if="${noticeItem.type() == 'RADIO'}">
+                                    <label class="public-choice" th:each="option : ${noticeItem.options()}">
+                                        <input type="radio" th:field="*{extraAnswers[__${iterStat.index}__]}" th:value="${option.value()}">
+                                        <span th:text="${option.label()}">옵션</span>
+                                    </label>
+                                </div>
+                                <div class="public-choice-list" th:if="${noticeItem.type() == 'CHECKBOX'}">
+                                    <input type="hidden"
+                                           th:field="*{extraAnswers[__${iterStat.index}__]}"
+                                           th:attr="data-extra-checkbox-target=${iterStat.index}">
+                                    <label class="public-choice" th:each="option : ${noticeItem.options()}">
+                                        <input type="checkbox"
+                                               th:value="${option.value()}"
+                                               th:attr="data-extra-checkbox=${iterStat.index}"
+                                               th:checked="${#lists.size(applicationForm.extraAnswers) > iterStat.index and #strings.contains(',' + applicationForm.extraAnswers[iterStat.index] + ',', ',' + option.value() + ',')}">
+                                        <span th:text="${option.label()}">옵션</span>
+                                    </label>
+                                </div>
                                 <div th:if="${#fields.hasErrors('extraAnswers[' + iterStat.index + ']')}"
                                      th:errors="*{extraAnswers[__${iterStat.index}__]}"
                                      class="public-error">오류</div>
                             </div>
                         </div>
                     </div>
-                    <div class="public-field__hint" th:if="${#lists.isEmpty(applicationFormNoticeItems)}">
+                    <div class="public-field__hint" th:if="${#lists.isEmpty(applicationFormNoticeDetails)}">
                         이 공고에는 별도 추가기재사항이 없습니다.
                     </div>
                 </div>
@@ -129,12 +171,8 @@
         <section class="public-card public-card--form">
             <div class="public-field-grid public-field-grid--single">
                 <div class="public-field">
-                    <label class="public-field__label">키워드 알림 수신</label>
-                    <div class="public-field__hint">추가기재사항 키워드와 새 공고 키워드가 일치하면 선택한 채널로 알림을 받을 수 있습니다.</div>
-                    <label class="public-choice public-choice--block">
-                        <input type="checkbox" th:field="*{notifyKeywordYn}">
-                        <span>키워드 알림을 받겠습니다.</span>
-                    </label>
+                    <label class="public-field__label">알림 수신</label>
+                    <div class="public-field__hint">새로운 일감이 등록되면 선택한 채널로 추천 알림을 받을 수 있습니다.</div>
                     <label class="public-choice public-choice--block">
                         <input type="checkbox" th:field="*{notifySmsYn}">
                         <span>SMS로 알림을 받겠습니다.</span>
@@ -143,7 +181,6 @@
                         <input type="checkbox" th:field="*{notifyEmailYn}">
                         <span>이메일로 알림을 받겠습니다.</span>
                     </label>
-                    <div th:if="${#fields.hasErrors('notifyKeywordYn')}" th:errors="*{notifyKeywordYn}" class="public-error">오류</div>
                 </div>
             </div>
         </section>
@@ -193,6 +230,26 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ko.js"></script>
 <script>
+    (function initializeExtraAnswerCheckboxes() {
+        function sync(index) {
+            const target = document.querySelector('[data-extra-checkbox-target="' + index + '"]');
+            const checkboxes = document.querySelectorAll('[data-extra-checkbox="' + index + '"]');
+            if (!target) {
+                return;
+            }
+            target.value = Array.from(checkboxes)
+                .filter(function (checkbox) { return checkbox.checked; })
+                .map(function (checkbox) { return checkbox.value; })
+                .join(',');
+        }
+        document.querySelectorAll('[data-extra-checkbox]').forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                sync(checkbox.getAttribute('data-extra-checkbox'));
+            });
+            sync(checkbox.getAttribute('data-extra-checkbox'));
+        });
+    }());
+
     (function initializeBirthDatePicker() {
         const hiddenInput = document.getElementById('birthDate');
         const pickerInput = document.getElementById('birthDatePicker');

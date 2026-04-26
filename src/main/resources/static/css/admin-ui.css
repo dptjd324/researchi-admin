@@ -269,6 +269,27 @@ button,
     font-weight: 600;
 }
 
+.danger-button {
+    border-color: #dc2626;
+    background: #dc2626;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.status-chip--danger {
+    border: 1px solid rgba(220, 38, 38, 0.18);
+    background: var(--admin-danger-soft);
+    color: #991b1b;
+}
+
 button:hover,
 button:focus,
 .secondary-link:hover,

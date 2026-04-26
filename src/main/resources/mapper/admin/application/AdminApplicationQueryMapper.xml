@@ -13,6 +13,7 @@
         <result property="ageText" column="age_text"/>
         <result property="jobText" column="job_text"/>
         <result property="organizationText" column="organization_text"/>
+        <result property="mobilePhoneEnc" column="mobile_phone_enc"/>
         <result property="mobilePhoneMasked" column="mobile_phone_masked"/>
         <result property="telPhoneMasked" column="tel_phone_masked"/>
         <result property="regionText" column="region_text"/>
@@ -54,6 +55,7 @@
         age_text,
         job_text,
         organization_text,
+        mobile_phone_enc,
         mobile_phone_masked,
         tel_phone_masked,
         region_text,
@@ -117,6 +119,16 @@
         UPDATE admin_job_application
         SET
             application_status = #{applicationStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateBlacklistState">
+        UPDATE admin_job_application
+        SET
+            application_status = #{applicationStatus},
+            is_blacklisted = 'Y',
+            black_mode_applied = #{blackModeApplied},
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>

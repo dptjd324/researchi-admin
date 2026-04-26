@@ -52,7 +52,7 @@
                                 <div>
                                     <p class="eyebrow" th:text="${matchJob.matchStatus == 'PENDING' ? '대기' : matchJob.matchStatus == 'RUNNING' ? '실행중' : matchJob.matchStatus == 'COMPLETED' ? '완료' : matchJob.matchStatus == 'FAILED' ? '실패' : matchJob.matchStatus}">완료</p>
                                     <h3 class="h6 mb-2" th:text="${'매칭 작업 #' + matchJob.id}">매칭 작업 #1</h3>
-                                    <p class="job-summary" th:text="${'생성 ' + matchJob.createdAt + ' | 완료 ' + (matchJob.completedAt != null ? matchJob.completedAt : '-')}">생성</p>
+                                    <p class="job-summary" th:text="${'생성 ' + @uiLabels.dateTime(matchJob.createdAt) + ' | 완료 ' + @uiLabels.dateTime(matchJob.completedAt)}">생성</p>
                                 </div>
                                 <div class="actions">
                                     <a th:href="@{/matching/jobs/{documentSrl}(documentSrl=${documentSrl}, matchJobId=${matchJob.id})}" class="secondary-link">검토</a>
@@ -131,7 +131,7 @@
                             <div>
                                 <p class="eyebrow" th:text="${log.channelType == 'EMAIL' ? '이메일' : log.channelType == 'SMS' ? '문자' : log.channelType}">이메일</p>
                                 <h3 class="h6 mb-2" th:text="${'지원서 #' + log.applicationId}">지원서 #1</h3>
-                                <p class="job-summary" th:text="${log.createdAt}">2026-04-16T12:00</p>
+                                <p class="job-summary" th:text="${@uiLabels.dateTime(log.createdAt)}">2026-04-16 - 12:00</p>
                             </div>
                         </div>
                         <div class="job-meta-grid">

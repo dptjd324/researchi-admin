@@ -20,6 +20,13 @@ public interface AdminBlacklistAdminMapper {
 
     BlacklistEntry findById(@Param("id") Long id);
 
+    BlacklistEntry findActiveByMobilePhoneHash(@Param("mobilePhoneHash") String mobilePhoneHash);
+
+    BlacklistEntry findActiveByNameAndBirthDate(
+            @Param("blackName") String blackName,
+            @Param("blackBirthDate") java.time.LocalDate blackBirthDate
+    );
+
     void insert(BlacklistEntry entry);
 
     int update(BlacklistEntry entry);

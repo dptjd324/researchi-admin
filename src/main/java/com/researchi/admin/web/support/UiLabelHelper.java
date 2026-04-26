@@ -64,7 +64,7 @@ public class UiLabelHelper {
 
     public String blacklistMode(String value) {
         return switch (normalize(value)) {
-            case "MANUAL_REVIEW" -> "수동 검토";
+            case "MANUAL_REVIEW" -> "관리자 검토";
             case "TEMPORARY_BLOCK" -> "임시 차단";
             case "PERMANENT_BLOCK" -> "영구 차단";
             case "TEMPORARY_BLOCKED" -> "임시 차단 적용";

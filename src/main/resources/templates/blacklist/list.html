@@ -50,7 +50,7 @@
                                     <option value="">모드 선택</option>
                                     <option th:each="mode : ${modeOptions}"
                                             th:value="${mode}"
-                                            th:text="${mode == 'PERMANENT_BLOCK' ? '영구 차단' : mode == 'TEMPORARY_BLOCK' ? '기간 차단' : mode}">영구 차단</option>
+                                            th:text="${mode == 'PERMANENT_BLOCK' ? '영구 차단' : mode == 'TEMPORARY_BLOCK' ? '기간 차단' : mode == 'MANUAL_REVIEW' ? '관리자 검토' : mode}">영구 차단</option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('blackMode')}" class="field-error" th:errors="*{blackMode}">모드 오류</div>
                             </label>
@@ -99,7 +99,7 @@
                                     <option value="">전체</option>
                                     <option th:each="mode : ${modeOptions}"
                                             th:value="${mode}"
-                                            th:text="${mode == 'PERMANENT_BLOCK' ? '영구 차단' : mode == 'TEMPORARY_BLOCK' ? '기간 차단' : mode}"
+                                            th:text="${mode == 'PERMANENT_BLOCK' ? '영구 차단' : mode == 'TEMPORARY_BLOCK' ? '기간 차단' : mode == 'MANUAL_REVIEW' ? '관리자 검토' : mode}"
                                             th:selected="${blackMode == mode}">영구 차단</option>
                                 </select>
                             </label>
@@ -137,7 +137,7 @@
                                         <span><strong>활성 여부</strong><span th:text="${@uiLabels.yesNo(entry.activeYn)}">예</span></span>
                                         <span><strong>모드</strong><span th:text="${@uiLabels.blacklistMode(entry.blackMode)}">영구 차단</span></span>
                                         <span><strong>생년월일</strong><span th:text="${entry.blackBirthDate != null ? entry.blackBirthDate : '-'}">-</span></span>
-                                        <span><strong>만료 시각</strong><span th:text="${entry.expiresAt != null ? entry.expiresAt : '-'}">-</span></span>
+                                        <span><strong>만료 시각</strong><span th:text="${@uiLabels.dateTime(entry.expiresAt)}">-</span></span>
                                         <span><strong>매칭 수</strong><span th:text="${entry.matchCount != null ? entry.matchCount : 0}">0</span></span>
                                     </div>
                                 </article>

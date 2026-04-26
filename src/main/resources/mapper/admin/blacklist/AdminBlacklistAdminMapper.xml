@@ -119,6 +119,77 @@
             blacklist.expires_at
     </select>
 
+    <select id="findActiveByMobilePhoneHash" resultMap="blacklistEntryResultMap">
+        SELECT
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at,
+            COUNT(match_log.id) AS match_count
+        FROM admin_blacklist blacklist
+        LEFT JOIN admin_blacklist_match_log match_log ON match_log.blacklist_id = blacklist.id
+        WHERE blacklist.active_yn = 'Y'
+          AND (blacklist.expires_at IS NULL OR blacklist.expires_at > CURRENT_TIMESTAMP)
+          AND blacklist.black_mobile_phone_hash = #{mobilePhoneHash}
+        GROUP BY
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at
+        ORDER BY blacklist.id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findActiveByNameAndBirthDate" resultMap="blacklistEntryResultMap">
+        SELECT
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at,
+            COUNT(match_log.id) AS match_count
+        FROM admin_blacklist blacklist
+        LEFT JOIN admin_blacklist_match_log match_log ON match_log.blacklist_id = blacklist.id
+        WHERE blacklist.active_yn = 'Y'
+          AND (blacklist.expires_at IS NULL OR blacklist.expires_at > CURRENT_TIMESTAMP)
+          AND blacklist.black_name = #{blackName}
+          AND blacklist.black_birth_date = #{blackBirthDate}
+        GROUP BY
+            blacklist.id,
+            blacklist.black_name,
+            blacklist.black_mobile_phone_hash,
+            blacklist.black_birth_date,
+            blacklist.black_reason,
+            blacklist.black_mode,
+            blacklist.active_yn,
+            blacklist.created_by,
+            blacklist.created_at,
+            blacklist.updated_at,
+            blacklist.expires_at
+        ORDER BY blacklist.id DESC
+        LIMIT 1
+    </select>
+
     <insert id="insert" parameterType="com.researchi.admin.blacklist.domain.BlacklistEntry" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO admin_blacklist (
             black_name,

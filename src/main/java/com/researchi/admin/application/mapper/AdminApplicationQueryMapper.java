@@ -19,4 +19,10 @@ public interface AdminApplicationQueryMapper {
     List<ApplicationAnswerItem> findAnswersByApplicationId(@Param("applicationId") Long applicationId);
 
     int updateStatus(@Param("id") Long id, @Param("applicationStatus") String applicationStatus);
+
+    int updateBlacklistState(
+            @Param("id") Long id,
+            @Param("applicationStatus") String applicationStatus,
+            @Param("blackModeApplied") String blackModeApplied
+    );
 }

@@ -83,6 +83,36 @@ body.public-body {
     line-height: 1.6;
 }
 
+.public-period {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.public-period__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 196, 113, 0.18);
+    border-radius: 999px;
+    background: rgba(0, 196, 113, 0.08);
+    color: #d5e0e4;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.public-period__label {
+    color: var(--public-green);
+    font-weight: 800;
+}
+
+.public-period__value {
+    font-weight: 600;
+}
+
 .public-card {
     margin-bottom: 14px;
     padding: 22px 22px 20px;

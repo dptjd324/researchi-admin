@@ -3,6 +3,7 @@ package com.researchi.admin.application.web;
 import com.researchi.admin.application.domain.ApplicationDetail;
 import com.researchi.admin.application.service.ApplicationService;
 import com.researchi.admin.auth.service.AdminPrincipal;
+import com.researchi.admin.blacklist.service.BlacklistService;
 import com.researchi.admin.common.web.PaginationSupport;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
@@ -22,10 +23,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class ApplicationController {
 
     private final ApplicationService applicationService;
+    private final BlacklistService blacklistService;
     private final JobService jobService;
 
-    public ApplicationController(ApplicationService applicationService, JobService jobService) {
+    public ApplicationController(
+            ApplicationService applicationService,
+            BlacklistService blacklistService,
+            JobService jobService
+    ) {
         this.applicationService = applicationService;
+        this.blacklistService = blacklistService;
         this.jobService = jobService;
     }
 
@@ -83,7 +90,26 @@ public class ApplicationController {
             HttpServletRequest request
     ) {
         applicationService.updateStatus(id, applicationStatus, principal, request);
-        return "redirect:" + sanitizeReturnTo(returnTo, id);
+        return "redirect:" + sanitizeReturnTo(returnTo, id, "statusUpdated");
+    }
+
+    @PostMapping("/applications/{id}/blacklist")
+    public String registerBlacklist(
+            @PathVariable Long id,
+            @RequestParam(name = "returnTo", required = false) String returnTo,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        String flag = "blacklisted";
+        try {
+            Long blacklistId = blacklistService.registerApplication(id, principal, request);
+            if (blacklistId == null) {
+                flag = "alreadyBlacklisted";
+            }
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            flag = "blacklistFailed";
+        }
+        return "redirect:" + sanitizeReturnTo(returnTo, id, flag);
     }
 
     private void populateListModel(
@@ -123,12 +149,12 @@ public class ApplicationController {
                 : request.getRequestURI() + "?" + queryString;
     }
 
-    private String sanitizeReturnTo(String returnTo, Long applicationId) {
+    private String sanitizeReturnTo(String returnTo, Long applicationId, String flag) {
         if (returnTo == null || returnTo.isBlank() || !returnTo.startsWith("/") || returnTo.contains("://")) {
-            return "/applications/" + applicationId + "?statusUpdated";
+            return "/applications/" + applicationId + "?" + flag;
         }
         return returnTo.contains("?")
-                ? returnTo + "&statusUpdated"
-                : returnTo + "?statusUpdated";
+                ? returnTo + "&" + flag
+                : returnTo + "?" + flag;
     }
 }

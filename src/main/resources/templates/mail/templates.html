@@ -75,7 +75,7 @@
                             </div>
                             <div class="job-meta-grid">
                                 <span><strong>상태</strong><span th:text="${template.activeYn == 'Y' ? '사용' : '미사용'}">사용</span></span>
-                                <span><strong>수정 시각</strong><span th:text="${template.updatedAt}">2026-04-16T12:00</span></span>
+                                <span><strong>수정 시각</strong><span th:text="${@uiLabels.dateTime(template.updatedAt)}">2026-04-16 - 12:00</span></span>
                             </div>
                             <div class="note" th:text="${#strings.abbreviate(template.mailBody, 300)}">본문 미리보기</div>
                         </article>

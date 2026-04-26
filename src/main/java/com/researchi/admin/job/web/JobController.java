@@ -214,6 +214,7 @@ public class JobController {
         model.addAttribute("documentSrl", documentSrl);
         model.addAttribute("recruitStatuses", List.of("RECRUITING", "WAITING", "CLOSED"));
         model.addAttribute("applicationFormNoticeItems", ApplicationFormNoticeParser.parseItems(form.getApplicationFormNotice()));
+        model.addAttribute("applicationFormNoticeDetails", ApplicationFormNoticeParser.parseDetails(form.getApplicationFormNotice()));
         if (documentSrl != null) {
             populatePublicApplyModel(model, documentSrl, request);
         }

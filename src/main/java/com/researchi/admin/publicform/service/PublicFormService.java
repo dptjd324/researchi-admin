@@ -8,6 +8,9 @@ import com.researchi.admin.form.service.FormFieldService;
 import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.job.support.ApplicationFormNoticeItem;
+import com.researchi.admin.job.support.ApplicationFormNoticeParser;
+import com.researchi.admin.job.support.ApplicationFormNoticeOption;
 import com.researchi.admin.keyword.service.KeywordExtractionService;
 import com.researchi.admin.publicform.domain.AdminApplicationDuplicateLog;
 import com.researchi.admin.publicform.domain.AdminBlacklist;
@@ -146,7 +149,7 @@ public class PublicFormService {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
         Map<Long, String> dynamicFieldErrors = new LinkedHashMap<>();
         validateBusinessRules(form, request.getSession(), fieldErrors);
-        List<String> additionalItems = additionalItems(documentSrl);
+        List<ApplicationFormNoticeItem> additionalItems = additionalItems(documentSrl);
         List<String> normalizedExtraAnswers = validateAdditionalAnswers(additionalItems, form.getExtraAnswers(), fieldErrors);
 
         String normalizedMobile = protectionService.normalizePhone(form.getMobilePhone());
@@ -186,7 +189,7 @@ public class PublicFormService {
         AdminJobApplication application = toApplication(
                 documentSrl,
                 form,
-                additionalItems,
+                additionalItems.stream().map(ApplicationFormNoticeItem::label).toList(),
                 normalizedExtraAnswers,
                 normalizedMobile,
                 normalizedTel,
@@ -199,7 +202,7 @@ public class PublicFormService {
         adminApplicationDuplicateLogMapper.insert(duplicateLog(documentSrl, applicantName, genderCode, birthDate, mobilePhoneHash, false, application.getId()));
 
         saveAnswers(application.getId(), normalizedDynamicValues);
-        saveExtraAnswers(application.getId(), additionalItems, normalizedExtraAnswers);
+        saveExtraAnswers(application.getId(), additionalItems.stream().map(ApplicationFormNoticeItem::label).toList(), normalizedExtraAnswers);
         saveConsents(application.getId(), form, clientIp(request));
         saveBlacklistMatches(application.getId(), blacklistMatches);
         keywordExtractionService.syncApplicationKeywords(application.getId());
@@ -210,13 +213,13 @@ public class PublicFormService {
         );
     }
 
-    private List<String> additionalItems(Long documentSrl) {
+    private List<ApplicationFormNoticeItem> additionalItems(Long documentSrl) {
         JobDetail jobDetail = jobService.getJob(documentSrl);
         AdminJobMeta meta = jobDetail.getMeta();
         if (meta == null || meta.getApplicationFormNotice() == null || meta.getApplicationFormNotice().isBlank()) {
             return List.of();
         }
-        return com.researchi.admin.job.support.ApplicationFormNoticeParser.parseItems(meta.getApplicationFormNotice());
+        return ApplicationFormNoticeParser.parseDetails(meta.getApplicationFormNotice());
     }
 
     private void validateBusinessRules(
@@ -237,9 +240,6 @@ public class PublicFormService {
             if (form.getBirthDate().isBefore(LocalDate.of(1900, 1, 1))) {
                 fieldErrors.put("birthDate", "생년월일이 너무 이릅니다.");
             }
-        }
-        if (Boolean.TRUE.equals(form.getNotifyKeywordYn()) && !Boolean.TRUE.equals(form.getNotifyEmailYn()) && !Boolean.TRUE.equals(form.getNotifySmsYn())) {
-            fieldErrors.put("notifyKeywordYn", "키워드 알림을 사용하려면 알림 채널을 하나 이상 선택해 주세요.");
         }
     }
 
@@ -339,7 +339,7 @@ public class PublicFormService {
         application.setEmailAddressMasked(protectionService.maskEmail(normalizedEmail));
         application.setNotifyEmailYn(toYn(form.getNotifyEmailYn()));
         application.setNotifySmsYn(toYn(form.getNotifySmsYn()));
-        application.setNotifyKeywordYn(toYn(form.getNotifyKeywordYn()));
+        application.setNotifyKeywordYn(toYn(hasRecommendationChannel(form)));
         application.setApplicationStatus(effectiveBlacklist == null ? "RECEIVED" : BlacklistModePolicy.applicationStatus(effectiveBlacklist.getBlackMode()));
         application.setIsNewApplicant(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(mobilePhoneHash) == 0 ? "Y" : "N");
         application.setIsBlacklisted(effectiveBlacklist == null ? "N" : "Y");
@@ -350,7 +350,7 @@ public class PublicFormService {
     }
 
     private List<String> validateAdditionalAnswers(
-            List<String> additionalItems,
+            List<ApplicationFormNoticeItem> additionalItems,
             List<String> extraAnswers,
             Map<String, String> fieldErrors
     ) {
@@ -359,15 +359,82 @@ public class PublicFormService {
         }
         List<String> normalizedAnswers = new ArrayList<>();
         for (int index = 0; index < additionalItems.size(); index++) {
+            ApplicationFormNoticeItem item = additionalItems.get(index);
             String value = extraAnswers != null && extraAnswers.size() > index ? trimToNull(extraAnswers.get(index)) : null;
             if (value == null) {
                 fieldErrors.put("extraAnswers[" + index + "]", "추가기재사항 답변을 입력해주세요.");
                 normalizedAnswers.add("");
                 continue;
             }
-            normalizedAnswers.add(value);
+            if (!isValidAdditionalAnswer(item, value)) {
+                fieldErrors.put("extraAnswers[" + index + "]", additionalAnswerErrorMessage(item));
+            }
+            normalizedAnswers.add(displayAdditionalAnswer(item, value));
         }
         return List.copyOf(normalizedAnswers);
+    }
+
+    private String displayAdditionalAnswer(ApplicationFormNoticeItem item, String value) {
+        return switch (item.type()) {
+            case "RADIO", "SELECT" -> item.options().stream()
+                    .filter(option -> option.value().equals(value))
+                    .map(ApplicationFormNoticeOption::label)
+                    .findFirst()
+                    .orElse(value);
+            case "CHECKBOX" -> splitMultiValue(value).stream()
+                    .map(selectedValue -> item.options().stream()
+                            .filter(option -> option.value().equals(selectedValue))
+                            .map(ApplicationFormNoticeOption::label)
+                            .findFirst()
+                            .orElse(selectedValue))
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse(value);
+            default -> value;
+        };
+    }
+
+    private boolean isValidAdditionalAnswer(ApplicationFormNoticeItem item, String value) {
+        return switch (item.type()) {
+            case "NUMBER" -> value.matches("-?\\d+(\\.\\d+)?");
+            case "DATE" -> {
+                try {
+                    LocalDate.parse(value);
+                    yield true;
+                } catch (RuntimeException ex) {
+                    yield false;
+                }
+            }
+            case "RADIO", "SELECT" -> item.options().stream().anyMatch(option -> option.value().equals(value));
+            case "CHECKBOX" -> {
+                List<String> selected = splitMultiValue(value);
+                yield !selected.isEmpty() && selected.stream().allMatch(selectedValue -> isAllowedAdditionalOption(item.options(), selectedValue));
+            }
+            default -> true;
+        };
+    }
+
+    private String additionalAnswerErrorMessage(ApplicationFormNoticeItem item) {
+        return switch (item.type()) {
+            case "NUMBER" -> "올바른 숫자를 입력해 주세요.";
+            case "DATE" -> "올바른 날짜를 입력해 주세요.";
+            case "RADIO", "SELECT" -> "제공된 옵션 중 하나를 선택해 주세요.";
+            case "CHECKBOX" -> "제공된 옵션만 선택해 주세요.";
+            default -> "추가기재사항 답변을 입력해주세요.";
+        };
+    }
+
+    private boolean isAllowedAdditionalOption(List<ApplicationFormNoticeOption> options, String value) {
+        return options.stream().anyMatch(option -> option.value().equals(value));
+    }
+
+    private List<String> splitMultiValue(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(current -> !current.isBlank())
+                .toList();
     }
 
     private String buildExtraCommentSummary(List<String> additionalItems, List<String> normalizedExtraAnswers) {
@@ -532,6 +599,10 @@ public class PublicFormService {
 
     private String toYn(Boolean value) {
         return Boolean.TRUE.equals(value) ? "Y" : "N";
+    }
+
+    private boolean hasRecommendationChannel(PublicApplicationForm form) {
+        return Boolean.TRUE.equals(form.getNotifyEmailYn()) || Boolean.TRUE.equals(form.getNotifySmsYn());
     }
 
     private String clientIp(HttpServletRequest request) {

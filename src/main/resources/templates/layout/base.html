@@ -47,22 +47,22 @@
                 <div class="admin-status-card">
                     <span class="admin-status-card__label">&#xC561;&#xC158; &#xB85C;&#xADF8;</span>
                     <strong th:text="${statusBarSummary.actionCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestActionAt != null ? statusBarSummary.latestActionAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestActionAt != null ? @uiLabels.dateTime(statusBarSummary.latestActionAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
                 </div>
                 <div class="admin-status-card">
                     <span class="admin-status-card__label">&#xBA54;&#xC77C; &#xB85C;&#xADF8;</span>
                     <strong th:text="${statusBarSummary.mailCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestMailAt != null ? statusBarSummary.latestMailAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestMailAt != null ? @uiLabels.dateTime(statusBarSummary.latestMailAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
                 </div>
                 <div class="admin-status-card">
                     <span class="admin-status-card__label">&#xAC80;&#xC0C9; &#xB85C;&#xADF8;</span>
                     <strong th:text="${statusBarSummary.searchCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestSearchAt != null ? statusBarSummary.latestSearchAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestSearchAt != null ? @uiLabels.dateTime(statusBarSummary.latestSearchAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
                 </div>
                 <div class="admin-status-card">
                     <span class="admin-status-card__label">&#xC54C;&#xB9BC; &#xB85C;&#xADF8;</span>
                     <strong th:text="${statusBarSummary.notificationCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestNotificationAt != null ? statusBarSummary.latestNotificationAt : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestNotificationAt != null ? @uiLabels.dateTime(statusBarSummary.latestNotificationAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
                 </div>
             </div>
         </div>

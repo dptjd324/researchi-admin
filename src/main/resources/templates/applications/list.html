@@ -23,6 +23,9 @@
             </div>
 
             <div th:if="${param.statusUpdated}" class="notice success">지원서 상태를 변경했습니다.</div>
+            <div th:if="${param.blacklisted}" class="notice success">지원자를 블랙리스트로 등록했습니다.</div>
+            <div th:if="${param.alreadyBlacklisted}" class="notice success">이미 블랙리스트로 등록된 지원자입니다.</div>
+            <div th:if="${param.blacklistFailed}" class="notice error">블랙리스트 등록에 실패했습니다. 지원자 정보를 확인해 주세요.</div>
 
             <div class="list-toolbar">
                 <form method="get" th:action="${selectedDocumentSrl != null ? '/jobs/' + selectedDocumentSrl + '/applications' : '/applications'}" class="search-form">
@@ -62,6 +65,12 @@
                         </div>
                         <div class="actions">
                             <a th:href="@{/applications/{id}(id=${applicationItem.id})}" class="secondary-link">상세 보기</a>
+                            <form th:if="${applicationItem.isBlacklisted != 'Y'}" th:action="@{/applications/{id}/blacklist(id=${applicationItem.id})}" method="post">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                <input type="hidden" name="returnTo" th:value="${returnTo}">
+                                <button type="submit" class="danger-button">블랙리스트 등록</button>
+                            </form>
+                            <span th:if="${applicationItem.isBlacklisted == 'Y'}" class="status-chip status-chip--danger">블랙리스트 등록됨</span>
                         </div>
                     </div>
 

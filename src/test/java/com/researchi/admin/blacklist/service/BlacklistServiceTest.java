@@ -1,5 +1,7 @@
 package com.researchi.admin.blacklist.service;
 
+import com.researchi.admin.application.domain.ApplicationRecord;
+import com.researchi.admin.application.mapper.AdminApplicationQueryMapper;
 import com.researchi.admin.auth.service.AdminActionLogService;
 import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.blacklist.domain.BlacklistEntry;
@@ -34,6 +36,9 @@ class BlacklistServiceTest {
     private AdminBlacklistAdminMapper adminBlacklistAdminMapper;
 
     @Mock
+    private AdminApplicationQueryMapper adminApplicationQueryMapper;
+
+    @Mock
     private AdminActionLogService adminActionLogService;
 
     private BlacklistService blacklistService;
@@ -44,6 +49,7 @@ class BlacklistServiceTest {
         properties.setEncryptionKey("test-encryption-key");
         blacklistService = new BlacklistService(
                 adminBlacklistAdminMapper,
+                adminApplicationQueryMapper,
                 adminActionLogService,
                 new PublicFormProtectionService(properties)
         );
@@ -119,7 +125,41 @@ class BlacklistServiceTest {
         assertThat(captor.getValue().getBlackName()).isEqualTo("Updated Kim");
         assertThat(captor.getValue().getBlackMode()).isEqualTo(BlacklistModePolicy.MANUAL_REVIEW);
         assertThat(captor.getValue().getBlackMobilePhoneHash()).isEqualTo("existing-hash");
-        verify(adminActionLogService).log(eq(1L), eq("BLACKLIST_UPDATE"), eq("BLACKLIST"), eq("21"), eq("블랙리스트 수정: 수동 검토"), any());
+        verify(adminActionLogService).log(eq(1L), eq("BLACKLIST_UPDATE"), eq("BLACKLIST"), eq("21"), eq("블랙리스트 수정: 관리자 검토"), any());
+    }
+
+    @Test
+    void registerApplicationCreatesBlacklistAndMarksApplicationBlocked() {
+        PublicFormProperties properties = new PublicFormProperties();
+        properties.setEncryptionKey("test-encryption-key");
+        PublicFormProtectionService protectionService = new PublicFormProtectionService(properties);
+        String encryptedPhone = protectionService.encrypt("010-1234-5678");
+        ApplicationRecord application = new ApplicationRecord();
+        application.setId(90L);
+        application.setApplicantName("Kim");
+        application.setBirthDate(LocalDate.of(1990, 5, 1));
+        application.setMobilePhoneEnc(encryptedPhone);
+        application.setIsBlacklisted("N");
+        when(adminApplicationQueryMapper.findById(90L)).thenReturn(application);
+        when(adminApplicationQueryMapper.updateBlacklistState(90L, "BLOCKED", BlacklistModePolicy.PERMANENT_BLOCK)).thenReturn(1);
+        doAnswer(invocation -> {
+            BlacklistEntry entry = invocation.getArgument(0);
+            entry.setId(91L);
+            return null;
+        }).when(adminBlacklistAdminMapper).insert(any(BlacklistEntry.class));
+
+        Long blacklistId = blacklistService.registerApplication(
+                90L,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        assertThat(blacklistId).isEqualTo(91L);
+        verify(adminApplicationQueryMapper).updateBlacklistState(90L, "BLOCKED", BlacklistModePolicy.PERMANENT_BLOCK);
+        ArgumentCaptor<BlacklistEntry> captor = ArgumentCaptor.forClass(BlacklistEntry.class);
+        verify(adminBlacklistAdminMapper).insert(captor.capture());
+        assertThat(captor.getValue().getBlackMode()).isEqualTo(BlacklistModePolicy.PERMANENT_BLOCK);
+        assertThat(captor.getValue().getBlackMobilePhoneHash()).hasSize(64);
     }
 
     @Test

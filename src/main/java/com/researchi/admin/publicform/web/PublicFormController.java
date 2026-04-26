@@ -144,8 +144,8 @@ public class PublicFormController {
             Map<Long, String> dynamicErrors,
             CsrfToken csrfToken
     ) {
-        List<String> applicationFormNoticeItems =
-                page.jobDetail().getMeta() == null ? List.of() : ApplicationFormNoticeParser.parseItems(page.jobDetail().getMeta().getApplicationFormNotice());
+        String applicationFormNotice = page.jobDetail().getMeta() == null ? null : page.jobDetail().getMeta().getApplicationFormNotice();
+        List<String> applicationFormNoticeItems = ApplicationFormNoticeParser.parseItems(applicationFormNotice);
         ensureExtraAnswersSize(form, applicationFormNoticeItems);
 
         model.addAttribute("pageTitle", "리서치아일랜드 지원서");
@@ -155,10 +155,12 @@ public class PublicFormController {
         model.addAttribute("dynamicFields", page.fields());
         model.addAttribute("dynamicValues", new LinkedHashMap<>(dynamicValues));
         model.addAttribute("dynamicErrors", new LinkedHashMap<>(dynamicErrors));
-        model.addAttribute("publicClientEmail", page.jobDetail().getMeta() != null ? page.jobDetail().getMeta().getClientEmail() : null);
         model.addAttribute("publicRewardText", page.jobDetail().getMeta() != null ? page.jobDetail().getMeta().getRewardText() : null);
+        model.addAttribute("publicStartText", buildStartText(page));
+        model.addAttribute("publicDeadlineText", buildDeadlineText(page));
         model.addAttribute("publicScheduleText", buildScheduleText(page));
         model.addAttribute("applicationFormNoticeItems", applicationFormNoticeItems);
+        model.addAttribute("applicationFormNoticeDetails", ApplicationFormNoticeParser.parseDetails(applicationFormNotice));
         model.addAttribute("captchaEnabled", page.captchaEnabled());
         model.addAttribute("captchaQuestion", page.captchaQuestion());
         if (csrfToken != null) {
@@ -209,20 +211,37 @@ public class PublicFormController {
     }
 
     private String buildScheduleText(PublicFormPage page) {
+        String start = buildStartText(page);
+        String deadline = buildDeadlineText(page);
+        if (start == null && deadline == null) {
+            return null;
+        }
+        if (start == null) {
+            return "마감 " + deadline;
+        }
+        if (deadline == null) {
+            return "시작 " + start + " · 마감일 미설정";
+        }
+        return "시작 " + start + " · 마감 " + deadline;
+    }
+
+    private String buildStartText(PublicFormPage page) {
         if (page == null || page.jobDetail() == null) {
             return null;
         }
-        String start = formatXeDateTime(page.jobDetail().getDocument().getRegdate());
+        return formatXeDateTime(page.jobDetail().getDocument().getRegdate());
+    }
+
+    private String buildDeadlineText(PublicFormPage page) {
+        if (page == null || page.jobDetail() == null || page.jobDetail().getMeta() == null) {
+            return null;
+        }
         if (page.jobDetail().getMeta() == null || page.jobDetail().getMeta().getCloseDate() == null) {
-            return start;
+            return null;
         }
         LocalDate closeDate = page.jobDetail().getMeta().getCloseDate();
         LocalDateTime closeDateTime = LocalDateTime.of(closeDate, LocalTime.of(23, 59));
-        String end = closeDateTime.format(DISPLAY_TIMESTAMP);
-        if (start == null) {
-            return end;
-        }
-        return start + " ~ " + end;
+        return closeDateTime.format(DISPLAY_TIMESTAMP);
     }
 
     private String formatXeDateTime(String rawValue) {

@@ -7,6 +7,8 @@ import com.researchi.admin.form.service.FormFieldService;
 import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.job.support.ApplicationFormNoticeOption;
+import com.researchi.admin.job.support.ApplicationFormNoticeParser;
 import com.researchi.admin.keyword.service.KeywordExtractionService;
 import com.researchi.admin.publicform.config.PublicFormProperties;
 import com.researchi.admin.publicform.domain.AdminApplicationDuplicateLog;
@@ -122,6 +124,30 @@ class PublicFormServiceTest {
     }
 
     @Test
+    void submitEnablesRecommendationWhenNotificationChannelIsSelected() {
+        when(jobService.getJob(11L)).thenReturn(jobDetail(11L));
+        when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(any())).thenReturn(0);
+        when(adminBlacklistMapper.findActiveMatches(any(), any(), any())).thenReturn(List.of());
+        doAnswer(invocation -> {
+            AdminJobApplication application = invocation.getArgument(0);
+            application.setId(87L);
+            return null;
+        }).when(adminJobApplicationMapper).insert(any(AdminJobApplication.class));
+        PublicApplicationForm form = baseForm();
+        form.setNotifyEmailYn(true);
+        form.setEmailAddress("applicant@example.com");
+
+        publicFormService.submit(11L, form, Map.of(41L, List.of("weekday")), request());
+
+        ArgumentCaptor<AdminJobApplication> captor = ArgumentCaptor.forClass(AdminJobApplication.class);
+        verify(adminJobApplicationMapper).insert(captor.capture());
+        assertThat(captor.getValue().getNotifyEmailYn()).isEqualTo("Y");
+        assertThat(captor.getValue().getNotifyKeywordYn()).isEqualTo("Y");
+    }
+
+    @Test
     void submitRequiresEachAdditionalAnswer() {
         when(jobService.getJob(11L)).thenReturn(jobDetail(11L));
         when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
@@ -130,6 +156,30 @@ class PublicFormServiceTest {
 
         assertThatThrownBy(() -> publicFormService.submit(11L, form, Map.of(41L, List.of("weekday")), request()))
                 .isInstanceOf(PublicFormValidationException.class);
+    }
+
+    @Test
+    void submitValidatesTypedAdditionalAnswersAndStoresDisplayLabels() {
+        when(jobService.getJob(11L)).thenReturn(typedJobDetail(11L));
+        when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(any())).thenReturn(0);
+        when(adminBlacklistMapper.findActiveMatches(any(), any(), any())).thenReturn(List.of());
+        doAnswer(invocation -> {
+            AdminJobApplication application = invocation.getArgument(0);
+            application.setId(87L);
+            return null;
+        }).when(adminJobApplicationMapper).insert(any(AdminJobApplication.class));
+        PublicApplicationForm form = baseForm();
+        form.setExtraAnswers(List.of("평일", "뷰티,식품", "7", LocalDate.now().toString()));
+
+        publicFormService.submit(11L, form, Map.of(41L, List.of("weekday")), request());
+
+        ArgumentCaptor<AdminJobApplication> captor = ArgumentCaptor.forClass(AdminJobApplication.class);
+        verify(adminJobApplicationMapper).insert(captor.capture());
+        assertThat(captor.getValue().getExtraComment()).contains("참석 가능 시간: 평일");
+        assertThat(captor.getValue().getExtraComment()).contains("관심 분야: 뷰티, 식품");
+        assertThat(captor.getValue().getExtraComment()).contains("구매 횟수: 7");
     }
 
     @Test
@@ -258,6 +308,31 @@ class PublicFormServiceTest {
         meta.setApplicationFormNotice("결혼여부\n자녀유무");
         meta.setCloseDate(LocalDate.now().plusDays(5));
         return new JobDetail(document, meta);
+    }
+
+    private JobDetail typedJobDetail(Long documentSrl) {
+        JobDetail detail = jobDetail(documentSrl);
+        detail.getMeta().setApplicationFormNotice(String.join("\n",
+                ApplicationFormNoticeParser.serializeItem(
+                        "참석 가능 시간",
+                        "SELECT",
+                        List.of(
+                                ApplicationFormNoticeOption.fromAdminText("평일"),
+                                ApplicationFormNoticeOption.fromAdminText("주말")
+                        )
+                ),
+                ApplicationFormNoticeParser.serializeItem(
+                        "관심 분야",
+                        "CHECKBOX",
+                        List.of(
+                                ApplicationFormNoticeOption.fromAdminText("뷰티"),
+                                ApplicationFormNoticeOption.fromAdminText("식품")
+                        )
+                ),
+                ApplicationFormNoticeParser.serializeItem("구매 횟수", "NUMBER", List.of()),
+                ApplicationFormNoticeParser.serializeItem("참석 가능일", "DATE", List.of())
+        ));
+        return detail;
     }
 
     private FormFieldDetail selectField() {

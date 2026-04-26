@@ -206,7 +206,7 @@ public class BlacklistExportService {
         return switch (value.trim().toUpperCase()) {
             case "PERMANENT_BLOCK" -> "영구 차단";
             case "TEMPORARY_BLOCK" -> "기간 차단";
-            case "MANUAL_REVIEW" -> "수동 검토";
+            case "MANUAL_REVIEW" -> "관리자 검토";
             default -> value;
         };
     }

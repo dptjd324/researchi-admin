@@ -19,6 +19,7 @@ public class ApplicationRecord {
     private String ageText;
     private String jobText;
     private String organizationText;
+    private String mobilePhoneEnc;
     private String mobilePhoneMasked;
     private String telPhoneMasked;
     private String regionText;
