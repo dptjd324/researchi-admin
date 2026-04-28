@@ -10,7 +10,7 @@
 ## Recommended Sizing
 - AWS Lightsail 2GB or 4GB
 - Split the database later if traffic grows
-
+ 
 ## Environment Variables
 - `ADMIN_DB_URL`
 - `ADMIN_DB_USERNAME`

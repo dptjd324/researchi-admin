@@ -14,22 +14,30 @@
     <header class="admin-header border-bottom" th:if="${hideNavigation == null || !hideNavigation}">
         <div class="container-fluid admin-container">
             <nav class="admin-navbar" aria-label="&#xAD00;&#xB9AC;&#xC790; &#xC0C1;&#xB2E8; &#xBA54;&#xB274;">
-                <div class="admin-header__hero" th:if="${hidePageHeader == null || !hidePageHeader}">
-                    <div class="admin-header__title">
-                        <div class="admin-header__eyebrow">&#82;&#69;&#83;&#69;&#65;&#82;&#67;&#72;&#73; &#xC6B4;&#xC601; &#xAD00;&#xB9AC;</div>
-                        <h1 class="admin-page-title h4 mb-1" th:text="${title}">Researchi Admin</h1>
-                        <p class="admin-page-description mb-0" th:text="${pageDescription}">&#xACF5;&#xACE0;, &#xC9C0;&#xC6D0;&#xC11C;, &#xBA54;&#xC77C;, &#xB85C;&#xADF8;, &#xAE30;&#xAC04; &#xAC80;&#xC0C9;&#xC744; &#xD55C; &#xD654;&#xBA74; &#xC548;&#xC5D0;&#xC11C; &#xAD00;&#xB9AC;&#xD569;&#xB2C8;&#xB2E4;.</p>
+                <div class="admin-header__top">
+                    <div class="admin-header__hero" th:if="${hidePageHeader == null || !hidePageHeader}">
+                        <div class="admin-header__title">
+                            <div class="admin-header__eyebrow">RESEARCHI 운영 관리</div>
+                            <h1 class="admin-page-title h4 mb-1" th:text="${title}">Researchi Admin</h1>
+                            <p class="admin-page-description mb-0" th:text="${pageDescription}">공고, 지원서, 메일, 로그, 기간 검색을 한 화면 안에서 관리합니다.</p>
+                        </div>
+                    </div>
+                    <div class="admin-account-actions">
+                        <a class="admin-account-actions__link" th:href="@{/account/password}">비밀번호 변경</a>
+                        <form action="/logout" method="post" class="admin-account-actions__form">
+                            <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <button type="submit" class="admin-account-actions__logout">로그아웃</button>
+                        </form>
                     </div>
                 </div>
                 <ul class="navbar-nav mb-0 admin-nav-list">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}">&#xB300;&#xC2DC;&#xBCF4;&#xB4DC;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/jobs}">&#xACF5;&#xACE0;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/clients}">&#xAC70;&#xB798;&#xCC98;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/applications}">&#xC9C0;&#xC6D0;&#xC11C;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/blacklist}">&#xBE14;&#xB799;&#xB9AC;&#xC2A4;&#xD2B8;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/search}">&#xAE30;&#xAC04; &#xAC80;&#xC0C9;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/mail/send/history}">&#xBA54;&#xC77C;</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/logs/actions}">&#xB85C;&#xADF8;</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/jobs}">공고</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/clients}">거래처</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/applications}">지원서</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/blacklist}">블랙리스트</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/search}">기간 검색</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/mail/send/history}">메일</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/logs/actions}">로그</a></li>
                 </ul>
             </nav>
         </div>
