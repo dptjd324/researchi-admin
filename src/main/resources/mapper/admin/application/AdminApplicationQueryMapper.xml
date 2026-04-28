@@ -15,11 +15,14 @@
         <result property="organizationText" column="organization_text"/>
         <result property="mobilePhoneEnc" column="mobile_phone_enc"/>
         <result property="mobilePhoneMasked" column="mobile_phone_masked"/>
+        <result property="telPhoneEnc" column="tel_phone_enc"/>
         <result property="telPhoneMasked" column="tel_phone_masked"/>
         <result property="regionText" column="region_text"/>
+        <result property="addressEnc" column="address_enc"/>
         <result property="addressMasked" column="address_masked"/>
         <result property="extraComment" column="extra_comment"/>
         <result property="priorResearchText" column="prior_research_text"/>
+        <result property="emailAddressEnc" column="email_address_enc"/>
         <result property="emailAddressMasked" column="email_address_masked"/>
         <result property="notifyEmailYn" column="notify_email_yn"/>
         <result property="notifySmsYn" column="notify_sms_yn"/>
@@ -57,11 +60,14 @@
         organization_text,
         mobile_phone_enc,
         mobile_phone_masked,
+        tel_phone_enc,
         tel_phone_masked,
         region_text,
+        address_enc,
         address_masked,
         extra_comment,
         prior_research_text,
+        email_address_enc,
         email_address_masked,
         notify_email_yn,
         notify_sms_yn,

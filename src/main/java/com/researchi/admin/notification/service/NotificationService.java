@@ -80,14 +80,15 @@ public class NotificationService {
                 continue;
             }
             String keywordSummary = trimSummary(target.getMatchedKeyword());
+            String email = decrypt(recipient.getEmailAddressEnc());
+            String targetEmail = blankToFallback(email, recipient.getEmailAddressMasked());
             if (adminNotificationLogMapper.countSuccessfulDuplicate(documentSrl, target.getApplicationId(), "EMAIL", keywordSummary) > 0) {
-                insertLog(documentSrl, target.getApplicationId(), "EMAIL", recipient.getEmailAddressMasked(), keywordSummary, "SKIPPED_DUPLICATE", null);
+                insertLog(documentSrl, target.getApplicationId(), "EMAIL", targetEmail, keywordSummary, "SKIPPED_DUPLICATE", null);
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "EMAIL_SKIPPED_DUPLICATE", null, null);
                 continue;
             }
-            String email = decrypt(recipient.getEmailAddressEnc());
             if (email == null || email.isBlank()) {
-                insertLog(documentSrl, target.getApplicationId(), "EMAIL", recipient.getEmailAddressMasked(), keywordSummary, "FAILED", "이메일 주소를 확인할 수 없습니다.");
+                insertLog(documentSrl, target.getApplicationId(), "EMAIL", targetEmail, keywordSummary, "FAILED", "이메일 주소를 확인할 수 없습니다.");
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "EMAIL_FAILED", null, "이메일 주소를 확인할 수 없습니다.");
                 continue;
             }
@@ -99,7 +100,7 @@ public class NotificationService {
                         notificationTemplate.body()
                 ));
                 LocalDateTime sentAt = LocalDateTime.now();
-                insertLog(documentSrl, target.getApplicationId(), "EMAIL", recipient.getEmailAddressMasked(), keywordSummary, "SENT", null);
+                insertLog(documentSrl, target.getApplicationId(), "EMAIL", targetEmail, keywordSummary, "SENT", null);
                 SecondaryEmailResult secondaryResult = dispatchSecondaryEmailIfEnabled(
                         documentSrl,
                         target,
@@ -117,7 +118,7 @@ public class NotificationService {
                 sentCount++;
             } catch (Exception ex) {
                 String reason = trimFailureReason(ex.getMessage());
-                insertLog(documentSrl, target.getApplicationId(), "EMAIL", recipient.getEmailAddressMasked(), keywordSummary, "FAILED", reason);
+                insertLog(documentSrl, target.getApplicationId(), "EMAIL", targetEmail, keywordSummary, "FAILED", reason);
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "EMAIL_FAILED", null, reason);
             }
         }
@@ -144,14 +145,15 @@ public class NotificationService {
                 continue;
             }
             String keywordSummary = trimSummary(target.getMatchedKeyword());
+            String mobilePhone = decrypt(recipient.getMobilePhoneEnc());
+            String targetMobilePhone = blankToFallback(mobilePhone, recipient.getMobilePhoneMasked());
             if (adminNotificationLogMapper.countSuccessfulDuplicate(documentSrl, target.getApplicationId(), "SMS", keywordSummary) > 0) {
-                insertLog(documentSrl, target.getApplicationId(), "SMS", recipient.getMobilePhoneMasked(), keywordSummary, "SKIPPED_DUPLICATE", null);
+                insertLog(documentSrl, target.getApplicationId(), "SMS", targetMobilePhone, keywordSummary, "SKIPPED_DUPLICATE", null);
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "SMS_SKIPPED_DUPLICATE", null, null);
                 continue;
             }
-            String mobilePhone = decrypt(recipient.getMobilePhoneEnc());
             if (mobilePhone == null || mobilePhone.isBlank()) {
-                insertLog(documentSrl, target.getApplicationId(), "SMS", recipient.getMobilePhoneMasked(), keywordSummary, "FAILED", "휴대전화 번호를 확인할 수 없습니다.");
+                insertLog(documentSrl, target.getApplicationId(), "SMS", targetMobilePhone, keywordSummary, "FAILED", "휴대전화 번호를 확인할 수 없습니다.");
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "SMS_FAILED", null, "휴대전화 번호를 확인할 수 없습니다.");
                 continue;
             }
@@ -161,12 +163,12 @@ public class NotificationService {
                         buildSmsMessage(jobDetail, keywordSummary)
                 ));
                 LocalDateTime sentAt = LocalDateTime.now();
-                insertLog(documentSrl, target.getApplicationId(), "SMS", recipient.getMobilePhoneMasked(), keywordSummary, "SENT", null);
+                insertLog(documentSrl, target.getApplicationId(), "SMS", targetMobilePhone, keywordSummary, "SENT", null);
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "SMS_SENT", sentAt, null);
                 sentCount++;
             } catch (Exception ex) {
                 String reason = trimFailureReason(ex.getMessage());
-                insertLog(documentSrl, target.getApplicationId(), "SMS", recipient.getMobilePhoneMasked(), keywordSummary, "FAILED", reason);
+                insertLog(documentSrl, target.getApplicationId(), "SMS", targetMobilePhone, keywordSummary, "FAILED", reason);
                 adminKeywordMatchTargetMapper.updateNotificationState(target.getId(), "SMS_FAILED", null, reason);
             }
         }
@@ -184,7 +186,7 @@ public class NotificationService {
             Long documentSrl,
             Long applicationId,
             String channelType,
-            String targetAddressMasked,
+            String targetAddress,
             String keywordSummary,
             String sendStatus,
             String failReason
@@ -193,7 +195,7 @@ public class NotificationService {
         log.setDocumentSrl(documentSrl);
         log.setApplicationId(applicationId);
         log.setChannelType(channelType);
-        log.setTargetAddressMasked(targetAddressMasked);
+        log.setTargetAddressMasked(targetAddress);
         log.setKeywordSummary(keywordSummary);
         log.setSendStatus(sendStatus);
         log.setFailReason(failReason);
@@ -212,7 +214,7 @@ public class NotificationService {
             return new SecondaryEmailResult("EMAIL_SENT", null);
         }
         if (adminNotificationLogMapper.countSuccessfulDuplicate(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", keywordSummary) > 0) {
-            insertLog(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", recipient.getEmailAddressMasked(), keywordSummary, "SKIPPED_DUPLICATE", null);
+            insertLog(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", email, keywordSummary, "SKIPPED_DUPLICATE", null);
             return new SecondaryEmailResult("EMAIL_SECONDARY_SKIPPED_DUPLICATE", null);
         }
         try {
@@ -221,11 +223,11 @@ public class NotificationService {
                     notificationProperties.getSecondaryEmailSubject(),
                     buildSecondaryEmailBody(jobDetail, recipient.getApplicantName(), keywordSummary)
             ));
-            insertLog(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", recipient.getEmailAddressMasked(), keywordSummary, "SENT", null);
+            insertLog(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", email, keywordSummary, "SENT", null);
             return new SecondaryEmailResult("EMAIL_SECONDARY_SENT", null);
         } catch (Exception ex) {
             String reason = trimFailureReason(ex.getMessage());
-            insertLog(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", recipient.getEmailAddressMasked(), keywordSummary, "FAILED", reason);
+            insertLog(documentSrl, target.getApplicationId(), "EMAIL_SECONDARY", email, keywordSummary, "FAILED", reason);
             return new SecondaryEmailResult("EMAIL_SECONDARY_FAILED", reason);
         }
     }
@@ -323,6 +325,10 @@ public class NotificationService {
             return null;
         }
         return protectionService.decrypt(value);
+    }
+
+    private String blankToFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     private record SecondaryEmailResult(String notifyStatus, String failReason) {

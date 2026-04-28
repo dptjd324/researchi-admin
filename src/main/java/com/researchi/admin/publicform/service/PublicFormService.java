@@ -328,16 +328,17 @@ public class PublicFormService {
         application.setJobText(trimToNull(form.getJobText()));
         application.setOrganizationText(trimToNull(form.getOrganizationText()));
         application.setMobilePhoneEnc(protectionService.encrypt(normalizedMobile));
-        application.setMobilePhoneMasked(protectionService.maskPhone(normalizedMobile));
+        application.setMobilePhoneMasked(normalizedMobile);
         application.setTelPhoneEnc(protectionService.encrypt(normalizedTel));
-        application.setTelPhoneMasked(protectionService.maskPhone(normalizedTel));
+        application.setTelPhoneMasked(normalizedTel);
         application.setRegionText(trimToNull(form.getRegionText()) != null ? trimToNull(form.getRegionText()) : trimToNull(form.getAddress()));
-        application.setAddressEnc(protectionService.encrypt(trimToNull(form.getAddress())));
-        application.setAddressMasked(protectionService.maskAddress(trimToNull(form.getAddress())));
+        String address = trimToNull(form.getAddress());
+        application.setAddressEnc(protectionService.encrypt(address));
+        application.setAddressMasked(address);
         application.setExtraComment(buildExtraCommentSummary(additionalItems, normalizedExtraAnswers));
         application.setPriorResearchText(trimToNull(form.getPriorResearchText()));
         application.setEmailAddressEnc(protectionService.encrypt(normalizedEmail));
-        application.setEmailAddressMasked(protectionService.maskEmail(normalizedEmail));
+        application.setEmailAddressMasked(normalizedEmail);
         application.setNotifyEmailYn(toYn(form.getNotifyEmailYn()));
         application.setNotifySmsYn(toYn(form.getNotifySmsYn()));
         application.setNotifyKeywordYn(toYn(hasRecommendationChannel(form)));
@@ -607,10 +608,6 @@ public class PublicFormService {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 

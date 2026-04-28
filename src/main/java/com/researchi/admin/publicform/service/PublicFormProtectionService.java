@@ -82,6 +82,7 @@ public class PublicFormProtectionService {
         }
         Instant now = clock.instant();
         Instant threshold = now.minusSeconds(properties.getRateLimitWindowSeconds());
+        cleanupExpiredRateLimitSlots(threshold);
         Deque<Instant> attempts = submissionsByKey.computeIfAbsent(key, ignored -> new ArrayDeque<>());
         synchronized (attempts) {
             while (!attempts.isEmpty() && attempts.peekFirst().isBefore(threshold)) {
@@ -93,6 +94,18 @@ public class PublicFormProtectionService {
             attempts.addLast(now);
             return true;
         }
+    }
+
+    private void cleanupExpiredRateLimitSlots(Instant threshold) {
+        submissionsByKey.entrySet().removeIf(entry -> {
+            Deque<Instant> attempts = entry.getValue();
+            synchronized (attempts) {
+                while (!attempts.isEmpty() && attempts.peekFirst().isBefore(threshold)) {
+                    attempts.removeFirst();
+                }
+                return attempts.isEmpty();
+            }
+        });
     }
 
     public String normalizePhone(String value) {
@@ -189,35 +202,6 @@ public class PublicFormProtectionService {
 
     public String legacyPhoneHash(String value) {
         return sha256(value);
-    }
-
-    public String maskPhone(String value) {
-        if (value == null || value.length() < 7) {
-            return value;
-        }
-        return value.substring(0, 3) + "****" + value.substring(value.length() - 4);
-    }
-
-    public String maskEmail(String value) {
-        if (value == null || value.isBlank() || !value.contains("@")) {
-            return value;
-        }
-        String[] parts = value.split("@", 2);
-        if (parts[0].length() <= 2) {
-            return parts[0].charAt(0) + "***@" + parts[1];
-        }
-        return parts[0].substring(0, 2) + "***@" + parts[1];
-    }
-
-    public String maskAddress(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        String trimmed = value.trim();
-        if (trimmed.length() <= 6) {
-            return trimmed.charAt(0) + "***";
-        }
-        return trimmed.substring(0, 6) + "***";
     }
 
     private SecretKeySpec secretKeySpec() throws Exception {

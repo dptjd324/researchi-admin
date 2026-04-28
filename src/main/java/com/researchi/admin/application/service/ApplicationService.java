@@ -12,6 +12,7 @@ import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.publicform.mapper.AdminJobApplicationExtraAnswerMapper;
+import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,17 +39,20 @@ public class ApplicationService {
     private final JobService jobService;
     private final AdminActionLogService adminActionLogService;
     private final AdminJobApplicationExtraAnswerMapper adminJobApplicationExtraAnswerMapper;
+    private final PublicFormProtectionService protectionService;
 
     public ApplicationService(
             AdminApplicationQueryMapper adminApplicationQueryMapper,
             JobService jobService,
             AdminActionLogService adminActionLogService,
-            AdminJobApplicationExtraAnswerMapper adminJobApplicationExtraAnswerMapper
+            AdminJobApplicationExtraAnswerMapper adminJobApplicationExtraAnswerMapper,
+            PublicFormProtectionService protectionService
     ) {
         this.adminApplicationQueryMapper = adminApplicationQueryMapper;
         this.jobService = jobService;
         this.adminActionLogService = adminActionLogService;
         this.adminJobApplicationExtraAnswerMapper = adminJobApplicationExtraAnswerMapper;
+        this.protectionService = protectionService;
     }
 
     public List<ApplicationRecord> getApplications(Long documentSrl, String keyword) {
@@ -59,6 +63,7 @@ public class ApplicationService {
 
         return applications.stream()
                 .map(application -> enrich(application, jobsByDocumentSrl))
+                .peek(this::populatePersonalInfoDisplay)
                 .filter(application -> matchesKeyword(application, keyword))
                 .sorted(Comparator.comparing(ApplicationRecord::getAppliedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
                 .toList();
@@ -90,6 +95,7 @@ public class ApplicationService {
         JobDetail jobDetail = jobService.getJob(application.getDocumentSrl());
         application.setJobTitle(jobDetail.getDocument().getTitle());
         application.setJobType(jobDetail.getJobType());
+        populatePersonalInfoDisplay(application);
 
         List<ApplicationAnswerItem> answers = adminApplicationQueryMapper.findAnswersByApplicationId(id).stream()
                 .map(this::normalizeAnswer)
@@ -162,14 +168,28 @@ public class ApplicationService {
         return application;
     }
 
+    private void populatePersonalInfoDisplay(ApplicationRecord application) {
+        application.setMobilePhoneDisplay(decryptOrFallback(application.getMobilePhoneEnc(), application.getMobilePhoneMasked()));
+        application.setTelPhoneDisplay(decryptOrFallback(application.getTelPhoneEnc(), application.getTelPhoneMasked()));
+        application.setEmailAddressDisplay(decryptOrFallback(application.getEmailAddressEnc(), application.getEmailAddressMasked()));
+        application.setAddressDisplay(decryptOrFallback(application.getAddressEnc(), application.getAddressMasked()));
+    }
+
+    private String decryptOrFallback(String encryptedValue, String fallback) {
+        if (encryptedValue == null || encryptedValue.isBlank()) {
+            return fallback;
+        }
+        return protectionService.decrypt(encryptedValue);
+    }
+
     private boolean matchesKeyword(ApplicationRecord application, String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return true;
         }
         String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
         return contains(application.getApplicantName(), normalizedKeyword)
-                || contains(application.getMobilePhoneMasked(), normalizedKeyword)
-                || contains(application.getEmailAddressMasked(), normalizedKeyword)
+                || contains(application.getMobilePhoneDisplay(), normalizedKeyword)
+                || contains(application.getEmailAddressDisplay(), normalizedKeyword)
                 || contains(application.getRegionText(), normalizedKeyword)
                 || contains(application.getJobText(), normalizedKeyword)
                 || contains(application.getOrganizationText(), normalizedKeyword)

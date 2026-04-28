@@ -149,8 +149,10 @@ class MailingServiceTest {
         assertThat(targetCaptor.getAllValues()).allSatisfy(target -> {
             assertThat(target.getApplicationId()).isEqualTo(101L);
             assertThat(target.getSendResult()).isEqualTo("SENT");
-            assertThat(target.getTargetEmailMasked()).isNotBlank();
         });
+        assertThat(targetCaptor.getAllValues())
+                .extracting(com.researchi.admin.mailing.domain.AdminMailSendTarget::getTargetEmailMasked)
+                .containsExactly("client@example.com", "client2@example.com");
         verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(101L), eq("SENT"), eq(55L), any());
         verify(adminMailingApplicationMapper, times(1)).updateDeliveryStatus(any(), any(), any(), any());
     }

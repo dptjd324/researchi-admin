@@ -5,7 +5,6 @@
         <section class="panel">
             <div class="dashboard-head">
                 <div>
-                    <p class="eyebrow">Phase 10</p>
                     <h2 class="h3 mb-2">키워드 매칭</h2>
                     <p class="dashboard-copy mb-0">공고와 지원자 키워드를 추출하고 매칭 결과를 검토한 뒤 키워드 알림을 발송합니다.</p>
                 </div>
@@ -110,8 +109,8 @@
                             <span><strong>상태</strong><span th:text="${target.applicationStatus == 'RECEIVED' ? '접수' : target.applicationStatus == 'REVIEWING' ? '검토중' : target.applicationStatus == 'APPROVED' ? '승인' : target.applicationStatus == 'REJECTED' ? '반려' : target.applicationStatus == 'BLOCKED' ? '차단' : target.applicationStatus}">접수</span></span>
                             <span><strong>이메일 수신 동의</strong><span th:text="${target.notifyEmailYn == 'Y' ? '예' : target.notifyEmailYn == 'N' ? '아니오' : '-'}">예</span></span>
                             <span><strong>SMS 수신 동의</strong><span th:text="${target.notifySmsYn == 'Y' ? '예' : target.notifySmsYn == 'N' ? '아니오' : '-'}">아니오</span></span>
-                            <span><strong>이메일</strong><span th:text="${target.emailAddressMasked ?: '-'}">ab***@example.com</span></span>
-                            <span><strong>휴대전화</strong><span th:text="${target.mobilePhoneMasked ?: '-'}">010****1234</span></span>
+                            <span><strong>이메일</strong><span th:text="${target.emailAddressDisplay ?: '-'}">applicant@example.com</span></span>
+                            <span><strong>휴대전화</strong><span th:text="${target.mobilePhoneDisplay ?: '-'}">01012345678</span></span>
                         </div>
                         <div class="note">
                             <strong>매칭 키워드</strong>
@@ -136,7 +135,7 @@
                         </div>
                         <div class="job-meta-grid">
                             <span><strong>상태</strong><span th:text="${log.sendStatus == 'PENDING' ? '대기' : log.sendStatus == 'SCHEDULED' ? '예약' : log.sendStatus == 'RUNNING' ? '실행중' : log.sendStatus == 'SENT' ? '발송완료' : log.sendStatus == 'FAILED' ? '실패' : log.sendStatus == 'CANCELLED' ? '취소' : log.sendStatus}">발송완료</span></span>
-                            <span><strong>대상</strong><span th:text="${log.targetAddressMasked}">ab***@example.com</span></span>
+                            <span><strong>대상</strong><span th:text="${log.targetAddressMasked}">applicant@example.com</span></span>
                         </div>
                         <div class="note">
                             <strong>키워드</strong>

@@ -27,8 +27,7 @@ public class PublicFormConfig {
             throw new IllegalStateException("ENCRYPTION_KEY and PHONE_HASH_KEY must be set to production secrets before running on AWS.");
         }
         Set<String> activeProfiles = Set.of(environment.getActiveProfiles());
-        boolean localProfile = activeProfiles.isEmpty()
-                || activeProfiles.stream().anyMatch(profile -> Set.of("local", "dev", "test").contains(profile));
+        boolean localProfile = activeProfiles.stream().anyMatch(profile -> Set.of("local", "dev", "test").contains(profile));
         if (localProfile) {
             return;
         }

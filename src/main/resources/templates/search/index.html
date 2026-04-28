@@ -94,8 +94,8 @@
                     </div>
                     <div class="job-meta-grid">
                         <span><strong>지원 시각</strong><span th:text="${@uiLabels.dateTime(application.appliedAt)}">-</span></span>
-                        <span><strong>휴대전화</strong><span th:text="${application.mobilePhoneMasked ?: '-'}">-</span></span>
-                        <span><strong>이메일</strong><span th:text="${application.emailAddressMasked ?: '-'}">-</span></span>
+                        <span><strong>휴대전화</strong><span th:text="${application.mobilePhoneDisplay ?: '-'}">-</span></span>
+                        <span><strong>이메일</strong><span th:text="${application.emailAddressDisplay ?: '-'}">-</span></span>
                         <span><strong>지역</strong><span th:text="${application.regionText ?: '-'}">-</span></span>
                     </div>
                 </article>

@@ -194,8 +194,8 @@ public class PeriodSearchService {
             return true;
         }
         return contains(item.getApplicantName(), normalized)
-                || contains(item.getMobilePhoneMasked(), normalized)
-                || contains(item.getEmailAddressMasked(), normalized)
+                || contains(item.getMobilePhoneDisplay(), normalized)
+                || contains(item.getEmailAddressDisplay(), normalized)
                 || contains(item.getRegionText(), normalized)
                 || contains(item.getAgeText(), normalized)
                 || contains(item.getJobText(), normalized)

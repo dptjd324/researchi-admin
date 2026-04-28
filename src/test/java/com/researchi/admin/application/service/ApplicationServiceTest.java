@@ -10,6 +10,7 @@ import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.publicform.mapper.AdminJobApplicationExtraAnswerMapper;
+import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import com.researchi.admin.xe.domain.XeJobDocument;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class ApplicationServiceTest {
 
     @Mock
     private AdminJobApplicationExtraAnswerMapper adminJobApplicationExtraAnswerMapper;
+
+    @Mock
+    private PublicFormProtectionService protectionService;
 
     @InjectMocks
     private ApplicationService applicationService;
@@ -156,6 +160,38 @@ class ApplicationServiceTest {
 
         assertThat(detail.application().getJobTitle()).isEqualTo("Survey Job");
         assertThat(detail.answers()).singleElement().extracting(ApplicationAnswerItem::getDisplayAnswer).isEqualTo("A, B");
+    }
+
+    @Test
+    void getApplicationDetailShowsDecryptedPersonalInfo() {
+        ApplicationRecord application = new ApplicationRecord();
+        application.setId(11L);
+        application.setDocumentSrl(9L);
+        application.setApplicantName("Kim");
+        application.setMobilePhoneEnc("mobile-enc");
+        application.setTelPhoneEnc("tel-enc");
+        application.setEmailAddressEnc("email-enc");
+        application.setAddressEnc("address-enc");
+        application.setMobilePhoneMasked("01012345678");
+        application.setTelPhoneMasked("0212345678");
+        application.setEmailAddressMasked("kim@example.com");
+        application.setAddressMasked("Seoul Gangnam");
+
+        when(adminApplicationQueryMapper.findById(11L)).thenReturn(application);
+        when(adminApplicationQueryMapper.findAnswersByApplicationId(11L)).thenReturn(List.of());
+        when(adminJobApplicationExtraAnswerMapper.findByApplicationId(11L)).thenReturn(List.of());
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L, "Survey Job"));
+        when(protectionService.decrypt("mobile-enc")).thenReturn("01012345678");
+        when(protectionService.decrypt("tel-enc")).thenReturn("0212345678");
+        when(protectionService.decrypt("email-enc")).thenReturn("kim@example.com");
+        when(protectionService.decrypt("address-enc")).thenReturn("Seoul Gangnam");
+
+        ApplicationDetail detail = applicationService.getApplicationDetail(11L);
+
+        assertThat(detail.application().getMobilePhoneDisplay()).isEqualTo("01012345678");
+        assertThat(detail.application().getTelPhoneDisplay()).isEqualTo("0212345678");
+        assertThat(detail.application().getEmailAddressDisplay()).isEqualTo("kim@example.com");
+        assertThat(detail.application().getAddressDisplay()).isEqualTo("Seoul Gangnam");
     }
 
     @Test

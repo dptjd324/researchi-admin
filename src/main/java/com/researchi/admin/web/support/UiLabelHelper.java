@@ -2,14 +2,21 @@ package com.researchi.admin.web.support;
 
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
 @Component("uiLabels")
 public class UiLabelHelper {
 
-    private static final DateTimeFormatter DISPLAY_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd - HH:mm");
+    private static final DateTimeFormatter DISPLAY_DATE_TIME = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
+    private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
+    private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("HH시 mm분");
+    private static final DateTimeFormatter XE_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final DateTimeFormatter DISPLAY_XE_DATE_TIME = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
 
     public String applicationStatus(String value) {
         return switch (normalize(value)) {
@@ -282,6 +289,35 @@ public class UiLabelHelper {
             return "-";
         }
         return value.format(DISPLAY_DATE_TIME);
+    }
+
+    public String date(LocalDate value) {
+        if (value == null) {
+            return "-";
+        }
+        return value.format(DISPLAY_DATE);
+    }
+
+    public String time(LocalTime value) {
+        if (value == null) {
+            return "-";
+        }
+        return value.format(DISPLAY_TIME);
+    }
+
+    public String xeDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String normalized = value.trim();
+        if (!normalized.matches("\\d{14}")) {
+            return normalized;
+        }
+        try {
+            return LocalDateTime.parse(normalized, XE_DATE_TIME).format(DISPLAY_XE_DATE_TIME);
+        } catch (DateTimeParseException ex) {
+            return normalized;
+        }
     }
 
     public String triggerToneClass(String value) {

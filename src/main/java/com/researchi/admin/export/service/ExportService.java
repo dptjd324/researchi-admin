@@ -39,7 +39,8 @@ import java.util.function.Function;
 public class ExportService {
 
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-    private static final DateTimeFormatter EXPORTED_DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter EXPORTED_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
+    private static final DateTimeFormatter EXPORTED_DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
     private static final List<ColumnDefinition> COMMON_COLUMNS = List.of(
             new ColumnDefinition("\uC21C\uBC88", row -> stringValue(row.sequence())),
             new ColumnDefinition("\uC131\uBA85", ExportRow::applicantName),
@@ -208,7 +209,7 @@ public class ExportService {
             for (ExportRow exportRow : context.rows()) {
                 Row row = sheet.createRow(rowIndex++);
                 for (int columnIndex = 0; columnIndex < context.columns().size(); columnIndex++) {
-                    row.createCell(columnIndex).setCellValue(context.columns().get(columnIndex).value(exportRow));
+                    row.createCell(columnIndex).setCellValue(sanitizeSpreadsheetValue(context.columns().get(columnIndex).value(exportRow)));
                 }
             }
             for (int index = 0; index < context.columns().size(); index++) {
@@ -235,7 +236,7 @@ public class ExportService {
             if (index > 0) {
                 builder.append('\t');
             }
-            builder.append(sanitizeTxt(values.get(index)));
+            builder.append(sanitizeSpreadsheetValue(sanitizeTxt(values.get(index))));
         }
         builder.append(System.lineSeparator());
     }
@@ -245,6 +246,17 @@ public class ExportService {
             return "";
         }
         return value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ');
+    }
+
+    private String sanitizeSpreadsheetValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        char first = value.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@') {
+            return "'" + value;
+        }
+        return value;
     }
 
     private void writeLogs(
@@ -327,7 +339,7 @@ public class ExportService {
             return localDateTime.format(EXPORTED_DT);
         }
         if (value instanceof LocalDate localDate) {
-            return localDate.toString();
+            return localDate.format(EXPORTED_DATE);
         }
         return String.valueOf(value);
     }

@@ -14,6 +14,7 @@ import com.researchi.admin.matching.mapper.AdminKeywordMatchJobMapper;
 import com.researchi.admin.matching.mapper.AdminKeywordMatchTargetMapper;
 import com.researchi.admin.notification.domain.AdminNotificationLog;
 import com.researchi.admin.notification.service.NotificationService;
+import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -49,6 +50,8 @@ class MatchingServiceTest {
     private NotificationService notificationService;
     @Mock
     private AdminActionLogService adminActionLogService;
+    @Mock
+    private PublicFormProtectionService protectionService;
 
     @Test
     void runCreatesTargetsOnlyForKeywordMatches() {
@@ -59,7 +62,8 @@ class MatchingServiceTest {
                 applicationService,
                 jobService,
                 notificationService,
-                adminActionLogService
+                adminActionLogService,
+                protectionService
         );
 
         when(keywordExtractionService.syncJobKeywords(9L)).thenReturn(List.of(
@@ -106,7 +110,8 @@ class MatchingServiceTest {
                 applicationService,
                 jobService,
                 notificationService,
-                adminActionLogService
+                adminActionLogService,
+                protectionService
         );
         AdminKeywordMatchJob matchJob = new AdminKeywordMatchJob();
         matchJob.setId(70L);

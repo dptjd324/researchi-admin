@@ -133,6 +133,48 @@ class ExportServiceTest {
     }
 
     @Test
+    void exportEscapesSpreadsheetFormulaValues() throws Exception {
+        exportService = new ExportService(
+                jobService,
+                formFieldService,
+                adminExportQueryMapper,
+                adminExportLogMapper,
+                protectionService(),
+                adminActionLogService
+        );
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+        when(formFieldService.getFields(9L)).thenReturn(List.of(
+                new FormFieldDetail(20L, "formula", "Formula Answer", "TEXT", 1, false, null, null, List.of(), true)
+        ));
+        ExportApplicationSource source = exportApplicationSource();
+        source.setApplicantName("=HYPERLINK(\"http://example.test\")");
+        when(adminExportQueryMapper.findApplicationsByDocumentSrl(9L)).thenReturn(List.of(source));
+        when(adminExportQueryMapper.findAnswersByDocumentSrl(9L)).thenReturn(List.of(
+                answer(101L, 20L, "+SUM(1,1)", null)
+        ));
+
+        ExportPayload txtPayload = exportService.exportTxt(
+                9L,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+        String txtContent = new String(txtPayload.content(), StandardCharsets.UTF_8);
+        assertThat(txtContent).contains("'=HYPERLINK");
+        assertThat(txtContent).contains("'+SUM(1,1)");
+
+        ExportPayload xlsxPayload = exportService.exportXlsx(
+                9L,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxPayload.content()))) {
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue()).startsWith("'=HYPERLINK");
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(24).getStringCellValue()).isEqualTo("'+SUM(1,1)");
+        }
+    }
+
+    @Test
     void exportUsesJobSpecificQuestionDefinitions() {
         exportService = new ExportService(
                 jobService,

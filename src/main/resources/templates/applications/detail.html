@@ -62,12 +62,12 @@
                 </div>
 
                 <div class="panel">
-                    <h3 class="h5 mb-3">마스킹된 개인정보</h3>
+                    <h3 class="h5 mb-3">개인정보</h3>
                     <div class="detail-grid">
-                        <div><strong>휴대전화</strong><span th:text="${detail.application.mobilePhoneMasked ?: '-'}">010****0000</span></div>
-                        <div><strong>전화번호</strong><span th:text="${detail.application.telPhoneMasked ?: '-'}">02****0000</span></div>
-                        <div><strong>이메일</strong><span th:text="${detail.application.emailAddressMasked ?: '-'}">ma***@example.com</span></div>
-                        <div><strong>주소</strong><span th:text="${detail.application.addressMasked ?: '-'}">서울***</span></div>
+                        <div><strong>휴대전화</strong><span th:text="${detail.application.mobilePhoneDisplay ?: '-'}">01012345678</span></div>
+                        <div><strong>전화번호</strong><span th:text="${detail.application.telPhoneDisplay ?: '-'}">0212345678</span></div>
+                        <div><strong>이메일</strong><span th:text="${detail.application.emailAddressDisplay ?: '-'}">mail@example.com</span></div>
+                        <div><strong>주소</strong><span th:text="${detail.application.addressDisplay ?: '-'}">서울특별시 강남구</span></div>
                         <div><strong>지역</strong><span th:text="${detail.application.regionText ?: '-'}">서울</span></div>
                         <div><strong>생년월일</strong><span th:text="${detail.application.birthDate ?: '-'}">1990-01-01</span></div>
                     </div>

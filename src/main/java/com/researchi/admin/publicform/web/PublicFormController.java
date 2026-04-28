@@ -32,7 +32,7 @@ import java.util.Map;
 public class PublicFormController {
 
     private static final DateTimeFormatter XE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy.MM.dd. a hh:mm");
+    private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
 
     private final PublicFormService publicFormService;
 

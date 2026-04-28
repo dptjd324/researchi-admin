@@ -113,7 +113,7 @@ class PublicFormServiceTest {
         assertThat(result.status()).isEqualTo(PublicFormSubmissionStatus.COMPLETE);
         ArgumentCaptor<AdminJobApplication> captor = ArgumentCaptor.forClass(AdminJobApplication.class);
         verify(adminJobApplicationMapper).insert(captor.capture());
-        assertThat(captor.getValue().getMobilePhoneMasked()).isEqualTo("010****5678");
+        assertThat(captor.getValue().getMobilePhoneMasked()).isEqualTo("01012345678");
         assertThat(captor.getValue().getExtraComment()).contains("결혼여부: 미혼");
         assertThat(captor.getValue().getExtraComment()).contains("자녀유무: 없음");
         verify(adminJobApplicationExtraAnswerMapper, times(2)).insert(any());
@@ -146,6 +146,31 @@ class PublicFormServiceTest {
         assertThat(captor.getValue().getNotifyEmailYn()).isEqualTo("Y");
         assertThat(captor.getValue().getNotifyKeywordYn()).isEqualTo("Y");
     }
+
+    @Test
+    void submitUsesRemoteAddressInsteadOfForwardedForHeaderForAuditIp() {
+        when(jobService.getJob(11L)).thenReturn(jobDetail(11L));
+        when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHashes(any())).thenReturn(0);
+        when(adminBlacklistMapper.findActiveMatches(any(), any(), any())).thenReturn(List.of());
+        doAnswer(invocation -> {
+            AdminJobApplication application = invocation.getArgument(0);
+            application.setId(87L);
+            return null;
+        }).when(adminJobApplicationMapper).insert(any(AdminJobApplication.class));
+        MockHttpServletRequest request = request();
+        request.setRemoteAddr("203.0.113.10");
+        request.addHeader("X-Forwarded-For", "198.51.100.77");
+
+        publicFormService.submit(11L, baseForm(), Map.of(41L, List.of("weekday")), request);
+
+        ArgumentCaptor<com.researchi.admin.publicform.domain.AdminPrivacyConsent> captor =
+                ArgumentCaptor.forClass(com.researchi.admin.publicform.domain.AdminPrivacyConsent.class);
+        verify(adminPrivacyConsentMapper, times(2)).insert(captor.capture());
+        assertThat(captor.getAllValues()).allMatch(consent -> "203.0.113.10".equals(consent.getIpAddress()));
+    }
+
 
     @Test
     void submitRequiresEachAdditionalAnswer() {

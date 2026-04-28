@@ -5,7 +5,6 @@
         <section class="panel">
             <div class="dashboard-head">
                 <div>
-                    <p class="eyebrow">Phase 7</p>
                     <h2 class="h3 mb-2">블랙리스트</h2>
                     <p class="dashboard-copy mb-0">차단 규칙을 관리하고 최근 매칭 로그와 관리자 액션 로그를 함께 확인합니다.</p>
                 </div>
@@ -35,7 +34,6 @@
                             <label>
                                 <span>휴대전화</span>
                                 <input type="text" th:field="*{mobilePhone}" maxlength="30" placeholder="010-1234-5678">
-                                <small class="field-help" th:text="${form.id != null ? '비우면 기존 저장 해시를 유지합니다.' : '전화번호는 해시로만 저장됩니다.'}">전화번호 안내</small>
                                 <div th:if="${#fields.hasErrors('mobilePhone')}" class="field-error" th:errors="*{mobilePhone}">휴대전화 오류</div>
                             </label>
                             <label>

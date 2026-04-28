@@ -8,7 +8,7 @@ public record MailingHistoryItem(
         List<AdminMailSendTarget> targets
 ) {
 
-    public List<String> maskedRecipients() {
+    public List<String> recipientAddresses() {
         return targets.stream()
                 .map(AdminMailSendTarget::getTargetEmailMasked)
                 .filter(value -> value != null && !value.isBlank())
@@ -16,8 +16,8 @@ public record MailingHistoryItem(
                 .toList();
     }
 
-    public String maskedRecipientsSummary() {
-        return maskedRecipients().stream().collect(Collectors.joining(", "));
+    public String recipientAddressesSummary() {
+        return recipientAddresses().stream().collect(Collectors.joining(", "));
     }
 
     public int uniqueApplicationCount() {

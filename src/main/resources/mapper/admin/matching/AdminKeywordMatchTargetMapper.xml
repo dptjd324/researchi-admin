@@ -23,7 +23,9 @@
         <result property="applicantName" column="applicant_name"/>
         <result property="jobTitle" column="job_title"/>
         <result property="applicationStatus" column="application_status"/>
+        <result property="emailAddressEnc" column="email_address_enc"/>
         <result property="emailAddressMasked" column="email_address_masked"/>
+        <result property="mobilePhoneEnc" column="mobile_phone_enc"/>
         <result property="mobilePhoneMasked" column="mobile_phone_masked"/>
     </resultMap>
 
@@ -67,7 +69,9 @@
             application.document_srl,
             application.applicant_name,
             application.application_status,
+            application.email_address_enc,
             application.email_address_masked,
+            application.mobile_phone_enc,
             application.mobile_phone_masked,
             CONCAT('Job #', application.document_srl) AS job_title
         FROM admin_keyword_match_target target

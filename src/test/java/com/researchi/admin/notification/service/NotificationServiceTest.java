@@ -81,7 +81,7 @@ class NotificationServiceTest {
         when(adminNotificationLogMapper.countSuccessfulDuplicate(9L, 101L, "EMAIL", "survey")).thenReturn(1);
         NotificationApplicationRecipient recipient = new NotificationApplicationRecipient();
         recipient.setApplicationId(101L);
-        recipient.setEmailAddressMasked("ap***@example.com");
+        recipient.setEmailAddressMasked("applicant@example.com");
         when(notificationApplicationMapper.findRecipientByApplicationId(101L)).thenReturn(recipient);
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
 
@@ -129,7 +129,7 @@ class NotificationServiceTest {
         NotificationApplicationRecipient recipient = new NotificationApplicationRecipient();
         recipient.setApplicationId(102L);
         recipient.setMobilePhoneEnc(protectionService.encrypt("01012345678"));
-        recipient.setMobilePhoneMasked("010****5678");
+        recipient.setMobilePhoneMasked("01012345678");
         when(notificationApplicationMapper.findRecipientByApplicationId(102L)).thenReturn(recipient);
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
 
@@ -182,7 +182,7 @@ class NotificationServiceTest {
         recipient.setApplicationId(103L);
         recipient.setApplicantName("Kim");
         recipient.setEmailAddressEnc(protectionService.encrypt("kim@example.com"));
-        recipient.setEmailAddressMasked("ki***@example.com");
+        recipient.setEmailAddressMasked("kim@example.com");
         when(notificationApplicationMapper.findRecipientByApplicationId(103L)).thenReturn(recipient);
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
 
@@ -235,7 +235,7 @@ class NotificationServiceTest {
         recipient.setApplicationId(104L);
         recipient.setApplicantName("이예성");
         recipient.setEmailAddressEnc(protectionService.encrypt("lee@example.com"));
-        recipient.setEmailAddressMasked("le***@example.com");
+        recipient.setEmailAddressMasked("lee@example.com");
         when(notificationApplicationMapper.findRecipientByApplicationId(104L)).thenReturn(recipient);
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
         AdminMailTemplate template = new AdminMailTemplate();

@@ -45,7 +45,7 @@ import java.util.Set;
 @Service
 public class MailingService {
 
-    private static final DateTimeFormatter MAIL_DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter MAIL_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
     private static final String DEFAULT_ATTACHMENT_TYPE = "XLSX";
 
     private final AdminMailTemplateMapper adminMailTemplateMapper;
@@ -686,7 +686,7 @@ public class MailingService {
                 AdminMailSendTarget target = new AdminMailSendTarget();
                 target.setSendJobId(sendJobId);
                 target.setApplicationId(applicationId);
-                target.setTargetEmailMasked(protectionService.maskEmail(recipient));
+                target.setTargetEmailMasked(recipient);
                 target.setTargetName(recipients.targetName());
                 target.setSendResult(sendResult);
                 target.setFailReason(failReason);

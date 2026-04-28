@@ -5,7 +5,6 @@
         <section class="panel">
             <div class="dashboard-head">
                 <div>
-                    <p class="eyebrow">Phase 9</p>
                     <h2 class="h3 mb-2">메일 발송 이력</h2>
                     <p class="dashboard-copy mb-0">수동 발송, 예약 발송, 임계치 발송 실행 결과와 수신자 스냅샷을 확인합니다.</p>
                 </div>
@@ -298,7 +297,7 @@
                         <div class="detail-grid" style="margin-top: 1rem;">
                             <div>
                                 <strong>수신자 스냅샷</strong>
-                                <span th:text="${#lists.isEmpty(item.maskedRecipients()) ? '저장된 수신자 정보가 없습니다.' : item.maskedRecipientsSummary()}">수신자</span>
+                                <span th:text="${#lists.isEmpty(item.recipientAddresses()) ? '저장된 수신자 정보가 없습니다.' : item.recipientAddressesSummary()}">수신자</span>
                             </div>
                             <div>
                                 <strong>발송 데이터 범위</strong>

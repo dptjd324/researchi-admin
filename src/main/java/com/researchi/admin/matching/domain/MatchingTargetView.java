@@ -6,8 +6,12 @@ public class MatchingTargetView extends AdminKeywordMatchTarget {
     private String applicantName;
     private String jobTitle;
     private String applicationStatus;
+    private String emailAddressEnc;
     private String emailAddressMasked;
+    private String emailAddressDisplay;
+    private String mobilePhoneEnc;
     private String mobilePhoneMasked;
+    private String mobilePhoneDisplay;
 
     public Long getDocumentSrl() {
         return documentSrl;
@@ -49,11 +53,43 @@ public class MatchingTargetView extends AdminKeywordMatchTarget {
         this.emailAddressMasked = emailAddressMasked;
     }
 
+    public String getEmailAddressEnc() {
+        return emailAddressEnc;
+    }
+
+    public void setEmailAddressEnc(String emailAddressEnc) {
+        this.emailAddressEnc = emailAddressEnc;
+    }
+
+    public String getEmailAddressDisplay() {
+        return emailAddressDisplay;
+    }
+
+    public void setEmailAddressDisplay(String emailAddressDisplay) {
+        this.emailAddressDisplay = emailAddressDisplay;
+    }
+
     public String getMobilePhoneMasked() {
         return mobilePhoneMasked;
     }
 
     public void setMobilePhoneMasked(String mobilePhoneMasked) {
         this.mobilePhoneMasked = mobilePhoneMasked;
+    }
+
+    public String getMobilePhoneEnc() {
+        return mobilePhoneEnc;
+    }
+
+    public void setMobilePhoneEnc(String mobilePhoneEnc) {
+        this.mobilePhoneEnc = mobilePhoneEnc;
+    }
+
+    public String getMobilePhoneDisplay() {
+        return mobilePhoneDisplay;
+    }
+
+    public void setMobilePhoneDisplay(String mobilePhoneDisplay) {
+        this.mobilePhoneDisplay = mobilePhoneDisplay;
     }
 }

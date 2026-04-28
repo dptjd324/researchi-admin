@@ -15,6 +15,7 @@ import com.researchi.admin.matching.mapper.AdminKeywordMatchJobMapper;
 import com.researchi.admin.matching.mapper.AdminKeywordMatchTargetMapper;
 import com.researchi.admin.notification.domain.AdminNotificationLog;
 import com.researchi.admin.notification.service.NotificationService;
+import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class MatchingService {
     private final JobService jobService;
     private final NotificationService notificationService;
     private final AdminActionLogService adminActionLogService;
+    private final PublicFormProtectionService protectionService;
 
     public MatchingService(
             KeywordExtractionService keywordExtractionService,
@@ -46,7 +48,8 @@ public class MatchingService {
             ApplicationService applicationService,
             JobService jobService,
             NotificationService notificationService,
-            AdminActionLogService adminActionLogService
+            AdminActionLogService adminActionLogService,
+            PublicFormProtectionService protectionService
     ) {
         this.keywordExtractionService = keywordExtractionService;
         this.adminKeywordMatchJobMapper = adminKeywordMatchJobMapper;
@@ -55,6 +58,7 @@ public class MatchingService {
         this.jobService = jobService;
         this.notificationService = notificationService;
         this.adminActionLogService = adminActionLogService;
+        this.protectionService = protectionService;
     }
 
     public MatchingOverview getOverview(Long documentSrl, Long selectedMatchJobId) {
@@ -70,7 +74,9 @@ public class MatchingService {
                 : matchJobs.stream().findFirst().map(AdminKeywordMatchJob::getId).orElse(null);
         List<MatchingTargetView> targets = activeMatchJobId == null
                 ? List.of()
-                : adminKeywordMatchTargetMapper.findViewsByMatchJobId(activeMatchJobId);
+                : adminKeywordMatchTargetMapper.findViewsByMatchJobId(activeMatchJobId).stream()
+                .peek(this::populatePersonalInfoDisplay)
+                .toList();
         List<AdminNotificationLog> notificationLogs = notificationService.getNotificationLogs(documentSrl);
         return new MatchingOverview(jobKeywords, matchJobs, targets, notificationLogs);
     }
@@ -175,5 +181,17 @@ public class MatchingService {
 
     private boolean hasNotificationChannel(ApplicationRecord application) {
         return "Y".equals(application.getNotifyEmailYn()) || "Y".equals(application.getNotifySmsYn());
+    }
+
+    private void populatePersonalInfoDisplay(MatchingTargetView target) {
+        target.setEmailAddressDisplay(decryptOrFallback(target.getEmailAddressEnc(), target.getEmailAddressMasked()));
+        target.setMobilePhoneDisplay(decryptOrFallback(target.getMobilePhoneEnc(), target.getMobilePhoneMasked()));
+    }
+
+    private String decryptOrFallback(String encryptedValue, String fallback) {
+        if (encryptedValue == null || encryptedValue.isBlank()) {
+            return fallback;
+        }
+        return protectionService.decrypt(encryptedValue);
     }
 }

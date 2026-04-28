@@ -5,7 +5,6 @@
         <section class="panel">
             <div class="dashboard-head">
                 <div>
-                    <p class="eyebrow">Phase 3</p>
                     <h2 class="h3 mb-2" th:text="${jobDetail.document.title}">공고 제목</h2>
                     <p class="dashboard-copy mb-0">공고 본문과 운영 메타 정보를 확인할 수 있습니다.</p>
                 </div>
@@ -23,8 +22,8 @@
                 <span><strong>공고유형</strong><span th:text="${@uiLabels.jobBoard(jobDetail.document.mid)}">신규 공고</span></span>
                 <span><strong>모집 상태</strong><span th:text="${@uiLabels.recruitStatus(jobDetail.meta != null ? jobDetail.meta.recruitStatus : 'WAITING')}">대기</span></span>
                 <span><strong>지원 가능</strong><span th:text="${@uiLabels.yesNo(jobDetail.meta != null ? jobDetail.meta.applicationEnabled : 'Y')}">예</span></span>
-                <span><strong>등록 시각</strong><span th:text="${jobDetail.document.regdate ?: '-'}">-</span></span>
-                <span><strong>수정 시각</strong><span th:text="${jobDetail.document.lastUpdate ?: '-'}">-</span></span>
+                <span><strong>등록 시각</strong><span th:text="${@uiLabels.xeDateTime(jobDetail.document.regdate)}">-</span></span>
+                <span><strong>수정 시각</strong><span th:text="${@uiLabels.xeDateTime(jobDetail.document.lastUpdate)}">-</span></span>
             </div>
 
             <section class="panel" style="margin-top: 1rem;">
@@ -56,7 +55,7 @@
                 <div><strong>최대 연령</strong><span th:text="${jobDetail.meta.ageMax ?: '-'}">-</span></div>
                 <div><strong>성별 코드</strong><span th:text="${jobDetail.meta.genderCode ?: '-'}">-</span></div>
                 <div><strong>모집 인원</strong><span th:text="${jobDetail.meta.recruitLimit ?: '-'}">-</span></div>
-                <div><strong>마감일</strong><span th:text="${jobDetail.meta.closeDate ?: '-'}">-</span></div>
+                <div><strong>마감일</strong><span th:text="${@uiLabels.date(jobDetail.meta.closeDate)}">-</span></div>
                 <div><strong>거래처명</strong><span th:text="${jobDetail.meta.clientName ?: '-'}">-</span></div>
                 <div><strong>거래처 이메일</strong><span th:text="${jobDetail.meta.clientEmail ?: '-'}">-</span></div>
                 <div><strong>자동 발송</strong><span th:text="${@uiLabels.yesNo(jobDetail.meta.autoSendEnabled)}">아니오</span></div>
@@ -67,7 +66,7 @@
                 <div><strong>지원 안내</strong><span th:text="${jobDetail.meta.applicationFormNotice ?: '-'}">-</span></div>
                 <div><strong>자동 발송 방식</strong><span th:text="${jobDetail.meta.autoSendMode ?: '-'}">-</span></div>
                 <div><strong>자동 발송 임계치</strong><span th:text="${jobDetail.meta.autoSendThreshold ?: '-'}">-</span></div>
-                <div><strong>자동 발송 시각</strong><span th:text="${jobDetail.meta.autoSendTime ?: '-'}">-</span></div>
+                <div><strong>자동 발송 시각</strong><span th:text="${@uiLabels.time(jobDetail.meta.autoSendTime)}">-</span></div>
                 <div><strong>반복 여부</strong><span th:text="${@uiLabels.yesNo(jobDetail.meta.autoSendRepeatYn)}">아니오</span></div>
                 <div><strong>반복 단위</strong><span th:text="${jobDetail.meta.autoSendRepeatUnit ?: '-'}">-</span></div>
                 <div><strong>첨부 형식</strong><span th:text="${jobDetail.meta.autoSendAttachmentType ?: '-'}">-</span></div>

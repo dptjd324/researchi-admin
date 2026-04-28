@@ -65,7 +65,9 @@
                             <p class="eyebrow" th:text="${applicationItem.isNewApplicant == 'Y' ? '신규 지원자' : '기존 지원자'}">신규 지원자</p>
                             <h3 class="h5 mb-2" th:text="${applicationItem.applicantName}">지원자명</h3>
                             <p class="job-summary">
-                                <span th:text="${applicationItem.jobTitle}">공고명</span>
+                                <a th:href="@{/jobs/{documentSrl}(documentSrl=${applicationItem.documentSrl})}"
+                                   th:text="${applicationItem.jobTitle}"
+                                   class="job-title-link">공고명</a>
                                 <span th:text="${' | #' + applicationItem.id}">#1</span>
                             </p>
                         </div>
@@ -83,8 +85,8 @@
                     <div class="job-meta-grid">
                         <span><strong>상태</strong><span th:text="${@uiLabels.applicationStatus(applicationItem.applicationStatus)}">접수</span></span>
                         <span><strong>발송 상태</strong><span th:text="${@uiLabels.deliveryStatus(applicationItem.deliveryStatus)}">대기</span></span>
-                        <span><strong>전화번호</strong><span th:text="${applicationItem.mobilePhoneMasked ?: '-'}">010****0000</span></span>
-                        <span><strong>이메일</strong><span th:text="${applicationItem.emailAddressMasked ?: '-'}">ma***@example.com</span></span>
+                        <span><strong>전화번호</strong><span th:text="${applicationItem.mobilePhoneDisplay ?: '-'}">01012345678</span></span>
+                        <span><strong>이메일</strong><span th:text="${applicationItem.emailAddressDisplay ?: '-'}">mail@example.com</span></span>
                         <span><strong>지역</strong><span th:text="${applicationItem.regionText ?: '-'}">서울</span></span>
                         <span><strong>블랙리스트 여부</strong><span th:text="${@uiLabels.yesNo(applicationItem.isBlacklisted)}">아니오</span></span>
                         <span><strong>블랙리스트 모드</strong><span th:text="${@uiLabels.blacklistMode(applicationItem.blackModeApplied)}">-</span></span>

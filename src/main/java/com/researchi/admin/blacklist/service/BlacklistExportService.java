@@ -22,7 +22,8 @@ import java.util.List;
 public class BlacklistExportService {
 
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-    private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
     private static final List<String> HEADERS = List.of(
             "ID",
             "이름",
@@ -119,9 +120,9 @@ public class BlacklistExportService {
 
     private void writeRow(Row row, BlacklistEntry entry) {
         row.createCell(0).setCellValue(stringValue(entry.getId()));
-        row.createCell(1).setCellValue(sanitize(entry.getBlackName()));
+        row.createCell(1).setCellValue(sanitizeSpreadsheetValue(sanitize(entry.getBlackName())));
         row.createCell(2).setCellValue(stringValue(entry.getBlackBirthDate()));
-        row.createCell(3).setCellValue(sanitize(entry.getBlackReason()));
+        row.createCell(3).setCellValue(sanitizeSpreadsheetValue(sanitize(entry.getBlackReason())));
         row.createCell(4).setCellValue(sanitize(labelMode(entry.getBlackMode())));
         row.createCell(5).setCellValue(sanitize(labelActive(entry.getActiveYn())));
         row.createCell(6).setCellValue(stringValue(entry.getExpiresAt()));
@@ -136,7 +137,7 @@ public class BlacklistExportService {
             if (index > 0) {
                 builder.append('\t');
             }
-            builder.append(sanitize(values.get(index)));
+            builder.append(sanitizeSpreadsheetValue(sanitize(values.get(index))));
         }
         builder.append(System.lineSeparator());
     }
@@ -179,7 +180,7 @@ public class BlacklistExportService {
             return localDateTime.format(DT);
         }
         if (value instanceof LocalDate localDate) {
-            return localDate.toString();
+            return localDate.format(DATE);
         }
         return String.valueOf(value);
     }
@@ -189,6 +190,17 @@ public class BlacklistExportService {
             return "";
         }
         return value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ');
+    }
+
+    private String sanitizeSpreadsheetValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        char first = value.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@') {
+            return "'" + value;
+        }
+        return value;
     }
 
     private String normalizeFilterValue(String value) {
