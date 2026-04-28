@@ -7,7 +7,11 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.public-form")
 public class PublicFormProperties {
 
-    private String encryptionKey = "dev-only-phase5-key-change-me";
+    public static final String DEFAULT_ENCRYPTION_KEY = "dev-only-phase5-key-change-me";
+    public static final String DEFAULT_PHONE_HASH_KEY = "dev-only-phase5-phone-hash-key-change-me";
+
+    private String encryptionKey = DEFAULT_ENCRYPTION_KEY;
+    private String phoneHashKey = DEFAULT_PHONE_HASH_KEY;
     private boolean captchaEnabled = true;
     private int rateLimitCount = 5;
     private int rateLimitWindowSeconds = 300;
@@ -18,6 +22,14 @@ public class PublicFormProperties {
 
     public void setEncryptionKey(String encryptionKey) {
         this.encryptionKey = encryptionKey;
+    }
+
+    public String getPhoneHashKey() {
+        return phoneHashKey;
+    }
+
+    public void setPhoneHashKey(String phoneHashKey) {
+        this.phoneHashKey = phoneHashKey;
     }
 
     public boolean isCaptchaEnabled() {

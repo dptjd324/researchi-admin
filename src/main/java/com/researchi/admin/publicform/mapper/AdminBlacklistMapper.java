@@ -13,6 +13,6 @@ public interface AdminBlacklistMapper {
     List<AdminBlacklist> findActiveMatches(
             @Param("blackName") String blackName,
             @Param("blackBirthDate") LocalDate blackBirthDate,
-            @Param("blackMobilePhoneHash") String blackMobilePhoneHash
+            @Param("blackMobilePhoneHashes") List<String> blackMobilePhoneHashes
     );
 }

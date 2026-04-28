@@ -100,7 +100,7 @@ public class PeriodSearchService {
         logSearch(scope, form, results.size(), dateRange);
         return new PeriodSearchResult(
                 scope,
-                "Applied At",
+                "지원 시각",
                 results.size(),
                 resolveSingleDocumentSrl(results.stream().map(ApplicationRecord::getDocumentSrl).toList()),
                 results,
@@ -122,7 +122,7 @@ public class PeriodSearchService {
         logSearch(scope, form, results.size(), dateRange);
         return new PeriodSearchResult(
                 scope,
-                "Sent At",
+                "발송 시각",
                 results.size(),
                 resolveSingleDocumentSrl(results.stream().map(AdminMailSendJob::getDocumentSrl).toList()),
                 List.of(),
@@ -141,7 +141,7 @@ public class PeriodSearchService {
         logSearch(scope, form, results.size(), dateRange);
         return new PeriodSearchResult(
                 scope,
-                "Created At",
+                "생성 시각",
                 results.size(),
                 null,
                 List.of(),
@@ -161,7 +161,7 @@ public class PeriodSearchService {
         logSearch(scope, form, results.size(), dateRange);
         return new PeriodSearchResult(
                 scope,
-                "Notification At",
+                "알림 시각",
                 results.size(),
                 resolveSingleDocumentSrl(results.stream().map(AdminNotificationLog::getDocumentSrl).toList()),
                 List.of(),

@@ -10,8 +10,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
 public class ExportController {
@@ -22,7 +22,7 @@ public class ExportController {
         this.exportService = exportService;
     }
 
-    @GetMapping("/jobs/{documentSrl}/export/xlsx")
+    @PostMapping("/jobs/{documentSrl}/export/xlsx")
     public ResponseEntity<byte[]> exportXlsx(
             @PathVariable Long documentSrl,
             @AuthenticationPrincipal AdminPrincipal principal,
@@ -31,7 +31,7 @@ public class ExportController {
         return toResponse(exportService.exportXlsx(documentSrl, principal, request));
     }
 
-    @GetMapping("/jobs/{documentSrl}/export/txt")
+    @PostMapping("/jobs/{documentSrl}/export/txt")
     public ResponseEntity<byte[]> exportTxt(
             @PathVariable Long documentSrl,
             @AuthenticationPrincipal AdminPrincipal principal,

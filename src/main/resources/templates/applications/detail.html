@@ -14,8 +14,14 @@
                 <div class="dashboard-actions">
                     <a th:href="@{/jobs/{documentSrl}/applications(documentSrl=${detail.application.documentSrl})}" class="secondary-link">공고 지원서</a>
                     <a th:href="@{/mail/send/history(documentSrl=${detail.application.documentSrl})}" class="secondary-link">메일</a>
-                    <a th:href="@{/jobs/{documentSrl}/export/xlsx(documentSrl=${detail.application.documentSrl})}" class="secondary-link">XLSX 내려받기</a>
-                    <a th:href="@{/jobs/{documentSrl}/export/txt(documentSrl=${detail.application.documentSrl})}" class="secondary-link">TXT 내려받기</a>
+                    <form th:action="@{/jobs/{documentSrl}/export/xlsx(documentSrl=${detail.application.documentSrl})}" method="post" class="inline-export-form">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="secondary-link">XLSX 내려받기</button>
+                    </form>
+                    <form th:action="@{/jobs/{documentSrl}/export/txt(documentSrl=${detail.application.documentSrl})}" method="post" class="inline-export-form">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="secondary-link">TXT 내려받기</button>
+                    </form>
                     <a th:href="@{/applications}" class="secondary-link">전체 지원서</a>
                 </div>
             </div>

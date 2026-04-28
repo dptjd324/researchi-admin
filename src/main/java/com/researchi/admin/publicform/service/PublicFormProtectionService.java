@@ -4,6 +4,7 @@ import com.researchi.admin.publicform.config.PublicFormProperties;
 import jakarta.servlet.http.HttpSession;
 
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -166,6 +167,28 @@ public class PublicFormProtectionService {
         } catch (Exception ex) {
             throw new IllegalStateException("민감 정보를 해시 처리하지 못했습니다.", ex);
         }
+    }
+
+    public String phoneHash(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(properties.getPhoneHashKey().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] bytes = mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(bytes.length * 2);
+            for (byte current : bytes) {
+                builder.append(String.format("%02x", current));
+            }
+            return builder.toString();
+        } catch (Exception ex) {
+            throw new IllegalStateException("휴대전화 해시를 처리하지 못했습니다.", ex);
+        }
+    }
+
+    public String legacyPhoneHash(String value) {
+        return sha256(value);
     }
 
     public String maskPhone(String value) {

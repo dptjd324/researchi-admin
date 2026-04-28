@@ -27,14 +27,21 @@
             active_yn,
             expires_at,
             CASE
-                WHEN black_mobile_phone_hash = #{blackMobilePhoneHash} THEN 'MOBILE_PHONE_HASH'
+                WHEN black_mobile_phone_hash IN
+                    <foreach collection="blackMobilePhoneHashes" item="blackMobilePhoneHash" open="(" separator="," close=")">
+                        #{blackMobilePhoneHash}
+                    </foreach>
+                    THEN 'MOBILE_PHONE_HASH'
                 ELSE 'NAME_BIRTH_DATE'
             END AS match_type
         FROM admin_blacklist
         WHERE active_yn = 'Y'
           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
           AND (
-            (#{blackMobilePhoneHash} IS NOT NULL AND black_mobile_phone_hash = #{blackMobilePhoneHash})
+            (black_mobile_phone_hash IN
+                <foreach collection="blackMobilePhoneHashes" item="blackMobilePhoneHash" open="(" separator="," close=")">
+                    #{blackMobilePhoneHash}
+                </foreach>)
             OR
             (#{blackName} IS NOT NULL AND #{blackBirthDate} IS NOT NULL
                 AND black_name = #{blackName}

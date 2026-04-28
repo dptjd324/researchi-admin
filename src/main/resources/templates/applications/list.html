@@ -16,8 +16,14 @@
                     <a th:href="@{/applications}" class="secondary-link">전체 지원서</a>
                     <a th:if="${selectedDocumentSrl != null}" th:href="@{/jobs/{documentSrl}/edit(documentSrl=${selectedDocumentSrl})}" class="secondary-link">공고 상세</a>
                     <a th:if="${selectedDocumentSrl != null}" th:href="@{/mail/send/history(documentSrl=${selectedDocumentSrl})}" class="secondary-link">메일</a>
-                    <a th:if="${selectedDocumentSrl != null}" th:href="@{/jobs/{documentSrl}/export/xlsx(documentSrl=${selectedDocumentSrl})}" class="secondary-link">XLSX 내려받기</a>
-                    <a th:if="${selectedDocumentSrl != null}" th:href="@{/jobs/{documentSrl}/export/txt(documentSrl=${selectedDocumentSrl})}" class="secondary-link">TXT 내려받기</a>
+                    <form th:if="${selectedDocumentSrl != null}" th:action="@{/jobs/{documentSrl}/export/xlsx(documentSrl=${selectedDocumentSrl})}" method="post" class="inline-export-form">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="secondary-link">XLSX 내려받기</button>
+                    </form>
+                    <form th:if="${selectedDocumentSrl != null}" th:action="@{/jobs/{documentSrl}/export/txt(documentSrl=${selectedDocumentSrl})}" method="post" class="inline-export-form">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="secondary-link">TXT 내려받기</button>
+                    </form>
                     <a th:href="@{/jobs}" class="secondary-link">공고</a>
                 </div>
             </div>

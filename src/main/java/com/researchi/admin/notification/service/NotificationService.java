@@ -126,7 +126,7 @@ public class NotificationService {
                 "KEYWORD_NOTIFICATION_EMAIL",
                 "JOB",
                 String.valueOf(documentSrl),
-                "Keyword notification email dispatch completed for match job #" + matchJobId + " with " + sentCount + " sends.",
+                "키워드 이메일 알림 발송 완료: 매칭 작업 #" + matchJobId + ", 발송 " + sentCount + "건",
                 request
         );
     }

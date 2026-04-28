@@ -142,6 +142,8 @@ public class MailingService {
         Long sendJobId = sendNow(
                 form.getDocumentSrl(),
                 form.getTemplateId(),
+                form.getDirectMailSubject(),
+                form.getDirectMailBody(),
                 MailAttachmentType.fromValue(form.getAttachmentType()),
                 "MANUAL",
                 "MANUAL",
@@ -161,11 +163,13 @@ public class MailingService {
 
         Snapshot snapshot = loadSnapshot(form.getDocumentSrl());
         RecipientSelection recipients = parseRecipients(form.getDocumentSrl());
-        AdminMailTemplate template = requiredTemplate(form.getTemplateId());
+        MailContent mailContent = resolveMailContent(form.getTemplateId(), form.getDirectMailSubject(), form.getDirectMailBody());
 
         AdminMailSendJob sendJob = baseJob(
                 form.getDocumentSrl(),
-                template.getId(),
+                mailContent.templateId(),
+                mailContent.subject(),
+                mailContent.body(),
                 MailAttachmentType.fromValue(form.getAttachmentType()),
                 "SCHEDULED",
                 "SCHEDULED",
@@ -209,6 +213,8 @@ public class MailingService {
         Long sendJobId = sendNow(
                 form.getDocumentSrl(),
                 form.getTemplateId(),
+                form.getDirectMailSubject(),
+                form.getDirectMailBody(),
                 MailAttachmentType.fromValue(form.getAttachmentType()),
                 "AUTO",
                 "THRESHOLD",
@@ -296,7 +302,7 @@ public class MailingService {
                 throw new IllegalStateException("등록된 거래처 수신 이메일이 없습니다.");
             }
 
-            AdminMailTemplate template = requiredTemplate(sendJob.getTemplateId());
+            MailContent mailContent = resolveStoredMailContent(sendJob);
             MailAttachmentType attachmentType = MailAttachmentType.fromValue(
                     sendJob.getAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : sendJob.getAttachmentType()
             );
@@ -306,7 +312,7 @@ public class MailingService {
             mailDispatchGateway.dispatch(buildDispatchRequest(
                     sendJob.getDocumentSrl(),
                     recipients.recipients(),
-                    template,
+                    mailContent,
                     attachment,
                     attachmentType,
                     "SCHEDULED",
@@ -364,6 +370,8 @@ public class MailingService {
         sendNow(
                 documentSrl,
                 jobMeta.getAutoSendTemplateId(),
+                null,
+                null,
                 MailAttachmentType.fromValue(
                         jobMeta.getAutoSendAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : jobMeta.getAutoSendAttachmentType()
                 ),
@@ -381,6 +389,8 @@ public class MailingService {
     private Long sendNow(
             Long documentSrl,
             Long templateId,
+            String directMailSubject,
+            String directMailBody,
             MailAttachmentType attachmentType,
             String sendType,
             String triggerType,
@@ -391,11 +401,13 @@ public class MailingService {
     ) {
         Snapshot snapshot = loadSnapshot(documentSrl);
         RecipientSelection recipients = parseRecipients(documentSrl);
-        AdminMailTemplate template = requiredTemplate(templateId);
+        MailContent mailContent = resolveMailContent(templateId, directMailSubject, directMailBody);
 
         AdminMailSendJob sendJob = baseJob(
                 documentSrl,
-                template.getId(),
+                mailContent.templateId(),
+                mailContent.subject(),
+                mailContent.body(),
                 attachmentType,
                 sendType,
                 triggerType,
@@ -436,7 +448,7 @@ public class MailingService {
                     ? exportService.prepareXlsx(documentSrl, snapshot.applicationIds())
                     : exportService.prepareTxt(documentSrl, snapshot.applicationIds());
             try {
-                mailDispatchGateway.dispatch(buildDispatchRequest(documentSrl, recipients.recipients(), template, attachment, attachmentType, triggerType, snapshot.applicationIds().size()));
+                mailDispatchGateway.dispatch(buildDispatchRequest(documentSrl, recipients.recipients(), mailContent, attachment, attachmentType, triggerType, snapshot.applicationIds().size()));
                 sendStatus = "SENT";
                 targetResult = "SENT";
                 sentAt = LocalDateTime.now();
@@ -489,6 +501,8 @@ public class MailingService {
     private AdminMailSendJob baseJob(
             Long documentSrl,
             Long templateId,
+            String mailSubjectSnapshot,
+            String mailBodySnapshot,
             MailAttachmentType attachmentType,
             String sendType,
             String triggerType,
@@ -501,6 +515,8 @@ public class MailingService {
         AdminMailSendJob sendJob = new AdminMailSendJob();
         sendJob.setDocumentSrl(documentSrl);
         sendJob.setTemplateId(templateId);
+        sendJob.setMailSubjectSnapshot(mailSubjectSnapshot);
+        sendJob.setMailBodySnapshot(mailBodySnapshot);
         sendJob.setAttachmentType(attachmentType.name());
         sendJob.setSendType(sendType);
         sendJob.setTriggerType(triggerType);
@@ -572,6 +588,32 @@ public class MailingService {
         return template;
     }
 
+    private MailContent resolveMailContent(Long templateId, String directMailSubject, String directMailBody) {
+        if (templateId != null) {
+            AdminMailTemplate template = requiredTemplate(templateId);
+            return new MailContent(template.getId(), template.getMailSubject(), template.getMailBody());
+        }
+        String subject = trimToNull(directMailSubject);
+        String body = trimToNull(directMailBody);
+        if (subject == null || body == null) {
+            throw new IllegalArgumentException("템플릿을 선택하거나 직접 작성 제목과 본문을 입력해 주세요.");
+        }
+        if (subject.length() > 255) {
+            throw new IllegalArgumentException("메일 제목은 255자 이하로 입력해 주세요.");
+        }
+        return new MailContent(null, subject, body);
+    }
+
+    private MailContent resolveStoredMailContent(AdminMailSendJob sendJob) {
+        String subject = trimToNull(sendJob.getMailSubjectSnapshot());
+        String body = trimToNull(sendJob.getMailBodySnapshot());
+        if (subject != null && body != null) {
+            return new MailContent(sendJob.getTemplateId(), subject, body);
+        }
+        AdminMailTemplate template = requiredTemplate(sendJob.getTemplateId());
+        return new MailContent(template.getId(), template.getMailSubject(), template.getMailBody());
+    }
+
     private AdminJobMeta requireJobMeta(Long documentSrl) {
         AdminJobMeta jobMeta = jobService.ensureJobMeta(documentSrl);
         if (jobMeta == null) {
@@ -583,7 +625,7 @@ public class MailingService {
     private MailDispatchRequest buildDispatchRequest(
             Long documentSrl,
             List<String> recipients,
-            AdminMailTemplate template,
+            MailContent mailContent,
             ExportPayload attachment,
             MailAttachmentType attachmentType,
             String triggerType,
@@ -597,8 +639,8 @@ public class MailingService {
         return new MailDispatchRequest(
                 recipients,
                 replyTo,
-                renderTemplate(template.getMailSubject(), variables),
-                renderTemplate(template.getMailBody(), variables),
+                renderTemplate(mailContent.subject(), variables),
+                renderTemplate(mailContent.body(), variables),
                 attachment.fileName(),
                 attachment.contentType(),
                 attachment.content()
@@ -671,6 +713,13 @@ public class MailingService {
             rendered = rendered.replace("{{" + entry.getKey() + "}}", entry.getValue());
         }
         return rendered;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private boolean isValidEmail(String value) {
@@ -762,5 +811,8 @@ public class MailingService {
     }
 
     private record RecipientSelection(List<String> recipients, int excludedCount, String targetName) {
+    }
+
+    private record MailContent(Long templateId, String subject, String body) {
     }
 }

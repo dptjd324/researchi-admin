@@ -57,6 +57,7 @@ app:
     path: ./uploads
   public-form:
     encryption-key: ${ENCRYPTION_KEY:dev-only-phase5-key-change-me}
+    phone-hash-key: ${PHONE_HASH_KEY:dev-only-phase5-phone-hash-key-change-me}
     captcha-enabled: ${APP_PUBLIC_FORM_CAPTCHA_ENABLED:true}
     rate-limit-count: ${APP_PUBLIC_FORM_RATE_LIMIT_COUNT:5}
     rate-limit-window-seconds: ${APP_PUBLIC_FORM_RATE_LIMIT_WINDOW_SECONDS:300}

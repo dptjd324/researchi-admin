@@ -46,7 +46,7 @@ id, application_id, blacklist_id, match_type, action_taken, matched_at
 id, template_name, mail_subject, mail_body, active_yn, created_at, updated_at
 
 ### admin_mail_send_job
-id, document_srl, send_type, trigger_type, template_id, attachment_type, recipient_count, excluded_count, blacklist_excluded_count, send_status, scheduled_at, sent_at, threshold_snapshot, target_snapshot_count, duplicate_prevent_key, created_by, created_at
+id, document_srl, send_type, trigger_type, template_id, mail_subject_snapshot, mail_body_snapshot, attachment_type, recipient_count, excluded_count, blacklist_excluded_count, send_status, scheduled_at, sent_at, threshold_snapshot, target_snapshot_count, duplicate_prevent_key, created_by, created_at
 
 ### admin_mail_send_target
 id, send_job_id, application_id, target_email_masked, target_name, send_result, fail_reason, sent_at

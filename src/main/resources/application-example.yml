@@ -43,6 +43,7 @@ app:
 
   public-form:
     encryption-key: ${ENCRYPTION_KEY:change-me-before-production}
+    phone-hash-key: ${PHONE_HASH_KEY:change-me-before-production}
     captcha-enabled: true
     rate-limit-count: 5
     rate-limit-window-seconds: 300

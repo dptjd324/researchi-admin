@@ -20,7 +20,7 @@ public interface AdminBlacklistAdminMapper {
 
     BlacklistEntry findById(@Param("id") Long id);
 
-    BlacklistEntry findActiveByMobilePhoneHash(@Param("mobilePhoneHash") String mobilePhoneHash);
+    BlacklistEntry findActiveByMobilePhoneHashes(@Param("mobilePhoneHashes") List<String> mobilePhoneHashes);
 
     BlacklistEntry findActiveByNameAndBirthDate(
             @Param("blackName") String blackName,

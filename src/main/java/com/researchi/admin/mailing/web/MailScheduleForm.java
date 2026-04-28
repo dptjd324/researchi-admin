@@ -17,8 +17,11 @@ public class MailScheduleForm {
     @NotNull(message = "공고를 선택해 주세요.")
     private Long documentSrl;
 
-    @NotNull(message = "템플릿을 선택해 주세요.")
     private Long templateId;
+
+    private String directMailSubject;
+
+    private String directMailBody;
 
     @NotBlank(message = "첨부 형식을 선택해 주세요.")
     private String attachmentType = "XLSX";

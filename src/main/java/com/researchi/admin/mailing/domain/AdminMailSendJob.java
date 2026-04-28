@@ -15,6 +15,8 @@ public class AdminMailSendJob {
     private String sendType;
     private String triggerType;
     private Long templateId;
+    private String mailSubjectSnapshot;
+    private String mailBodySnapshot;
     private String attachmentType;
     private Integer recipientCount;
     private Integer excludedCount;

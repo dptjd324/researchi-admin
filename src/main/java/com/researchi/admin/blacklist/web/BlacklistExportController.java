@@ -10,7 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -24,7 +24,7 @@ public class BlacklistExportController {
         this.blacklistExportService = blacklistExportService;
     }
 
-    @GetMapping("/xlsx")
+    @PostMapping("/xlsx")
     public ResponseEntity<byte[]> exportXlsx(
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "activeYn", required = false) String activeYn,
@@ -35,7 +35,7 @@ public class BlacklistExportController {
         return toResponse(blacklistExportService.exportXlsx(keyword, activeYn, blackMode, principal, request));
     }
 
-    @GetMapping("/txt")
+    @PostMapping("/txt")
     public ResponseEntity<byte[]> exportTxt(
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "activeYn", required = false) String activeYn,

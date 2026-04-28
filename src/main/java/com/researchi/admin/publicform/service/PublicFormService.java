@@ -176,15 +176,16 @@ public class PublicFormService {
         String applicantName = trimToNull(form.getApplicantName());
         String genderCode = normalizeGender(form.getGenderCode());
         LocalDate birthDate = form.getBirthDate();
-        String mobilePhoneHash = protectionService.sha256(normalizedMobile);
+        String mobilePhoneHash = protectionService.phoneHash(normalizedMobile);
+        List<String> mobilePhoneHashes = phoneHashCandidates(normalizedMobile);
 
-        AdminApplicationDuplicateLog existing = adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(documentSrl, mobilePhoneHash);
+        AdminApplicationDuplicateLog existing = adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(documentSrl, mobilePhoneHashes);
         if (existing != null && existing.getMatchedApplicationId() != null) {
             adminApplicationDuplicateLogMapper.insert(duplicateLog(documentSrl, applicantName, genderCode, birthDate, mobilePhoneHash, true, existing.getMatchedApplicationId()));
             return new PublicFormSubmissionResult(PublicFormSubmissionStatus.DUPLICATE, existing.getMatchedApplicationId());
         }
 
-        List<AdminBlacklist> blacklistMatches = adminBlacklistMapper.findActiveMatches(applicantName, birthDate, mobilePhoneHash);
+        List<AdminBlacklist> blacklistMatches = adminBlacklistMapper.findActiveMatches(applicantName, birthDate, mobilePhoneHashes);
         AdminBlacklist effectiveBlacklist = BlacklistModePolicy.effectiveMatch(blacklistMatches);
         AdminJobApplication application = toApplication(
                 documentSrl,
@@ -341,7 +342,7 @@ public class PublicFormService {
         application.setNotifySmsYn(toYn(form.getNotifySmsYn()));
         application.setNotifyKeywordYn(toYn(hasRecommendationChannel(form)));
         application.setApplicationStatus(effectiveBlacklist == null ? "RECEIVED" : BlacklistModePolicy.applicationStatus(effectiveBlacklist.getBlackMode()));
-        application.setIsNewApplicant(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(mobilePhoneHash) == 0 ? "Y" : "N");
+        application.setIsNewApplicant(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHashes(phoneHashCandidates(normalizedMobile)) == 0 ? "Y" : "N");
         application.setIsBlacklisted(effectiveBlacklist == null ? "N" : "Y");
         application.setBlackModeApplied(effectiveBlacklist == null ? null : BlacklistModePolicy.normalize(effectiveBlacklist.getBlackMode()));
         application.setProvideYn("Y");
@@ -611,6 +612,18 @@ public class PublicFormService {
             return forwarded.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private List<String> phoneHashCandidates(String normalizedPhone) {
+        String currentHash = protectionService.phoneHash(normalizedPhone);
+        String legacyHash = protectionService.legacyPhoneHash(normalizedPhone);
+        if (currentHash == null) {
+            return List.of();
+        }
+        if (currentHash.equals(legacyHash)) {
+            return List.of(currentHash);
+        }
+        return List.of(currentHash, legacyHash);
     }
 
     private String toJsonArray(List<String> values) {

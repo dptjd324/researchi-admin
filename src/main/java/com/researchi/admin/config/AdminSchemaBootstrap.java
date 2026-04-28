@@ -102,6 +102,24 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
     }
 
     private void ensureAdminMailSendJobColumns(Connection connection) throws Exception {
+        alterColumnIfNotNullable(
+                connection,
+                "admin_mail_send_job",
+                "template_id",
+                "ALTER TABLE admin_mail_send_job MODIFY COLUMN template_id BIGINT NULL"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "mail_subject_snapshot",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN mail_subject_snapshot VARCHAR(255) NULL AFTER template_id"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "mail_body_snapshot",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN mail_body_snapshot TEXT NULL AFTER mail_subject_snapshot"
+        );
         addColumnIfMissing(
                 connection,
                 "admin_mail_send_job",
@@ -149,6 +167,31 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         try (Statement statement = connection.createStatement()) {
             statement.execute(ddl);
             log.info("Created missing table {}.", tableName);
+        }
+    }
+
+    private void alterColumnIfNotNullable(
+            Connection connection,
+            String tableName,
+            String columnName,
+            String ddl
+    ) throws Exception {
+        if (!hasColumn(connection, tableName, columnName) || isColumnNullable(connection, tableName, columnName)) {
+            return;
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(ddl);
+            log.info("Ensured column shape {}.{}.", tableName, columnName);
+        }
+    }
+
+    private boolean isColumnNullable(Connection connection, String tableName, String columnName) throws Exception {
+        DatabaseMetaData metaData = connection.getMetaData();
+        try (ResultSet columns = metaData.getColumns(connection.getCatalog(), null, tableName, columnName)) {
+            if (columns.next()) {
+                return columns.getInt("NULLABLE") == DatabaseMetaData.columnNullable;
+            }
+            return false;
         }
     }
 

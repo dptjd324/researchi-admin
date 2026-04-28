@@ -142,10 +142,10 @@ public class BlacklistService {
         }
 
         String normalizedPhone = decryptAndNormalizePhone(application.getMobilePhoneEnc());
-        String mobilePhoneHash = normalizedPhone == null ? null : protectionService.sha256(normalizedPhone);
+        String mobilePhoneHash = normalizedPhone == null ? null : protectionService.phoneHash(normalizedPhone);
         String applicantName = trimToNull(application.getApplicantName());
 
-        BlacklistEntry existing = findExistingActiveEntry(mobilePhoneHash, applicantName, application.getBirthDate());
+        BlacklistEntry existing = findExistingActiveEntry(phoneHashCandidates(normalizedPhone), applicantName, application.getBirthDate());
         Long blacklistId = existing == null
                 ? createApplicationBlacklist(application, mobilePhoneHash, applicantName, principal, request)
                 : existing.getId();
@@ -220,7 +220,7 @@ public class BlacklistService {
         entry.setExpiresAt(BlacklistModePolicy.TEMPORARY_BLOCK.equals(entry.getBlackMode()) ? form.getExpiresAt() : null);
 
         if (normalizedPhone != null) {
-            entry.setBlackMobilePhoneHash(protectionService.sha256(normalizedPhone));
+            entry.setBlackMobilePhoneHash(protectionService.phoneHash(normalizedPhone));
         } else if (existing == null) {
             entry.setBlackMobilePhoneHash(null);
         }
@@ -256,9 +256,9 @@ public class BlacklistService {
         return entry.getId();
     }
 
-    private BlacklistEntry findExistingActiveEntry(String mobilePhoneHash, String applicantName, java.time.LocalDate birthDate) {
-        if (mobilePhoneHash != null) {
-            BlacklistEntry existing = adminBlacklistAdminMapper.findActiveByMobilePhoneHash(mobilePhoneHash);
+    private BlacklistEntry findExistingActiveEntry(List<String> mobilePhoneHashes, String applicantName, java.time.LocalDate birthDate) {
+        if (mobilePhoneHashes != null && !mobilePhoneHashes.isEmpty()) {
+            BlacklistEntry existing = adminBlacklistAdminMapper.findActiveByMobilePhoneHashes(mobilePhoneHashes);
             if (existing != null) {
                 return existing;
             }
@@ -267,6 +267,18 @@ public class BlacklistService {
             return adminBlacklistAdminMapper.findActiveByNameAndBirthDate(applicantName, birthDate);
         }
         return null;
+    }
+
+    private List<String> phoneHashCandidates(String normalizedPhone) {
+        String currentHash = protectionService.phoneHash(normalizedPhone);
+        String legacyHash = protectionService.legacyPhoneHash(normalizedPhone);
+        if (currentHash == null) {
+            return List.of();
+        }
+        if (currentHash.equals(legacyHash)) {
+            return List.of(currentHash);
+        }
+        return List.of(currentHash, legacyHash);
     }
 
     private String decryptAndNormalizePhone(String encryptedPhone) {

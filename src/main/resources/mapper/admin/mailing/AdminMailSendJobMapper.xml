@@ -10,6 +10,8 @@
         <result property="sendType" column="send_type"/>
         <result property="triggerType" column="trigger_type"/>
         <result property="templateId" column="template_id"/>
+        <result property="mailSubjectSnapshot" column="mail_subject_snapshot"/>
+        <result property="mailBodySnapshot" column="mail_body_snapshot"/>
         <result property="attachmentType" column="attachment_type"/>
         <result property="recipientCount" column="recipient_count"/>
         <result property="excludedCount" column="excluded_count"/>
@@ -31,6 +33,8 @@
             send_type,
             trigger_type,
             template_id,
+            mail_subject_snapshot,
+            mail_body_snapshot,
             attachment_type,
             recipient_count,
             excluded_count,
@@ -48,6 +52,8 @@
             #{sendType},
             #{triggerType},
             #{templateId},
+            #{mailSubjectSnapshot},
+            #{mailBodySnapshot},
             #{attachmentType},
             #{recipientCount},
             #{excludedCount},

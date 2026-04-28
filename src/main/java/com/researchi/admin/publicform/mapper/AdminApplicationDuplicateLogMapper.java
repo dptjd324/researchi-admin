@@ -4,15 +4,17 @@ import com.researchi.admin.publicform.domain.AdminApplicationDuplicateLog;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface AdminApplicationDuplicateLogMapper {
 
-    AdminApplicationDuplicateLog findLatestByDocumentSrlAndMobilePhoneHash(
+    AdminApplicationDuplicateLog findLatestByDocumentSrlAndMobilePhoneHashes(
             @Param("documentSrl") Long documentSrl,
-            @Param("mobilePhoneHash") String mobilePhoneHash
+            @Param("mobilePhoneHashes") List<String> mobilePhoneHashes
     );
 
-    int countPrimaryByMobilePhoneHash(@Param("mobilePhoneHash") String mobilePhoneHash);
+    int countPrimaryByMobilePhoneHashes(@Param("mobilePhoneHashes") List<String> mobilePhoneHashes);
 
     void insert(AdminApplicationDuplicateLog duplicateLog);
 }

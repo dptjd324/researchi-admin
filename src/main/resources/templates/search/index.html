@@ -5,8 +5,7 @@
         <section class="panel">
             <div class="dashboard-head">
                 <div>
-                    <p class="eyebrow">Phase 11</p>
-                    <h2 class="h3 mb-2">기간 검색</h2>
+                    <h2 class="h3 mb-2">통합 검색</h2>
                     <p class="dashboard-copy mb-0">지원 등록, 메일 발송, 알림 이력을 날짜 범위와 다양한 조건으로 검색합니다.</p>
                 </div>
                 <div class="dashboard-actions">
@@ -76,7 +75,7 @@
             <div class="dashboard-head">
                 <div>
                     <h3 class="h5 mb-2">검색 결과</h3>
-                    <p class="dashboard-copy mb-0" th:text="${result.scope + ' | ' + result.dateFieldLabel + ' | ' + result.resultCount + '건'}">APPLICATION | Applied At | 0건</p>
+                    <p class="dashboard-copy mb-0" th:text="${@uiLabels.searchType(result.scope) + ' | ' + result.dateFieldLabel + ' | ' + result.resultCount + '건'}">지원서 | 지원 시각 | 0건</p>
                 </div>
             </div>
 
@@ -127,16 +126,16 @@
                 <article class="job-item" th:each="log : ${result.actionLogs}">
                     <div class="job-item-head">
                         <div>
-                            <p class="eyebrow" th:text="${log.actionType}">LOGIN</p>
+                            <p class="eyebrow" th:text="${@uiLabels.actionType(log.actionType)}">로그인</p>
                             <h3 class="h5 mb-2" th:text="${log.userName ?: log.loginId ?: '이름 없는 관리자'}">관리자</h3>
-                            <p class="job-summary" th:text="${(log.targetType ?: '-') + ' | ' + (log.targetId ?: '-')}">TARGET</p>
+                            <p class="job-summary" th:text="${@uiLabels.targetType(log.targetType) + ' | ' + (log.targetId ?: '-')}">대상</p>
                         </div>
                     </div>
                     <div class="job-meta-grid">
                         <span><strong>로그인 ID</strong><span th:text="${log.loginId ?: '-'}">-</span></span>
                         <span><strong>IP</strong><span th:text="${log.ipAddress ?: '-'}">-</span></span>
                         <span><strong>생성 시각</strong><span th:text="${@uiLabels.dateTime(log.createdAt)}">-</span></span>
-                        <span><strong>상세</strong><span th:text="${log.actionDetail ?: '-'}">-</span></span>
+                        <span><strong>상세</strong><span th:text="${@uiLabels.logDetail(log.actionDetail)}">-</span></span>
                     </div>
                 </article>
             </div>

@@ -119,7 +119,7 @@
             blacklist.expires_at
     </select>
 
-    <select id="findActiveByMobilePhoneHash" resultMap="blacklistEntryResultMap">
+    <select id="findActiveByMobilePhoneHashes" resultMap="blacklistEntryResultMap">
         SELECT
             blacklist.id,
             blacklist.black_name,
@@ -137,7 +137,10 @@
         LEFT JOIN admin_blacklist_match_log match_log ON match_log.blacklist_id = blacklist.id
         WHERE blacklist.active_yn = 'Y'
           AND (blacklist.expires_at IS NULL OR blacklist.expires_at > CURRENT_TIMESTAMP)
-          AND blacklist.black_mobile_phone_hash = #{mobilePhoneHash}
+          AND blacklist.black_mobile_phone_hash IN
+          <foreach collection="mobilePhoneHashes" item="mobilePhoneHash" open="(" separator="," close=")">
+              #{mobilePhoneHash}
+          </foreach>
         GROUP BY
             blacklist.id,
             blacklist.black_name,

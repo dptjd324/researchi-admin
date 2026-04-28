@@ -113,8 +113,20 @@
                         <div class="dashboard-head dashboard-head--row blacklist-results-toolbar">
                             <h4 class="h6 mb-0">조회 결과</h4>
                             <div class="actions">
-                                <a th:href="@{/blacklist/export/xlsx(keyword=${keyword}, activeYn=${activeYn}, blackMode=${blackMode})}" class="secondary-link">XLSX 내려받기</a>
-                                <a th:href="@{/blacklist/export/txt(keyword=${keyword}, activeYn=${activeYn}, blackMode=${blackMode})}" class="secondary-link">TXT 내려받기</a>
+                                <form th:action="@{/blacklist/export/xlsx}" method="post" class="inline-export-form">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <input type="hidden" name="keyword" th:value="${keyword}">
+                                    <input type="hidden" name="activeYn" th:value="${activeYn}">
+                                    <input type="hidden" name="blackMode" th:value="${blackMode}">
+                                    <button type="submit" class="secondary-link">XLSX 내려받기</button>
+                                </form>
+                                <form th:action="@{/blacklist/export/txt}" method="post" class="inline-export-form">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <input type="hidden" name="keyword" th:value="${keyword}">
+                                    <input type="hidden" name="activeYn" th:value="${activeYn}">
+                                    <input type="hidden" name="blackMode" th:value="${blackMode}">
+                                    <button type="submit" class="secondary-link">TXT 내려받기</button>
+                                </form>
                             </div>
                         </div>
 

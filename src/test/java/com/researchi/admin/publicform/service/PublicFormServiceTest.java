@@ -99,8 +99,8 @@ class PublicFormServiceTest {
     void submitPersistsApplicationAnswersConsentAndExtraAnswers() {
         when(jobService.getJob(11L)).thenReturn(jobDetail(11L));
         when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
-        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(null);
-        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(any())).thenReturn(0);
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHashes(any())).thenReturn(0);
         when(adminBlacklistMapper.findActiveMatches(any(), any(), any())).thenReturn(List.of());
         doAnswer(invocation -> {
             AdminJobApplication application = invocation.getArgument(0);
@@ -127,8 +127,8 @@ class PublicFormServiceTest {
     void submitEnablesRecommendationWhenNotificationChannelIsSelected() {
         when(jobService.getJob(11L)).thenReturn(jobDetail(11L));
         when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
-        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(null);
-        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(any())).thenReturn(0);
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHashes(any())).thenReturn(0);
         when(adminBlacklistMapper.findActiveMatches(any(), any(), any())).thenReturn(List.of());
         doAnswer(invocation -> {
             AdminJobApplication application = invocation.getArgument(0);
@@ -162,8 +162,8 @@ class PublicFormServiceTest {
     void submitValidatesTypedAdditionalAnswersAndStoresDisplayLabels() {
         when(jobService.getJob(11L)).thenReturn(typedJobDetail(11L));
         when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
-        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(null);
-        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(any())).thenReturn(0);
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHashes(any())).thenReturn(0);
         when(adminBlacklistMapper.findActiveMatches(any(), any(), any())).thenReturn(List.of());
         doAnswer(invocation -> {
             AdminJobApplication application = invocation.getArgument(0);
@@ -188,7 +188,7 @@ class PublicFormServiceTest {
         when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
         AdminApplicationDuplicateLog duplicateLog = new AdminApplicationDuplicateLog();
         duplicateLog.setMatchedApplicationId(23L);
-        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(duplicateLog);
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(eq(11L), any())).thenReturn(duplicateLog);
 
         PublicFormSubmissionResult result = publicFormService.submit(11L, baseForm(), Map.of(41L, List.of("weekday")), request());
 
@@ -201,8 +201,8 @@ class PublicFormServiceTest {
     void submitMarksApplicationBlockedWhenBlacklistMatches() {
         when(jobService.getJob(11L)).thenReturn(jobDetail(11L));
         when(formFieldService.getFields(11L)).thenReturn(List.of(selectField()));
-        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHash(eq(11L), any())).thenReturn(null);
-        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHash(any())).thenReturn(2);
+        when(adminApplicationDuplicateLogMapper.findLatestByDocumentSrlAndMobilePhoneHashes(eq(11L), any())).thenReturn(null);
+        when(adminApplicationDuplicateLogMapper.countPrimaryByMobilePhoneHashes(any())).thenReturn(2);
         AdminBlacklist blacklist = new AdminBlacklist();
         blacklist.setId(5L);
         blacklist.setBlackMode("BLOCK");

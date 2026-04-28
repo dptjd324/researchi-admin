@@ -16,20 +16,26 @@
         <result property="checkedAt" column="checked_at"/>
     </resultMap>
 
-    <select id="findLatestByDocumentSrlAndMobilePhoneHash" resultMap="duplicateLogResultMap">
+    <select id="findLatestByDocumentSrlAndMobilePhoneHashes" resultMap="duplicateLogResultMap">
         SELECT *
         FROM admin_application_duplicate_log
         WHERE document_srl = #{documentSrl}
-          AND mobile_phone_hash = #{mobilePhoneHash}
+          AND mobile_phone_hash IN
+          <foreach collection="mobilePhoneHashes" item="mobilePhoneHash" open="(" separator="," close=")">
+              #{mobilePhoneHash}
+          </foreach>
           AND matched_application_id IS NOT NULL
         ORDER BY checked_at DESC, id DESC
         LIMIT 1
     </select>
 
-    <select id="countPrimaryByMobilePhoneHash" resultType="int">
+    <select id="countPrimaryByMobilePhoneHashes" resultType="int">
         SELECT COUNT(*)
         FROM admin_application_duplicate_log
-        WHERE mobile_phone_hash = #{mobilePhoneHash}
+        WHERE mobile_phone_hash IN
+          <foreach collection="mobilePhoneHashes" item="mobilePhoneHash" open="(" separator="," close=")">
+              #{mobilePhoneHash}
+          </foreach>
           AND duplicate_found = 'N'
           AND matched_application_id IS NOT NULL
     </select>
