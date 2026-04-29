@@ -1,5 +1,18 @@
 # API-SPEC.md
 
+## Board Scope
+
+`GET /jobs` manages these XE mids:
+`notice`, `newjob`, `additional`, `fast`, `recruit`, `sharing`, `question`.
+
+Application endpoints and application-related controls are limited to:
+`newjob`, `additional`, `fast`, `recruit`.
+
+Content-only/Q&A boards are:
+`notice`, `sharing`, `question`.
+
+`page_tjVR38` is excluded from the API scope for now.
+
 ## Admin Pages
 - GET /login
 - POST /login

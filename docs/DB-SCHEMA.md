@@ -1,5 +1,24 @@
 # DB-SCHEMA.md
 
+## Board Configuration
+
+`admin_board_config` is a lightweight admin-side table for board classification.
+
+Columns:
+- `xe_mid`
+- `board_name`
+- `board_type`
+- `application_enabled`
+- `display_order`
+- `active_yn`
+- `created_at`
+- `updated_at`
+
+Managed board mids: `notice`, `newjob`, `additional`, `fast`, `recruit`, `sharing`, `question`.
+Application-enabled board mids: `newjob`, `additional`, `fast`, `recruit`.
+Content-only/Q&A board mids: `notice`, `sharing`, `question`.
+Excluded mid: `page_tjVR38`.
+
 ## 1. 기존 재사용 테이블
 ### xe_modules
 - 공고 게시판 식별(newjob, additional)

@@ -548,6 +548,9 @@ public class PublicFormService {
     }
 
     private String unavailableReason(JobDetail jobDetail) {
+        if (!jobDetail.isApplicationBoard()) {
+            return "This board does not accept applications.";
+        }
         if (!"PUBLIC".equals(jobDetail.getDocument().getStatus())) {
             return "공고가 아직 공개 상태가 아니어서 신청서를 열 수 없습니다.";
         }

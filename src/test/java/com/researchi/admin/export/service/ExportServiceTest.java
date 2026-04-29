@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -228,6 +229,74 @@ class ExportServiceTest {
         );
 
         verify(adminExportLogMapper, times(1)).insert(any());
+        verify(adminActionLogService).log(eq(1L), eq("APPLICATION_EXPORT"), eq("JOB"), eq("9"), eq("Exported XLSX applications (1 rows)"), any());
+    }
+
+    @Test
+    void streamTxtWritesRowsFromPagedQueriesAndLogsHistory() throws Exception {
+        exportService = new ExportService(
+                jobService,
+                formFieldService,
+                adminExportQueryMapper,
+                adminExportLogMapper,
+                protectionService(),
+                adminActionLogService
+        );
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+        when(formFieldService.getFields(9L)).thenReturn(List.of(
+                new FormFieldDetail(20L, "first", "First Question", "TEXT", 1, false, null, null, List.of(), true)
+        ));
+        when(adminExportQueryMapper.findApplicationsPageByDocumentSrl(9L, 500, 0)).thenReturn(List.of(exportApplicationSource()));
+        when(adminExportQueryMapper.findAnswersByApplicationIds(List.of(101L))).thenReturn(List.of(answer(101L, 20L, "One", null)));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        exportService.streamTxt(
+                9L,
+                "job-9.txt",
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest(),
+                outputStream
+        );
+
+        String content = outputStream.toString(StandardCharsets.UTF_8);
+        assertThat(content).contains("\uC21C\uBC88\t\uC131\uBA85");
+        assertThat(content).contains("Hong");
+        assertThat(content).contains("One");
+        verify(adminExportLogMapper).insert(any());
+        verify(adminActionLogService).log(eq(1L), eq("APPLICATION_EXPORT"), eq("JOB"), eq("9"), eq("Exported TXT applications (1 rows)"), any());
+    }
+
+    @Test
+    void streamXlsxWritesRowsFromPagedQueries() throws Exception {
+        exportService = new ExportService(
+                jobService,
+                formFieldService,
+                adminExportQueryMapper,
+                adminExportLogMapper,
+                protectionService(),
+                adminActionLogService
+        );
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+        when(formFieldService.getFields(9L)).thenReturn(List.of(
+                new FormFieldDetail(20L, "first", "First Question", "TEXT", 1, false, null, null, List.of(), true)
+        ));
+        when(adminExportQueryMapper.findApplicationsPageByDocumentSrl(9L, 500, 0)).thenReturn(List.of(exportApplicationSource()));
+        when(adminExportQueryMapper.findAnswersByApplicationIds(List.of(101L))).thenReturn(List.of(answer(101L, 20L, "One", null)));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        exportService.streamXlsx(
+                9L,
+                "job-9.xlsx",
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest(),
+                outputStream
+        );
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(outputStream.toByteArray()))) {
+            assertThat(workbook.getSheetAt(0).getRow(0).getCell(24).getStringCellValue()).isEqualTo("First Question");
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue()).isEqualTo("Hong");
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(24).getStringCellValue()).isEqualTo("One");
+        }
         verify(adminActionLogService).log(eq(1L), eq("APPLICATION_EXPORT"), eq("JOB"), eq("9"), eq("Exported XLSX applications (1 rows)"), any());
     }
 

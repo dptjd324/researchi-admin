@@ -49,6 +49,11 @@
         <result property="answerJson" column="answer_json"/>
     </resultMap>
 
+    <resultMap id="applicationJobCountResultMap" type="com.researchi.admin.application.domain.ApplicationJobCount">
+        <id property="documentSrl" column="document_srl"/>
+        <result property="applicationCount" column="application_count"/>
+    </resultMap>
+
     <sql id="applicationColumns">
         id,
         document_srl,
@@ -84,6 +89,36 @@
         updated_at
     </sql>
 
+    <sql id="applicationSearchWhere">
+        <where>
+            <if test="documentSrl != null">
+                document_srl = #{documentSrl}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                <if test="documentSrl != null">
+                    AND
+                </if>
+                (
+                    LOWER(applicant_name) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(mobile_phone_masked) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(tel_phone_masked) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(email_address_masked) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(region_text) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(job_text) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(organization_text) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application_status) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(delivery_status) LIKE CONCAT('%', #{keyword}, '%')
+                    <if test="jobDocumentSrls != null and jobDocumentSrls.size() > 0">
+                        OR document_srl IN
+                        <foreach collection="jobDocumentSrls" item="jobDocumentSrl" open="(" separator="," close=")">
+                            #{jobDocumentSrl}
+                        </foreach>
+                    </if>
+                )
+            </if>
+        </where>
+    </sql>
+
     <select id="findAll" resultMap="applicationRecordResultMap">
         SELECT
         <include refid="applicationColumns"/>
@@ -97,6 +132,55 @@
         FROM admin_job_application
         WHERE document_srl = #{documentSrl}
         ORDER BY applied_at DESC, id DESC
+    </select>
+
+    <select id="findPage" resultMap="applicationRecordResultMap">
+        SELECT
+        <include refid="applicationColumns"/>
+        FROM admin_job_application
+        <where>
+            <if test="documentSrl != null">
+                document_srl = #{documentSrl}
+            </if>
+        </where>
+        ORDER BY applied_at DESC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findSearchPage" resultMap="applicationRecordResultMap">
+        SELECT
+        <include refid="applicationColumns"/>
+        FROM admin_job_application
+        <include refid="applicationSearchWhere"/>
+        ORDER BY applied_at DESC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_job_application
+        <where>
+            <if test="documentSrl != null">
+                document_srl = #{documentSrl}
+            </if>
+        </where>
+    </select>
+
+    <select id="countSearch" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_job_application
+        <include refid="applicationSearchWhere"/>
+    </select>
+
+    <select id="countByDocumentSrl" resultMap="applicationJobCountResultMap">
+        SELECT
+            document_srl,
+            COUNT(*) AS application_count
+        FROM admin_job_application
+        GROUP BY document_srl
+        ORDER BY document_srl DESC
     </select>
 
     <select id="findById" resultMap="applicationRecordResultMap">

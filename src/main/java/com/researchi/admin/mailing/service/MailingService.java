@@ -98,7 +98,10 @@ public class MailingService {
         }
 
         Map<Long, String> titlesByDocumentSrl = new LinkedHashMap<>();
-        for (JobListItem job : jobService.getJobs()) {
+        List<Long> documentSrls = jobs.stream()
+                .map(AdminMailSendJob::getDocumentSrl)
+                .toList();
+        for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
             titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
         }
         for (AdminMailSendJob job : jobs) {

@@ -2,6 +2,7 @@ package com.researchi.admin.application.service;
 
 import com.researchi.admin.application.domain.ApplicationAnswerItem;
 import com.researchi.admin.application.domain.ApplicationDetail;
+import com.researchi.admin.application.domain.ApplicationJobCount;
 import com.researchi.admin.application.domain.ApplicationRecord;
 import com.researchi.admin.application.mapper.AdminApplicationQueryMapper;
 import com.researchi.admin.auth.service.AdminActionLogService;
@@ -61,7 +62,7 @@ class ApplicationServiceTest {
         application.setAppliedAt(LocalDateTime.of(2026, 4, 16, 10, 0));
 
         when(adminApplicationQueryMapper.findByDocumentSrl(9L)).thenReturn(List.of(application));
-        when(jobService.getJobs()).thenReturn(List.of(new JobListItem(
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(new JobListItem(
                 9L,
                 "Scoped Job",
                 "Body",
@@ -90,7 +91,7 @@ class ApplicationServiceTest {
         application.setAppliedAt(LocalDateTime.of(2026, 4, 16, 9, 0));
 
         when(adminApplicationQueryMapper.findAll()).thenReturn(List.of(application));
-        when(jobService.getJobs()).thenReturn(List.of(new JobListItem(
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(new JobListItem(
                 9L,
                 "Seoul Research Survey",
                 "Body",
@@ -119,7 +120,7 @@ class ApplicationServiceTest {
         application.setAppliedAt(LocalDateTime.of(2026, 4, 16, 11, 0));
 
         when(adminApplicationQueryMapper.findAll()).thenReturn(List.of(application));
-        when(jobService.getJobs()).thenReturn(List.of(new JobListItem(
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(new JobListItem(
                 9L,
                 "Status Job",
                 "Body",
@@ -135,6 +136,61 @@ class ApplicationServiceTest {
         assertThat(result.getIsNewApplicant()).isEqualTo("Y");
         assertThat(result.getApplicationStatus()).isEqualTo("RECEIVED");
         assertThat(result.getDeliveryStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void getApplicationPageUsesMapperLimitAndOffset() {
+        ApplicationRecord application = new ApplicationRecord();
+        application.setId(31L);
+        application.setDocumentSrl(9L);
+        application.setApplicantName("Page User");
+        application.setAppliedAt(LocalDateTime.of(2026, 4, 16, 12, 0));
+
+        when(adminApplicationQueryMapper.findPage(9L, 12, 24)).thenReturn(List.of(application));
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(new JobListItem(
+                9L,
+                "Paged Job",
+                "Body",
+                "PUBLIC",
+                "20260416",
+                "20260416",
+                null,
+                "newjob"
+        )));
+
+        List<ApplicationRecord> applications = applicationService.getApplicationPage(9L, 12, 24);
+
+        assertThat(applications).singleElement().extracting(ApplicationRecord::getJobTitle).isEqualTo("Paged Job");
+        verify(adminApplicationQueryMapper).findPage(9L, 12, 24);
+    }
+
+    @Test
+    void getApplicationSearchPageUsesDatabaseSearchAndJobTitleMatches() {
+        ApplicationRecord application = new ApplicationRecord();
+        application.setId(31L);
+        application.setDocumentSrl(9L);
+        application.setApplicantName("Page User");
+        application.setAppliedAt(LocalDateTime.of(2026, 4, 16, 12, 0));
+
+        when(jobService.findApplicationDocumentSrlsByTitle("survey")).thenReturn(List.of(9L));
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(
+                new JobListItem(9L, "Seoul Survey", "Body", "PUBLIC", "20260416", "20260416", null, "newjob")
+        ));
+        when(adminApplicationQueryMapper.findSearchPage(null, "survey", List.of(9L), 12, 0))
+                .thenReturn(List.of(application));
+
+        List<ApplicationRecord> applications = applicationService.getApplicationPage(null, " Survey ", 12, 0);
+
+        assertThat(applications).singleElement().extracting(ApplicationRecord::getJobTitle).isEqualTo("Seoul Survey");
+        verify(adminApplicationQueryMapper).findSearchPage(null, "survey", List.of(9L), 12, 0);
+    }
+
+    @Test
+    void countApplicationsUsesDatabaseSearch() {
+        when(jobService.findApplicationDocumentSrlsByTitle("survey")).thenReturn(List.of(9L));
+        when(adminApplicationQueryMapper.countSearch(null, "survey", List.of(9L))).thenReturn(3);
+
+        assertThat(applicationService.countApplications(null, " Survey ")).isEqualTo(3);
     }
 
     @Test
@@ -196,18 +252,15 @@ class ApplicationServiceTest {
 
     @Test
     void getJobFiltersBuildsSplitUiCountsPerJob() {
-        ApplicationRecord first = new ApplicationRecord();
-        first.setId(21L);
-        first.setDocumentSrl(9L);
-        ApplicationRecord second = new ApplicationRecord();
-        second.setId(22L);
-        second.setDocumentSrl(9L);
-        ApplicationRecord third = new ApplicationRecord();
-        third.setId(23L);
-        third.setDocumentSrl(10L);
+        ApplicationJobCount firstCount = new ApplicationJobCount();
+        firstCount.setDocumentSrl(9L);
+        firstCount.setApplicationCount(2L);
+        ApplicationJobCount secondCount = new ApplicationJobCount();
+        secondCount.setDocumentSrl(10L);
+        secondCount.setApplicationCount(1L);
 
-        when(adminApplicationQueryMapper.findAll()).thenReturn(List.of(first, second, third));
-        when(jobService.getJobs()).thenReturn(List.of(
+        when(adminApplicationQueryMapper.countByDocumentSrl()).thenReturn(List.of(firstCount, secondCount));
+        when(jobService.getJobsByDocumentSrls(List.of(9L, 10L))).thenReturn(List.of(
                 new JobListItem(9L, "Job A", "Body", "PUBLIC", "20260416", "20260416", null, "newjob"),
                 new JobListItem(10L, "Job B", "Body", "PUBLIC", "20260416", "20260416", null, "additional")
         ));
@@ -218,6 +271,7 @@ class ApplicationServiceTest {
                         org.assertj.core.groups.Tuple.tuple(10L, "Job B", 1L),
                         org.assertj.core.groups.Tuple.tuple(9L, "Job A", 2L)
                 );
+        verify(adminApplicationQueryMapper, never()).findAll();
     }
 
     @Test

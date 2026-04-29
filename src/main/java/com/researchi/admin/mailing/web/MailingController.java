@@ -29,6 +29,8 @@ import java.util.Map;
 @RequestMapping("/mail/send")
 public class MailingController {
 
+    private static final int JOB_OPTION_LIMIT = 200;
+
     private final MailingService mailingService;
     private final MailTemplateService mailTemplateService;
     private final JobService jobService;
@@ -68,6 +70,7 @@ public class MailingController {
             return "mail/history";
         }
         try {
+            jobService.requireApplicationBoard(form.getDocumentSrl());
             mailingService.sendManual(form, principal, request);
             return redirectToHistory(form.getDocumentSrl(), "manualSent");
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -90,6 +93,7 @@ public class MailingController {
             return "mail/history";
         }
         try {
+            jobService.requireApplicationBoard(form.getDocumentSrl());
             mailingService.schedule(form, principal, request);
             return redirectToHistory(form.getDocumentSrl(), "scheduled");
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -112,6 +116,7 @@ public class MailingController {
             return "mail/history";
         }
         try {
+            jobService.requireApplicationBoard(form.getDocumentSrl());
             mailingService.triggerThreshold(form, principal, request);
             return redirectToHistory(form.getDocumentSrl(), "thresholdSent");
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -151,7 +156,7 @@ public class MailingController {
         model.addAttribute("pageTitle", "메일 발송 이력");
         model.addAttribute("pageDescription", "수동 발송, 예약 발송, 임계치 발송 실행과 수신자 스냅샷, 발송 이력을 관리합니다.");
         model.addAttribute("selectedDocumentSrl", documentSrl);
-        model.addAttribute("jobOptions", jobService.getJobs());
+        model.addAttribute("jobOptions", jobService.getRecentApplicationJobOptions(documentSrl, JOB_OPTION_LIMIT));
         model.addAttribute("templateOptions", mailTemplateService.getActiveTemplates());
         model.addAttribute("attachmentTypes", List.of(MailAttachmentType.values()));
         model.addAttribute("historyItems", mailingService.getHistory(documentSrl));

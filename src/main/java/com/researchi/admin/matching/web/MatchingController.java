@@ -39,6 +39,7 @@ public class MatchingController {
             CsrfToken csrfToken
     ) {
         request.getSession(true);
+        jobService.requireApplicationBoard(documentSrl);
         MatchingOverview overview = matchingService.getOverview(documentSrl, matchJobId);
         model.addAttribute("pageTitle", "키워드 매칭");
         model.addAttribute("pageDescription", "공고·지원자 키워드 추출, 매칭 실행, 알림 발송 대상을 검토하고 발송합니다.");
@@ -56,6 +57,7 @@ public class MatchingController {
             @AuthenticationPrincipal AdminPrincipal principal,
             HttpServletRequest request
     ) {
+        jobService.requireApplicationBoard(documentSrl);
         Long matchJobId = matchingService.run(documentSrl, principal, request);
         return "redirect:/matching/jobs/" + documentSrl + "?matchJobId=" + matchJobId + "&matched";
     }

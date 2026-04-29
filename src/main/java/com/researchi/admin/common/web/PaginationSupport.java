@@ -15,6 +15,9 @@ public final class PaginationSupport {
     public record PageLink(int pageNumber, String url, boolean current) {
     }
 
+    public record PageWindow(int currentPage, int totalPages, int offset, int pageSize) {
+    }
+
     public static final int DEFAULT_PAGE_SIZE = 12;
 
     private PaginationSupport() {
@@ -29,26 +32,41 @@ public final class PaginationSupport {
     ) {
         List<T> safeItems = items == null ? List.of() : items;
         int totalItems = safeItems.size();
-        int totalPages = totalItems == 0 ? 1 : (int) Math.ceil((double) totalItems / pageSize);
-        int currentPage = requestedPage == null ? 1 : Math.max(1, Math.min(requestedPage, totalPages));
-        int fromIndex = Math.min((currentPage - 1) * pageSize, totalItems);
-        int toIndex = Math.min(fromIndex + pageSize, totalItems);
+        PageWindow pageWindow = applyMetadata(model, request, totalItems, requestedPage, pageSize);
+        int fromIndex = Math.min(pageWindow.offset(), totalItems);
+        int toIndex = Math.min(fromIndex + pageWindow.pageSize(), totalItems);
         List<T> pagedItems = safeItems.subList(fromIndex, toIndex);
-
-        model.addAttribute("currentPage", currentPage);
-        model.addAttribute("totalPages", totalPages);
-        model.addAttribute("paginationEnabled", totalItems > pageSize);
-        model.addAttribute("pageLinks", buildPageLinks(request, currentPage, totalPages));
-        model.addAttribute("previousPageUrl", currentPage > 1 ? buildPageUrl(request, currentPage - 1) : null);
-        model.addAttribute("nextPageUrl", currentPage < totalPages ? buildPageUrl(request, currentPage + 1) : null);
-        model.addAttribute("pageSize", pageSize);
-        model.addAttribute("totalItemCount", totalItems);
 
         return pagedItems;
     }
 
+    public static PageWindow applyMetadata(
+            Model model,
+            HttpServletRequest request,
+            int totalItems,
+            Integer requestedPage,
+            int pageSize
+    ) {
+        int safeTotalItems = Math.max(0, totalItems);
+        int totalPages = safeTotalItems == 0 ? 1 : (int) Math.ceil((double) safeTotalItems / pageSize);
+        int currentPage = requestedPage == null ? 1 : Math.max(1, Math.min(requestedPage, totalPages));
+        int offset = Math.min((currentPage - 1) * pageSize, safeTotalItems);
+
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("paginationEnabled", safeTotalItems > pageSize);
+        model.addAttribute("pageLinks", buildPageLinks(request, currentPage, totalPages));
+        model.addAttribute("previousPageUrl", currentPage > 1 ? buildPageUrl(request, currentPage - 1) : null);
+        model.addAttribute("nextPageUrl", currentPage < totalPages ? buildPageUrl(request, currentPage + 1) : null);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("totalItemCount", safeTotalItems);
+
+        return new PageWindow(currentPage, totalPages, offset, pageSize);
+    }
+
     private static String buildPageUrl(HttpServletRequest request, int page) {
         Map<String, String[]> parameterMap = new LinkedHashMap<>(request.getParameterMap());
+        parameterMap.remove("cursor");
         parameterMap.put("page", new String[]{String.valueOf(page)});
 
         StringBuilder builder = new StringBuilder(request.getRequestURI());

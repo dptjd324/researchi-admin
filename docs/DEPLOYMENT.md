@@ -52,6 +52,18 @@
 11. Verify mail dispatch.
 12. Enable the scheduler by setting `APP_SCHEDULER_ENABLED=true` after checking Phase 12 mail template, threshold, and retention settings.
 
+## External XE DB Performance Checks
+- `xeDataSource` points to the existing XE database. The application reads and writes `xe_documents`, but it must not automatically change XE schema on startup.
+- For large XE databases, review and apply these indexes manually during a maintenance window if equivalent indexes do not already exist:
+
+```sql
+CREATE INDEX idx_xe_modules_mid_module_srl ON xe_modules (mid, module_srl);
+CREATE INDEX idx_xe_documents_module_document ON xe_documents (module_srl, document_srl);
+```
+
+- Check for existing indexes first to avoid duplicate indexes with different names.
+- Because admin DB and XE DB use separate local transactions, verify failed create/update scenarios in staging after any workflow change that writes both databases.
+
 ## Operational Security Checks
 - Enforce HTTPS
 - Set a strong initial admin password policy

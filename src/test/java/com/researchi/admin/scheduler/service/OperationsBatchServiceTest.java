@@ -2,7 +2,6 @@ package com.researchi.admin.scheduler.service;
 
 import com.researchi.admin.blacklist.service.BlacklistService;
 import com.researchi.admin.job.domain.AdminJobMeta;
-import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
@@ -146,15 +145,10 @@ class OperationsBatchServiceTest {
     @Test
     void keywordMatchBatchRunsOnlyRecruitingJobsWithApplicationsEnabled() {
         AdminJobMeta recruiting = new AdminJobMeta();
+        recruiting.setDocumentSrl(9L);
         recruiting.setApplicationEnabled("Y");
         recruiting.setRecruitStatus("RECRUITING");
-        AdminJobMeta closed = new AdminJobMeta();
-        closed.setApplicationEnabled("Y");
-        closed.setRecruitStatus("CLOSED");
-        when(jobService.getJobs()).thenReturn(List.of(
-                new JobListItem(9L, "Job 9", "", "PUBLIC", "", "", recruiting, "newjob"),
-                new JobListItem(10L, "Job 10", "", "CLOSED", "", "", closed, "newjob")
-        ));
+        when(adminJobMetaMapper.findEnabledRecruitingJobs()).thenReturn(List.of(recruiting));
         when(matchingService.runScheduled(9L)).thenReturn(44L);
 
         int executed = operationsBatchService.runKeywordMatchBatch();

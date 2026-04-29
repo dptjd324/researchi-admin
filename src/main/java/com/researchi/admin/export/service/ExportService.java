@@ -5,6 +5,7 @@ import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.export.domain.AdminExportLog;
 import com.researchi.admin.export.domain.ExportAnswerSource;
 import com.researchi.admin.export.domain.ExportApplicationSource;
+import com.researchi.admin.export.domain.ExportFileDescriptor;
 import com.researchi.admin.export.domain.ExportPayload;
 import com.researchi.admin.export.mapper.AdminExportLogMapper;
 import com.researchi.admin.export.mapper.AdminExportQueryMapper;
@@ -16,12 +17,16 @@ import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,6 +43,10 @@ import java.util.function.Function;
 @Service
 public class ExportService {
 
+    private static final int EXPORT_BATCH_SIZE = 500;
+    private static final int XLSX_STREAM_WINDOW_SIZE = 100;
+    private static final String XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    private static final String TXT_CONTENT_TYPE = "text/plain; charset=UTF-8";
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter EXPORTED_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
     private static final DateTimeFormatter EXPORTED_DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
@@ -111,7 +120,7 @@ public class ExportService {
         String fileName = buildFileName(documentSrl, "xlsx");
         return new ExportPayload(
                 fileName,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                XLSX_CONTENT_TYPE,
                 content,
                 context.rows().size()
         );
@@ -121,7 +130,39 @@ public class ExportService {
         ExportContext context = buildContext(documentSrl, applicationIds);
         byte[] content = buildTxt(context);
         String fileName = buildFileName(documentSrl, "txt");
-        return new ExportPayload(fileName, "text/plain; charset=UTF-8", content, context.rows().size());
+        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, context.rows().size());
+    }
+
+    public ExportFileDescriptor describeXlsx(Long documentSrl) {
+        return new ExportFileDescriptor(buildFileName(documentSrl, "xlsx"), XLSX_CONTENT_TYPE);
+    }
+
+    public ExportFileDescriptor describeTxt(Long documentSrl) {
+        return new ExportFileDescriptor(buildFileName(documentSrl, "txt"), TXT_CONTENT_TYPE);
+    }
+
+    @Transactional("adminTransactionManager")
+    public void streamXlsx(
+            Long documentSrl,
+            String fileName,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            OutputStream outputStream
+    ) {
+        int exportedCount = writeXlsxStreaming(documentSrl, outputStream);
+        writeLogs(documentSrl, "XLSX", fileName, exportedCount, principal, request);
+    }
+
+    @Transactional("adminTransactionManager")
+    public void streamTxt(
+            Long documentSrl,
+            String fileName,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            OutputStream outputStream
+    ) {
+        int exportedCount = writeTxtStreaming(documentSrl, outputStream);
+        writeLogs(documentSrl, "TXT", fileName, exportedCount, principal, request);
     }
 
     private ExportContext buildContext(Long documentSrl, List<Long> applicationIds) {
@@ -157,6 +198,62 @@ public class ExportService {
             columns.add(new ColumnDefinition(field.fieldLabel(), row -> row.dynamicAnswers().getOrDefault(field.id(), "")));
         }
         return new ExportContext(jobDetail.getDocument().getTitle(), columns, rows);
+    }
+
+    private ExportLayout buildLayout(Long documentSrl) {
+        jobService.getJob(documentSrl);
+        List<FormFieldDetail> fields = formFieldService.getFields(documentSrl).stream()
+                .sorted(Comparator.comparing(FormFieldDetail::fieldOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(FormFieldDetail::id))
+                .toList();
+        List<ColumnDefinition> columns = new ArrayList<>(COMMON_COLUMNS);
+        for (FormFieldDetail field : fields) {
+            columns.add(new ColumnDefinition(field.fieldLabel(), row -> row.dynamicAnswers().getOrDefault(field.id(), "")));
+        }
+        return new ExportLayout(fields, columns);
+    }
+
+    private void writeExportRows(Long documentSrl, List<FormFieldDetail> fields, ExportRowConsumer consumer) throws IOException {
+        int offset = 0;
+        int sequence = 1;
+        while (true) {
+            List<ExportApplicationSource> applications = adminExportQueryMapper.findApplicationsPageByDocumentSrl(
+                    documentSrl,
+                    EXPORT_BATCH_SIZE,
+                    offset
+            );
+            if (applications.isEmpty()) {
+                return;
+            }
+
+            Map<Long, Map<Long, String>> answersByApplicationId = answersByApplicationId(
+                    applications.stream().map(ExportApplicationSource::getId).toList()
+            );
+            for (ExportApplicationSource application : applications) {
+                consumer.accept(toRow(
+                        sequence++,
+                        application,
+                        fields,
+                        answersByApplicationId.getOrDefault(application.getId(), Map.of())
+                ));
+            }
+            if (applications.size() < EXPORT_BATCH_SIZE) {
+                return;
+            }
+            offset += EXPORT_BATCH_SIZE;
+        }
+    }
+
+    private Map<Long, Map<Long, String>> answersByApplicationId(List<Long> applicationIds) {
+        if (applicationIds == null || applicationIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Map<Long, String>> answersByApplicationId = new LinkedHashMap<>();
+        for (ExportAnswerSource answer : adminExportQueryMapper.findAnswersByApplicationIds(applicationIds)) {
+            answersByApplicationId.computeIfAbsent(answer.getApplicationId(), ignored -> new LinkedHashMap<>())
+                    .put(answer.getFieldId(), toDisplayAnswer(answer.getAnswerText(), answer.getAnswerJson()));
+        }
+        return answersByApplicationId;
     }
 
     private ExportRow toRow(
@@ -231,6 +328,51 @@ public class ExportService {
         return builder.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    private int writeXlsxStreaming(Long documentSrl, OutputStream outputStream) {
+        ExportLayout layout = buildLayout(documentSrl);
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook(XLSX_STREAM_WINDOW_SIZE)) {
+            workbook.setCompressTempFiles(true);
+            Sheet sheet = workbook.createSheet("Applications");
+            Row headerRow = sheet.createRow(0);
+            for (int index = 0; index < layout.columns().size(); index++) {
+                headerRow.createCell(index).setCellValue(layout.columns().get(index).header());
+            }
+
+            RowCounter counter = new RowCounter();
+            writeExportRows(documentSrl, layout.fields(), exportRow -> {
+                Row row = sheet.createRow(counter.value() + 1);
+                for (int columnIndex = 0; columnIndex < layout.columns().size(); columnIndex++) {
+                    row.createCell(columnIndex).setCellValue(sanitizeSpreadsheetValue(layout.columns().get(columnIndex).value(exportRow)));
+                }
+                counter.increment();
+            });
+
+            workbook.write(outputStream);
+            outputStream.flush();
+            workbook.dispose();
+            return counter.value();
+        } catch (IOException ex) {
+            throw new IllegalStateException("XLSX ?뚯씪???앹꽦?섏? 紐삵뻽?듬땲??", ex);
+        }
+    }
+
+    private int writeTxtStreaming(Long documentSrl, OutputStream outputStream) {
+        ExportLayout layout = buildLayout(documentSrl);
+        try {
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+            appendTxtLine(writer, layout.columns().stream().map(ColumnDefinition::header).toList());
+            RowCounter counter = new RowCounter();
+            writeExportRows(documentSrl, layout.fields(), exportRow -> {
+                appendTxtLine(writer, layout.columns().stream().map(column -> column.value(exportRow)).toList());
+                counter.increment();
+            });
+            writer.flush();
+            return counter.value();
+        } catch (IOException ex) {
+            throw new IllegalStateException("TXT ?뚯씪???앹꽦?섏? 紐삵뻽?듬땲??", ex);
+        }
+    }
+
     private void appendTxtLine(StringBuilder builder, List<String> values) {
         for (int index = 0; index < values.size(); index++) {
             if (index > 0) {
@@ -239,6 +381,16 @@ public class ExportService {
             builder.append(sanitizeSpreadsheetValue(sanitizeTxt(values.get(index))));
         }
         builder.append(System.lineSeparator());
+    }
+
+    private void appendTxtLine(BufferedWriter writer, List<String> values) throws IOException {
+        for (int index = 0; index < values.size(); index++) {
+            if (index > 0) {
+                writer.write('\t');
+            }
+            writer.write(sanitizeSpreadsheetValue(sanitizeTxt(values.get(index))));
+        }
+        writer.write(System.lineSeparator());
     }
 
     private String sanitizeTxt(String value) {
@@ -405,6 +557,26 @@ public class ExportService {
     }
 
     private record ExportContext(String jobTitle, List<ColumnDefinition> columns, List<ExportRow> rows) {
+    }
+
+    private record ExportLayout(List<FormFieldDetail> fields, List<ColumnDefinition> columns) {
+    }
+
+    private static class RowCounter {
+        private int value;
+
+        int value() {
+            return value;
+        }
+
+        void increment() {
+            value++;
+        }
+    }
+
+    @FunctionalInterface
+    private interface ExportRowConsumer {
+        void accept(ExportRow row) throws IOException;
     }
 
     private record ExportRow(

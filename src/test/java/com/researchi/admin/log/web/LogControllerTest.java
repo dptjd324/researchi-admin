@@ -12,6 +12,7 @@ import org.springframework.ui.ExtendedModelMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,21 +26,26 @@ class LogControllerTest {
 
     @Test
     void actionsPopulatesActionLogScreen() {
-        when(adminLogService.getActionLogs()).thenReturn(List.of());
+        when(adminLogService.countActionLogs()).thenReturn(21L);
+        when(adminLogService.getActionLogsPage(20, 20)).thenReturn(List.of());
 
         ExtendedModelMap model = new ExtendedModelMap();
 
-        String viewName = logController.actions(null, request("/logs/actions"), model);
+        String viewName = logController.actions(2, request("/logs/actions"), model);
 
         assertThat(viewName).isEqualTo("logs/actions");
         assertThat(model.get("actionLogs")).isEqualTo(List.of());
         assertThat(model.get("pageTitle")).isEqualTo("액션 로그");
         assertThat(model.get("pageSize")).isEqualTo(20);
+        assertThat(model.get("currentPage")).isEqualTo(2);
+        assertThat(model.get("totalPages")).isEqualTo(2);
+        verify(adminLogService).getActionLogsPage(20, 20);
     }
 
     @Test
     void mailPopulatesMailLogScreen() {
-        when(adminLogService.getMailLogs()).thenReturn(List.of());
+        when(adminLogService.countMailLogs()).thenReturn(1L);
+        when(adminLogService.getMailLogsPage(20, 0)).thenReturn(List.of());
 
         ExtendedModelMap model = new ExtendedModelMap();
 
@@ -49,11 +55,13 @@ class LogControllerTest {
         assertThat(model.get("mailLogs")).isEqualTo(List.of());
         assertThat(model.get("pageTitle")).isEqualTo("메일 로그");
         assertThat(model.get("pageSize")).isEqualTo(20);
+        verify(adminLogService).getMailLogsPage(20, 0);
     }
 
     @Test
     void searchPopulatesSearchLogScreen() {
-        when(adminLogService.getSearchLogs()).thenReturn(List.of());
+        when(adminLogService.countSearchLogs()).thenReturn(1L);
+        when(adminLogService.getSearchLogsPage(20, 0)).thenReturn(List.of());
 
         ExtendedModelMap model = new ExtendedModelMap();
 
@@ -63,11 +71,13 @@ class LogControllerTest {
         assertThat(model.get("searchLogs")).isEqualTo(List.of());
         assertThat(model.get("pageTitle")).isEqualTo("검색 로그");
         assertThat(model.get("pageSize")).isEqualTo(20);
+        verify(adminLogService).getSearchLogsPage(20, 0);
     }
 
     @Test
     void notificationsPopulatesNotificationLogScreen() {
-        when(adminLogService.getNotificationLogs()).thenReturn(List.of());
+        when(adminLogService.countNotificationLogs()).thenReturn(1L);
+        when(adminLogService.getNotificationLogsPage(20, 0)).thenReturn(List.of());
 
         ExtendedModelMap model = new ExtendedModelMap();
 
@@ -77,6 +87,7 @@ class LogControllerTest {
         assertThat(model.get("notificationLogs")).isEqualTo(List.of());
         assertThat(model.get("pageTitle")).isEqualTo("알림 로그");
         assertThat(model.get("pageSize")).isEqualTo(20);
+        verify(adminLogService).getNotificationLogsPage(20, 0);
     }
 
     private MockHttpServletRequest request(String path) {

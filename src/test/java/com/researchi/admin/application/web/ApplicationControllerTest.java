@@ -39,7 +39,8 @@ class ApplicationControllerTest {
 
     @Test
     void applicationsPopulatesAllListModel() {
-        when(applicationService.getApplications(null, "kim")).thenReturn(List.of(applicationRecord(11L, 9L)));
+        when(applicationService.countApplications(null, "kim")).thenReturn(1);
+        when(applicationService.getApplicationPage(null, "kim", 12, 0)).thenReturn(List.of(applicationRecord(11L, 9L)));
         when(applicationService.getJobFilters()).thenReturn(List.of());
         when(applicationService.getAllowedStatuses()).thenReturn(List.of("RECEIVED", "REVIEWING"));
 
@@ -57,12 +58,37 @@ class ApplicationControllerTest {
         assertThat(model.get("returnTo")).isEqualTo("/applications?keyword=kim");
         assertThat(model.get("currentPage")).isEqualTo(1);
         assertThat(model.get("totalPages")).isEqualTo(1);
+        verify(applicationService).countApplications(null, "kim");
+        verify(applicationService).getApplicationPage(null, "kim", 12, 0);
+    }
+
+    @Test
+    void applicationsUsesDatabasePageWhenKeywordIsBlank() {
+        when(applicationService.countApplications(null, null)).thenReturn(25);
+        when(applicationService.getApplicationPage(null, null, 12, 12)).thenReturn(List.of(applicationRecord(12L, 9L)));
+        when(applicationService.getJobFilters()).thenReturn(List.of());
+        when(applicationService.getAllowedStatuses()).thenReturn(List.of("RECEIVED", "REVIEWING"));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/applications");
+        request.setQueryString("page=2");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String viewName = applicationController.applications(null, 2, model, request, null);
+
+        assertThat(viewName).isEqualTo("applications/list");
+        assertThat(model.get("applications")).asList().hasSize(1);
+        assertThat(model.get("currentPage")).isEqualTo(2);
+        assertThat(model.get("totalPages")).isEqualTo(3);
+        assertThat(model.get("totalItemCount")).isEqualTo(25);
+        verify(applicationService).countApplications(null, null);
+        verify(applicationService).getApplicationPage(null, null, 12, 12);
     }
 
     @Test
     void applicationsByJobPopulatesScopedModel() {
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
-        when(applicationService.getApplications(9L, "kim")).thenReturn(List.of(applicationRecord(11L, 9L)));
+        when(applicationService.countApplications(9L, "kim")).thenReturn(1);
+        when(applicationService.getApplicationPage(9L, "kim", 12, 0)).thenReturn(List.of(applicationRecord(11L, 9L)));
         when(applicationService.getJobFilters()).thenReturn(List.of());
         when(applicationService.getAllowedStatuses()).thenReturn(List.of("RECEIVED", "REVIEWING"));
 

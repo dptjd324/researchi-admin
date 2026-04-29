@@ -11,16 +11,16 @@
                 <div class="dashboard-actions">
                     <a th:href="@{/jobs}" class="secondary-link">목록으로</a>
                     <a th:href="@{/clients}" class="secondary-link">거래처</a>
-                    <a th:if="${documentSrl != null}" th:href="@{/jobs/{documentSrl}/applications(documentSrl=${documentSrl})}" class="secondary-link">지원서</a>
-                    <a th:if="${documentSrl != null}" th:href="@{/matching/jobs/{documentSrl}(documentSrl=${documentSrl})}" class="secondary-link">매칭</a>
-                    <a th:if="${documentSrl != null}" th:href="@{/mail/send/history(documentSrl=${documentSrl})}" class="secondary-link">메일</a>
+                    <a th:if="${documentSrl != null and applicationBoard}" th:href="@{/jobs/{documentSrl}/applications(documentSrl=${documentSrl})}" class="secondary-link">지원서</a>
+                    <a th:if="${documentSrl != null and applicationBoard}" th:href="@{/matching/jobs/{documentSrl}(documentSrl=${documentSrl})}" class="secondary-link">매칭</a>
+                    <a th:if="${documentSrl != null and applicationBoard}" th:href="@{/mail/send/history(documentSrl=${documentSrl})}" class="secondary-link">메일</a>
                 </div>
             </div>
 
             <div th:if="${param.created}" class="notice success">공고를 등록했습니다.</div>
             <div th:if="${param.updated}" class="notice success">공고를 수정했습니다.</div>
 
-            <section class="panel" th:if="${documentSrl != null}" style="margin-bottom: 1rem;">
+            <section class="panel" th:if="${documentSrl != null and applicationBoard}" style="margin-bottom: 1rem;">
                 <div class="dashboard-head dashboard-head--row">
                     <div class="dashboard-head__copy">
                         <h3 class="h5 mb-2">신청서 링크</h3>
@@ -75,7 +75,7 @@
                     <small th:if="${#fields.hasErrors('content')}" th:errors="*{content}" class="field-error"></small>
                 </label>
 
-                <div class="form-grid triple">
+                <div class="form-grid triple" th:if="${applicationBoard}">
                     <label><span>리워드</span><input type="text" th:field="*{rewardText}"></label>
                     <label><span>장소</span><input type="text" th:field="*{placeText}"></label>
                     <label><span>지역</span><input type="text" th:field="*{regionText}"></label>
@@ -91,7 +91,7 @@
                     <label><span>마감일</span><input type="date" th:field="*{closeDate}"></label>
                 </div>
 
-                <div class="form-grid">
+                <div class="form-grid" th:if="${applicationBoard}">
                     <label>
                         <span>연결 거래처</span>
                         <select th:field="*{clientId}">
@@ -110,16 +110,16 @@
                     </label>
                 </div>
 
-                <div class="detail-grid" th:if="${jobForm.clientId != null}">
+                <div class="detail-grid" th:if="${jobForm.clientId != null and applicationBoard}">
                     <div><strong>거래처명</strong><span th:text="${jobForm.clientName ?: '-'}">-</span></div>
                     <div><strong>대표 이메일</strong><span th:text="${jobForm.clientEmail ?: '-'}">-</span></div>
                     <div><strong>추가 이메일</strong><span th:text="${jobForm.clientEmails ?: '-'}">-</span></div>
                 </div>
-                <div th:if="${jobForm.clientId == null}" class="note">
+                <div th:if="${jobForm.clientId == null and applicationBoard}" class="note">
                     아직 거래처가 연결되지 않았습니다. 메일 기능을 사용하려면 먼저 거래처를 등록하고 이 공고에 연결해 주세요.
                 </div>
 
-                <div class="form-grid">
+                <div class="form-grid" th:if="${applicationBoard}">
                     <label>
                         <span>지원 가능 여부</span>
                         <select th:field="*{applicationEnabled}">
@@ -136,7 +136,7 @@
                     </label>
                 </div>
 
-                <section class="panel" style="margin: 1rem 0;">
+                <section class="panel" th:if="${applicationBoard}" style="margin: 1rem 0;">
                     <div class="dashboard-head dashboard-head--row" style="margin-bottom: 0.75rem;">
                         <div class="dashboard-head__copy">
                             <h3 class="h5 mb-2">지원서 9번 추가기재사항</h3>
@@ -151,7 +151,7 @@
                     <small class="field-help">옵션은 선택형 질문에서만 사용합니다. 한 줄에 하나씩 입력하세요. 예: 평일 가능</small>
                 </section>
 
-                <div class="form-grid triple">
+                <div class="form-grid triple" th:if="${applicationBoard}">
                     <label>
                         <span>자동 발송 방식</span>
                         <select th:field="*{autoSendMode}">

@@ -108,21 +108,11 @@ public class OperationsBatchService {
     @Transactional("adminTransactionManager")
     public int runKeywordMatchBatch() {
         int executed = 0;
-        for (var job : jobService.getJobs()) {
-            AdminJobMeta meta = job.getMeta();
-            if (meta == null) {
-                continue;
-            }
-            if (!"Y".equals(meta.getApplicationEnabled())) {
-                continue;
-            }
-            if (!"RECRUITING".equals(meta.getRecruitStatus())) {
-                continue;
-            }
-            Long matchJobId = matchingService.runScheduled(job.getDocumentSrl());
+        for (AdminJobMeta meta : adminJobMetaMapper.findEnabledRecruitingJobs()) {
+            Long matchJobId = matchingService.runScheduled(meta.getDocumentSrl());
             AdminPrincipal scheduler = new AdminPrincipal(null, "scheduler", "", "Scheduler", "Y", null);
-            notificationService.sendEmailNotifications(job.getDocumentSrl(), matchJobId, scheduler, null);
-            notificationService.sendSmsNotifications(job.getDocumentSrl(), matchJobId, scheduler, null);
+            notificationService.sendEmailNotifications(meta.getDocumentSrl(), matchJobId, scheduler, null);
+            notificationService.sendSmsNotifications(meta.getDocumentSrl(), matchJobId, scheduler, null);
             executed++;
         }
         return executed;

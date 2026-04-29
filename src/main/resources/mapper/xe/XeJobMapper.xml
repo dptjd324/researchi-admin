@@ -24,8 +24,15 @@
     <select id="findJobModules" resultMap="xeModuleResultMap">
         SELECT module_srl, mid, browser_title
         FROM xe_modules
-        WHERE mid IN ('newjob', 'additional')
-        ORDER BY FIELD(mid, 'newjob', 'additional')
+        WHERE mid IN
+        <foreach collection="mids" item="mid" open="(" separator="," close=")">
+            #{mid}
+        </foreach>
+        ORDER BY FIELD(mid,
+        <foreach collection="mids" item="mid" separator=",">
+            #{mid}
+        </foreach>
+        )
     </select>
 
     <select id="findModuleByMid" resultMap="xeModuleResultMap">
@@ -34,7 +41,7 @@
         WHERE mid = #{mid}
     </select>
 
-    <select id="findJobDocuments" resultMap="xeJobDocumentResultMap">
+    <select id="findJobDocumentsByIds" resultMap="xeJobDocumentResultMap">
         SELECT
             d.document_srl,
             d.module_srl,
@@ -46,8 +53,135 @@
             d.last_update
         FROM xe_documents d
         INNER JOIN xe_modules m ON m.module_srl = d.module_srl
-        WHERE m.mid IN ('newjob', 'additional')
+        WHERE m.mid IN
+        <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+            #{managedMid}
+        </foreach>
+          AND d.document_srl IN
+        <foreach collection="documentSrls" item="documentSrl" open="(" separator="," close=")">
+            #{documentSrl}
+        </foreach>
         ORDER BY d.document_srl DESC
+    </select>
+
+    <select id="findJobDocumentSrlsByTitle" resultType="long">
+        SELECT d.document_srl
+        FROM xe_documents d
+        INNER JOIN xe_modules m ON m.module_srl = d.module_srl
+        WHERE m.mid IN
+        <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+            #{managedMid}
+        </foreach>
+        <if test="normalizedKeyword != null and normalizedKeyword != ''">
+          AND (
+            LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(d.title, ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '(', ''), ')', ''))
+              LIKE CONCAT('%', #{normalizedKeyword}, '%')
+            <if test="keywordTokens != null and keywordTokens.size() > 0">
+              OR
+              <foreach collection="keywordTokens" item="keywordToken" open="(" separator=" AND " close=")">
+                LOWER(d.title) LIKE CONCAT('%', #{keywordToken}, '%')
+              </foreach>
+            </if>
+          )
+        </if>
+        ORDER BY d.document_srl DESC
+    </select>
+
+    <select id="findJobDocumentsPage" resultMap="xeJobDocumentResultMap">
+        SELECT
+            d.document_srl,
+            d.module_srl,
+            m.mid,
+            d.title,
+            d.content,
+            d.status,
+            d.regdate,
+            d.last_update
+        FROM xe_documents d
+        INNER JOIN xe_modules m ON m.module_srl = d.module_srl
+        WHERE m.mid IN
+        <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+            #{managedMid}
+        </foreach>
+        <if test="mid != null and mid != ''">
+          AND m.mid = #{mid}
+        </if>
+        <if test="normalizedKeyword != null and normalizedKeyword != ''">
+          AND (
+            LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(d.title, ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '(', ''), ')', ''))
+              LIKE CONCAT('%', #{normalizedKeyword}, '%')
+            <if test="keywordTokens != null and keywordTokens.size() > 0">
+              OR
+              <foreach collection="keywordTokens" item="keywordToken" open="(" separator=" AND " close=")">
+                LOWER(d.title) LIKE CONCAT('%', #{keywordToken}, '%')
+              </foreach>
+            </if>
+          )
+        </if>
+        ORDER BY d.document_srl DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findJobDocumentsAfter" resultMap="xeJobDocumentResultMap">
+        SELECT
+            d.document_srl,
+            d.module_srl,
+            m.mid,
+            d.title,
+            d.content,
+            d.status,
+            d.regdate,
+            d.last_update
+        FROM xe_documents d
+        INNER JOIN xe_modules m ON m.module_srl = d.module_srl
+        WHERE m.mid IN
+        <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+            #{managedMid}
+        </foreach>
+          AND d.document_srl &lt; #{afterDocumentSrl}
+        <if test="mid != null and mid != ''">
+          AND m.mid = #{mid}
+        </if>
+        <if test="normalizedKeyword != null and normalizedKeyword != ''">
+          AND (
+            LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(d.title, ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '(', ''), ')', ''))
+              LIKE CONCAT('%', #{normalizedKeyword}, '%')
+            <if test="keywordTokens != null and keywordTokens.size() > 0">
+              OR
+              <foreach collection="keywordTokens" item="keywordToken" open="(" separator=" AND " close=")">
+                LOWER(d.title) LIKE CONCAT('%', #{keywordToken}, '%')
+              </foreach>
+            </if>
+          )
+        </if>
+        ORDER BY d.document_srl DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countJobDocuments" resultType="int">
+        SELECT COUNT(*)
+        FROM xe_documents d
+        INNER JOIN xe_modules m ON m.module_srl = d.module_srl
+        WHERE m.mid IN
+        <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+            #{managedMid}
+        </foreach>
+        <if test="mid != null and mid != ''">
+          AND m.mid = #{mid}
+        </if>
+        <if test="normalizedKeyword != null and normalizedKeyword != ''">
+          AND (
+            LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(d.title, ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '(', ''), ')', ''))
+              LIKE CONCAT('%', #{normalizedKeyword}, '%')
+            <if test="keywordTokens != null and keywordTokens.size() > 0">
+              OR
+              <foreach collection="keywordTokens" item="keywordToken" open="(" separator=" AND " close=")">
+                LOWER(d.title) LIKE CONCAT('%', #{keywordToken}, '%')
+              </foreach>
+            </if>
+          )
+        </if>
     </select>
 
     <select id="findJobDocumentById" resultMap="xeJobDocumentResultMap">
@@ -63,7 +197,10 @@
         FROM xe_documents d
         INNER JOIN xe_modules m ON m.module_srl = d.module_srl
         WHERE d.document_srl = #{documentSrl}
-          AND m.mid IN ('newjob', 'additional')
+          AND m.mid IN
+        <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+            #{managedMid}
+        </foreach>
     </select>
 
     <select id="findNextDocumentSrl" resultType="long">

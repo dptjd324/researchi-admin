@@ -30,6 +30,7 @@ import java.util.Set;
 @Service
 public class PeriodSearchService {
 
+    private static final int JOB_OPTION_LIMIT = 200;
     private static final List<String> SUPPORTED_SCOPES = List.of("APPLICATION", "MAIL", "ACTION", "NOTIFICATION");
 
     private final ApplicationService applicationService;
@@ -60,7 +61,11 @@ public class PeriodSearchService {
     }
 
     public List<JobListItem> getJobOptions() {
-        return jobService.getJobs();
+        return getJobOptions(null);
+    }
+
+    public List<JobListItem> getJobOptions(Long selectedDocumentSrl) {
+        return jobService.getRecentJobOptions(selectedDocumentSrl, JOB_OPTION_LIMIT);
     }
 
     public List<String> getScopeOptions() {
@@ -111,13 +116,15 @@ public class PeriodSearchService {
     }
 
     private PeriodSearchResult searchMail(PeriodSearchForm form, String scope, DateRange dateRange) {
-        Map<Long, String> titlesByDocumentSrl = jobTitles();
-        List<AdminMailSendJob> results = adminMailSendJobMapper.findAll().stream()
-                .peek(job -> job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl())))
+        List<AdminMailSendJob> candidates = adminMailSendJobMapper.findAll().stream()
                 .filter(job -> matchesDocumentSrl(job.getDocumentSrl(), form.getDocumentSrl()))
                 .filter(job -> matchesStatus(job.getSendStatus(), form.getStatus()))
-                .filter(job -> matchesKeyword(job, form.getKeyword()))
                 .filter(job -> matchesDate(resolveMailAt(job), dateRange))
+                .toList();
+        Map<Long, String> titlesByDocumentSrl = jobTitles(candidates.stream().map(AdminMailSendJob::getDocumentSrl).toList());
+        candidates.forEach(job -> job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl())));
+        List<AdminMailSendJob> results = candidates.stream()
+                .filter(job -> matchesKeyword(job, form.getKeyword()))
                 .toList();
         logSearch(scope, form, results.size(), dateRange);
         return new PeriodSearchResult(
@@ -180,9 +187,9 @@ public class PeriodSearchService {
         adminSearchLogMapper.insert(log);
     }
 
-    private Map<Long, String> jobTitles() {
+    private Map<Long, String> jobTitles(List<Long> documentSrls) {
         Map<Long, String> titlesByDocumentSrl = new LinkedHashMap<>();
-        for (JobListItem job : jobService.getJobs()) {
+        for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
             titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
         }
         return titlesByDocumentSrl;

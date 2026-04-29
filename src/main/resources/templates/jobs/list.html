@@ -37,15 +37,15 @@
                 <article class="job-item" th:each="job : ${jobs}">
                     <div class="job-item-head">
                         <div>
-                            <p class="eyebrow" th:text="${job.jobType == 'NEW' ? '신규 공고' : '추가 공고'}">신규 공고</p>
+                            <p class="eyebrow" th:text="${@uiLabels.jobBoard(job.mid)}">신규 공고</p>
                             <h3 class="h5 mb-2">
                                 <a th:href="@{/jobs/{documentSrl}(documentSrl=${job.documentSrl})}" th:text="${job.title}" class="job-title-link">공고 제목</a>
                             </h3>
                         </div>
                         <div class="actions">
-                            <a th:href="@{/jobs/{documentSrl}/applications(documentSrl=${job.documentSrl})}" class="secondary-link">지원서</a>
-                            <a th:href="@{/matching/jobs/{documentSrl}(documentSrl=${job.documentSrl})}" class="secondary-link">매칭</a>
-                            <a th:href="@{/mail/send/history(documentSrl=${job.documentSrl})}" class="secondary-link">메일</a>
+                            <a th:if="${job.applicationBoard}" th:href="@{/jobs/{documentSrl}/applications(documentSrl=${job.documentSrl})}" class="secondary-link">지원서</a>
+                            <a th:if="${job.applicationBoard}" th:href="@{/matching/jobs/{documentSrl}(documentSrl=${job.documentSrl})}" class="secondary-link">매칭</a>
+                            <a th:if="${job.applicationBoard}" th:href="@{/mail/send/history(documentSrl=${job.documentSrl})}" class="secondary-link">메일</a>
                             <a th:href="@{/jobs/{documentSrl}/edit(documentSrl=${job.documentSrl})}" class="secondary-link">수정</a>
                         </div>
                     </div>
@@ -53,6 +53,7 @@
                     <div class="job-meta-grid">
                         <span><strong>문서번호</strong><span th:text="${job.documentSrl}">1</span></span>
                         <span><strong>게시판</strong><span th:text="${@uiLabels.jobBoard(job.mid)}">신규 공고</span></span>
+                        <span><strong>신청 관리</strong><span th:text="${job.applicationBoard ? '지원' : '미지원'}">지원</span></span>
                         <span><strong>모집 상태</strong><span th:text="${@uiLabels.recruitStatus(job.meta != null ? job.meta.recruitStatus : 'WAITING')}">대기</span></span>
                         <span><strong>거래처</strong><span th:text="${job.meta != null ? job.meta.clientName : '-'}">-</span></span>
                     </div>

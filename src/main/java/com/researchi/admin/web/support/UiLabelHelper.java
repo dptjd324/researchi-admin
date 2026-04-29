@@ -1,5 +1,7 @@
 package com.researchi.admin.web.support;
 
+import com.researchi.admin.job.domain.BoardConfig;
+
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -61,12 +63,18 @@ public class UiLabelHelper {
     }
 
     public String jobBoard(String value) {
-        return switch (normalize(value)) {
-            case "NEWJOB" -> "신규 공고";
-            case "ADDITIONAL" -> "추가 공고";
-            case "" -> "-";
-            default -> value;
-        };
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        try {
+            return BoardConfig.fromMid(value).getLabel();
+        } catch (IllegalArgumentException ex) {
+            try {
+                return BoardConfig.fromCode(value).getLabel();
+            } catch (IllegalArgumentException ignored) {
+                return value;
+            }
+        }
     }
 
     public String blacklistMode(String value) {

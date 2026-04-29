@@ -38,7 +38,7 @@ server:
       force-request: true
       force-response: true
     session:
-      timeout: ${APP_SECURITY_SESSION_TIMEOUT:30m}
+      timeout: ${APP_SECURITY_SESSION_TIMEOUT:40m}
 
 logging:
   level:

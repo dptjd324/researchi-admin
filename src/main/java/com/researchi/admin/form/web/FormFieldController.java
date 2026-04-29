@@ -40,6 +40,7 @@ public class FormFieldController {
             CsrfToken csrfToken
     ) {
         request.getSession(true);
+        jobService.requireApplicationBoard(documentSrl);
         JobDetail jobDetail = jobService.getJob(documentSrl);
         populateModel(model, documentSrl, jobDetail, formFieldService.getForm(documentSrl, editFieldId), csrfToken);
         return "form/fields";
@@ -55,6 +56,7 @@ public class FormFieldController {
             Model model
     ) {
         JobDetail jobDetail = jobService.getJob(documentSrl);
+        jobService.requireApplicationBoard(documentSrl);
         if (bindingResult.hasErrors()) {
             populateModel(model, documentSrl, jobDetail, form, resolveCsrfToken(request));
             return "form/fields";
@@ -81,6 +83,7 @@ public class FormFieldController {
             Model model
     ) {
         form.setId(fieldId);
+        jobService.requireApplicationBoard(documentSrl);
         return saveField(documentSrl, principal, form, bindingResult, request, model);
     }
 
@@ -91,6 +94,7 @@ public class FormFieldController {
             @AuthenticationPrincipal AdminPrincipal principal,
             HttpServletRequest request
     ) {
+        jobService.requireApplicationBoard(documentSrl);
         formFieldService.deleteField(documentSrl, fieldId, principal, request);
         return "redirect:/jobs/" + documentSrl + "/fields?deleted";
     }

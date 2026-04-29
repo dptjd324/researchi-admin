@@ -1,5 +1,17 @@
 # ARCHITECTURE.md
 
+## Board Classification
+
+The admin app classifies managed XE mids before choosing available features.
+
+- JOB boards: `newjob`, `additional`, `fast`, `recruit`
+- CONTENT boards: `notice`, `sharing`
+- QNA boards: `question`
+
+Board management queries include `notice`, `newjob`, `additional`, `fast`, `recruit`, `sharing`, and `question`.
+Applicant, application form, blacklist filtering, export, matching, and mail sending flows are limited to JOB boards.
+`page_tjVR38` is excluded because it is outside the managed board set.
+
 ## 1. 아키텍처 개요
 시스템은 세 부분으로 구성된다.
 

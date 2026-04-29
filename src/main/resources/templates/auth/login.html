@@ -4,10 +4,8 @@
     <th:block th:fragment="content">
         <section class="auth-shell">
             <div class="auth-panel">
-                <div class="mb-4">
-                    <p class="eyebrow">관리자 인증</p>
+                <div class="auth-heading mb-4">
                     <h2 class="h3 mb-2">관리자 로그인</h2>
-                    <p class="dashboard-copy mb-0">CSRF 보호, 세션 관리, 로그인 실패 제한, 잠금 정책이 적용된 관리자 로그인 화면입니다.</p>
                 </div>
 
                 <div th:if="${loginErrorCode != null}" class="notice error">

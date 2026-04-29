@@ -1,5 +1,20 @@
 # PRD.md
 
+## Board Scope Update
+
+Managed XE board mids:
+- `notice`: notice/content board
+- `newjob`: job/application board
+- `additional`: job/application board
+- `fast`: job/application board
+- `recruit`: job/application board
+- `sharing`: content board
+- `question`: Q&A board
+
+Applicant/application features are enabled only for `newjob`, `additional`, `fast`, and `recruit`.
+The `notice`, `sharing`, and `question` boards are managed as normal website board posts only.
+The `page_tjVR38` mid is excluded for now because it is not part of the managed board scope.
+
 ## 1. 프로젝트 개요
 Researchi 관리자용 통합 시스템은 기존 XE 기반 사용자 사이트와 연동되는 독립 관리자 백오피스다.
 관리자 1명이 공고 등록, 신청자 관리, 블랙리스트 관리, 자동발송, 검색발송, 로그 조회를 한 곳에서 처리한다.

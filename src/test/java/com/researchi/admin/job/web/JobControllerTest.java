@@ -6,7 +6,9 @@ import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.mailing.service.MailTemplateService;
+import com.researchi.admin.matching.service.MatchingService;
 import com.researchi.admin.notification.config.NotificationProperties;
+import com.researchi.admin.notification.service.NotificationService;
 import com.researchi.admin.publicform.domain.PublicFormAvailability;
 import com.researchi.admin.publicform.service.PublicFormService;
 import com.researchi.admin.xe.domain.XeJobDocument;
@@ -21,6 +23,7 @@ import org.springframework.ui.ExtendedModelMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,52 +44,103 @@ class JobControllerTest {
     @Mock
     private NotificationProperties notificationProperties;
 
+    @Mock
+    private MatchingService matchingService;
+
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private JobController jobController;
 
     @Test
-    void jobsFiltersByKeywordWithinSelectedJobType() {
-        when(jobService.getJobs()).thenReturn(List.of(
-                jobListItem(9L, "신규 자동차 좌담회", "NEW"),
-                jobListItem(10L, "추가 자동차 좌담회", "ADDITIONAL"),
-                jobListItem(11L, "신규 식품 테스트", "NEW")
-        ));
+    void jobsFiltersByKeywordWithinSelectedJobTypeUsingDatabasePage() {
+        when(jobService.countJobs("NEW", "car interview")).thenReturn(1);
+        when(jobService.getJobPage("NEW", "car interview", 12, 0))
+                .thenReturn(List.of(jobListItem(9L, "New Car Interview", "NEW")));
 
         ExtendedModelMap model = new ExtendedModelMap();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/jobs");
 
-        String viewName = jobController.jobs(model, "NEW", "자동차 좌담", null, request, null);
+        String viewName = jobController.jobs(model, "NEW", "car interview", null, null, request, null);
 
         assertThat(viewName).isEqualTo("jobs/list");
-        assertThat(model.get("keyword")).isEqualTo("자동차 좌담");
+        assertThat(model.get("keyword")).isEqualTo("car interview");
         assertThat(model.get("selectedJobType")).isEqualTo("NEW");
         @SuppressWarnings("unchecked")
         List<JobListItem> jobs = (List<JobListItem>) model.get("jobs");
         assertThat(jobs).extracting(JobListItem::getDocumentSrl).containsExactly(9L);
+        verify(jobService).countJobs("NEW", "car interview");
+        verify(jobService).getJobPage("NEW", "car interview", 12, 0);
     }
 
     @Test
-    void jobsMatchesSimilarTitleWhenKeywordSpacingDiffers() {
-        when(jobService.getJobs()).thenReturn(List.of(
-                jobListItem(9L, "자동차구매자 좌담회", "NEW"),
-                jobListItem(10L, "식품 테스트", "NEW")
-        ));
+    void jobsMatchesSimilarTitleWhenKeywordSpacingDiffersUsingDatabasePage() {
+        when(jobService.countJobs(null, "car buyer")).thenReturn(1);
+        when(jobService.getJobPage(null, "car buyer", 12, 0))
+                .thenReturn(List.of(jobListItem(9L, "CarBuyer Interview", "NEW")));
 
         ExtendedModelMap model = new ExtendedModelMap();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/jobs");
 
-        String viewName = jobController.jobs(model, null, "자동차 구매자", null, request, null);
+        String viewName = jobController.jobs(model, null, "car buyer", null, null, request, null);
 
         assertThat(viewName).isEqualTo("jobs/list");
         @SuppressWarnings("unchecked")
         List<JobListItem> jobs = (List<JobListItem>) model.get("jobs");
         assertThat(jobs).extracting(JobListItem::getDocumentSrl).containsExactly(9L);
+        verify(jobService).countJobs(null, "car buyer");
+        verify(jobService).getJobPage(null, "car buyer", 12, 0);
+    }
+
+    @Test
+    void jobsUsesDatabasePageWhenKeywordIsBlank() {
+        when(jobService.countJobs("NEW", null)).thenReturn(25);
+        when(jobService.getJobPage("NEW", null, 12, 12)).thenReturn(List.of(jobListItem(9L, "Paged Job", "NEW")));
+
+        ExtendedModelMap model = new ExtendedModelMap();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/jobs");
+        request.setQueryString("jobType=NEW&page=2");
+
+        String viewName = jobController.jobs(model, "NEW", null, 2, null, request, null);
+
+        assertThat(viewName).isEqualTo("jobs/list");
+        @SuppressWarnings("unchecked")
+        List<JobListItem> jobs = (List<JobListItem>) model.get("jobs");
+        assertThat(jobs).extracting(JobListItem::getDocumentSrl).containsExactly(9L);
+        assertThat(model.get("currentPage")).isEqualTo(2);
+        assertThat(model.get("totalPages")).isEqualTo(3);
+        verify(jobService).countJobs("NEW", null);
+        verify(jobService).getJobPage("NEW", null, 12, 12);
+    }
+
+    @Test
+    void jobsUsesCursorPageForNextNavigation() {
+        when(jobService.countJobs("NEW", null)).thenReturn(36);
+        when(jobService.getJobPageAfter("NEW", null, 90L, 12))
+                .thenReturn(List.of(jobListItem(89L, "Cursor Job", "NEW"), jobListItem(78L, "Next Cursor", "NEW")));
+
+        ExtendedModelMap model = new ExtendedModelMap();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/jobs");
+        request.setParameter("jobType", "NEW");
+        request.setParameter("page", "2");
+        request.setParameter("cursor", "90");
+
+        String viewName = jobController.jobs(model, "NEW", null, 2, 90L, request, null);
+
+        assertThat(viewName).isEqualTo("jobs/list");
+        @SuppressWarnings("unchecked")
+        List<JobListItem> jobs = (List<JobListItem>) model.get("jobs");
+        assertThat(jobs).extracting(JobListItem::getDocumentSrl).containsExactly(89L, 78L);
+        assertThat(model.get("nextPageUrl").toString()).contains("page=3", "cursor=78");
+        assertThat(model.get("pageLinks").toString()).doesNotContain("cursor=90");
+        verify(jobService).getJobPageAfter("NEW", null, 90L, 12);
     }
 
     @Test
     void jobDetailPopulatesModel() {
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
-        when(publicFormService.getAvailability(9L)).thenReturn(new PublicFormAvailability(true, "현재 신청 가능한 공고입니다."));
+        when(publicFormService.getAvailability(9L)).thenReturn(new PublicFormAvailability(true, "Apply now"));
 
         ExtendedModelMap model = new ExtendedModelMap();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/jobs/9");
@@ -101,8 +155,8 @@ class JobControllerTest {
         assertThat(model.get("pageTitle")).isEqualTo("공고 상세");
         assertThat(model.get("publicApplyUrl")).isEqualTo("http://localhost:8082/apply/9");
         assertThat(model.get("publicApplyAvailable")).isEqualTo(true);
-        assertThat(model.get("publicApplyMessage")).isEqualTo("현재 신청 가능한 공고입니다.");
-        assertThat(model.get("applicationFormNoticeItems")).isEqualTo(List.of("결혼여부", "자녀유무", "알러지 유무"));
+        assertThat(model.get("publicApplyMessage")).isEqualTo("Apply now");
+        assertThat(model.get("applicationFormNoticeItems")).isEqualTo(List.of("Marriage", "Medication", "Allergy"));
     }
 
     private JobDetail jobDetail(Long documentSrl) {
@@ -114,7 +168,7 @@ class JobControllerTest {
         document.setStatus("PUBLIC");
 
         AdminJobMeta meta = new AdminJobMeta();
-        meta.setApplicationFormNotice("결혼여부/자녀유무\n알러지 유무");
+        meta.setApplicationFormNotice("Marriage/Medication\nAllergy");
         return new JobDetail(document, meta);
     }
 

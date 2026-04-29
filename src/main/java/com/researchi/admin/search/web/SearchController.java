@@ -31,7 +31,7 @@ public class SearchController {
         model.addAttribute("pageDescription", "등록, 지원, 발송, 알림 이력을 기간과 다중 조건으로 검색합니다.");
         model.addAttribute("scopeOptions", periodSearchService.getScopeOptions());
         model.addAttribute("statusOptions", periodSearchService.getStatusOptions(scope));
-        model.addAttribute("jobOptions", periodSearchService.getJobOptions());
+        model.addAttribute("jobOptions", periodSearchService.getJobOptions(form.getDocumentSrl()));
         model.addAttribute("submitted", submitted);
         if (submitted) {
             PeriodSearchResult result = periodSearchService.search(form);

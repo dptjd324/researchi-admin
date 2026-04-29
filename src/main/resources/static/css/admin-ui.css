@@ -224,6 +224,10 @@ body.admin-body {
     margin: 0 auto;
 }
 
+.auth-heading {
+    text-align: center;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

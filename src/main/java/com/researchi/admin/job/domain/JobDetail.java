@@ -15,6 +15,10 @@ public class JobDetail {
         if (meta != null && meta.getJobType() != null) {
             return meta.getJobType();
         }
-        return JobType.fromMid(document.getMid()).name();
+        return BoardConfig.fromMid(document.getMid()).name();
+    }
+
+    public boolean isApplicationBoard() {
+        return BoardConfig.isApplicationMid(document.getMid());
     }
 }

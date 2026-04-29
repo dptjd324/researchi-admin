@@ -1,8 +1,10 @@
 package com.researchi.admin.job.domain;
 
 public enum JobType {
-    NEW("newjob", "신규일감"),
-    ADDITIONAL("additional", "추가일감");
+    NEW("newjob", "\uc2e0\uaddc\uc77c\uac10"),
+    ADDITIONAL("additional", "\ucd94\uac00\uc77c\uac10"),
+    FAST("fast", "\uae09\uc9c4\ud589\uc2e0\uccad"),
+    RECRUIT("recruit", "\uc804\uad6d/\uc9c0\uc5ed\ubaa8\uc9d1");
 
     private final String mid;
     private final String label;
@@ -26,6 +28,15 @@ public enum JobType {
                 return value;
             }
         }
-        throw new IllegalArgumentException("지원하지 않는 공고 타입입니다.");
+        throw new IllegalArgumentException("Unsupported application board mid.");
+    }
+
+    public static boolean supportsMid(String mid) {
+        for (JobType value : values()) {
+            if (value.mid.equalsIgnoreCase(mid)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -14,6 +14,12 @@ public interface AdminJobMetaMapper {
 
     AdminJobMeta findByDocumentSrl(@Param("documentSrl") Long documentSrl);
 
+    List<AdminJobMeta> findByDocumentSrls(@Param("documentSrls") List<Long> documentSrls);
+
+    List<AdminJobMeta> findByClientId(@Param("clientId") Long clientId);
+
+    List<AdminJobMeta> findEnabledRecruitingJobs();
+
     void insert(AdminJobMeta adminJobMeta);
 
     void update(AdminJobMeta adminJobMeta);

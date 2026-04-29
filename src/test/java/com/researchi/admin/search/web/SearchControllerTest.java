@@ -29,7 +29,7 @@ class SearchControllerTest {
     void indexPopulatesDefaultModelWithoutRunningSearch() {
         when(periodSearchService.getScopeOptions()).thenReturn(List.of("APPLICATION", "MAIL"));
         when(periodSearchService.getStatusOptions("APPLICATION")).thenReturn(List.of("RECEIVED"));
-        when(periodSearchService.getJobOptions()).thenReturn(List.of());
+        when(periodSearchService.getJobOptions(null)).thenReturn(List.of());
 
         ExtendedModelMap model = new ExtendedModelMap();
         PeriodSearchForm form = new PeriodSearchForm();
@@ -45,7 +45,7 @@ class SearchControllerTest {
     void indexPopulatesSearchResultWhenSubmitted() {
         when(periodSearchService.getScopeOptions()).thenReturn(List.of("APPLICATION"));
         when(periodSearchService.getStatusOptions("APPLICATION")).thenReturn(List.of("RECEIVED"));
-        when(periodSearchService.getJobOptions()).thenReturn(List.of());
+        when(periodSearchService.getJobOptions(null)).thenReturn(List.of());
         PeriodSearchResult result = new PeriodSearchResult("APPLICATION", "Applied At", 2, 9L, List.of(), List.of(), List.of(), List.of());
         when(periodSearchService.search(org.mockito.ArgumentMatchers.any(PeriodSearchForm.class))).thenReturn(result);
 

@@ -38,7 +38,7 @@ class MailingControllerTest {
 
     @Test
     void historyPopulatesModel() {
-        when(jobService.getJobs()).thenReturn(List.of());
+        when(jobService.getRecentApplicationJobOptions(9L, 200)).thenReturn(List.of());
         when(mailTemplateService.getActiveTemplates()).thenReturn(List.of());
         when(mailingService.getHistory(9L)).thenReturn(List.of());
         when(mailingService.getPreview(9L)).thenReturn(new MailingPreview(9L, "Survey Job", List.of("client@example.com"), 1, 0, 3, 1));
@@ -82,7 +82,7 @@ class MailingControllerTest {
         form.setTemplateId(3L);
         form.setAttachmentType("XLSX");
         when(mailingService.sendManual(any(), any(), any())).thenThrow(new IllegalStateException("발송 대상 지원서가 없어 메일을 보내지 않았습니다."));
-        when(jobService.getJobs()).thenReturn(List.of());
+        when(jobService.getRecentApplicationJobOptions(9L, 200)).thenReturn(List.of());
         when(mailTemplateService.getActiveTemplates()).thenReturn(List.of());
         when(mailingService.getHistory(9L)).thenReturn(List.of());
         when(mailingService.getPreview(9L)).thenReturn(new MailingPreview(9L, "Survey Job", List.of("client@example.com"), 1, 0, 0, 0));
@@ -120,7 +120,7 @@ class MailingControllerTest {
         doThrow(new IllegalStateException("예약 상태인 메일만 취소할 수 있습니다."))
                 .when(mailingService)
                 .cancelSendJob(any(), any(), any());
-        when(jobService.getJobs()).thenReturn(List.of());
+        when(jobService.getRecentApplicationJobOptions(9L, 200)).thenReturn(List.of());
         when(mailTemplateService.getActiveTemplates()).thenReturn(List.of());
         when(mailingService.getHistory(9L)).thenReturn(List.of());
         when(mailingService.getPreview(9L)).thenReturn(new MailingPreview(9L, "Survey Job", List.of("client@example.com"), 1, 0, 1, 0));

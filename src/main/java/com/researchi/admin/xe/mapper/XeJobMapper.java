@@ -10,13 +10,47 @@ import java.util.List;
 @Mapper
 public interface XeJobMapper {
 
-    List<XeModule> findJobModules();
+    List<XeModule> findJobModules(@Param("mids") List<String> mids);
 
     XeModule findModuleByMid(@Param("mid") String mid);
 
-    List<XeJobDocument> findJobDocuments();
+    List<XeJobDocument> findJobDocumentsByIds(
+            @Param("documentSrls") List<Long> documentSrls,
+            @Param("mids") List<String> mids
+    );
 
-    XeJobDocument findJobDocumentById(@Param("documentSrl") Long documentSrl);
+    List<Long> findJobDocumentSrlsByTitle(
+            @Param("normalizedKeyword") String normalizedKeyword,
+            @Param("keywordTokens") List<String> keywordTokens,
+            @Param("mids") List<String> mids
+    );
+
+    List<XeJobDocument> findJobDocumentsPage(
+            @Param("mid") String mid,
+            @Param("normalizedKeyword") String normalizedKeyword,
+            @Param("keywordTokens") List<String> keywordTokens,
+            @Param("mids") List<String> mids,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    List<XeJobDocument> findJobDocumentsAfter(
+            @Param("mid") String mid,
+            @Param("normalizedKeyword") String normalizedKeyword,
+            @Param("keywordTokens") List<String> keywordTokens,
+            @Param("mids") List<String> mids,
+            @Param("afterDocumentSrl") Long afterDocumentSrl,
+            @Param("limit") int limit
+    );
+
+    int countJobDocuments(
+            @Param("mid") String mid,
+            @Param("normalizedKeyword") String normalizedKeyword,
+            @Param("keywordTokens") List<String> keywordTokens,
+            @Param("mids") List<String> mids
+    );
+
+    XeJobDocument findJobDocumentById(@Param("documentSrl") Long documentSrl, @Param("mids") List<String> mids);
 
     Long findNextDocumentSrl();
 

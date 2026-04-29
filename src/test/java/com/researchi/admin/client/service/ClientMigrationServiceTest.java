@@ -44,9 +44,8 @@ class ClientMigrationServiceTest {
         alreadyLinked.setClientEmail("linked@example.com");
 
         when(adminJobMetaMapper.findAll()).thenReturn(List.of(legacy, alreadyLinked));
-        when(jobService.getJobs()).thenReturn(List.of(
-                new JobListItem(9L, "Survey Job", "content", "PUBLIC", "", "", legacy, "newjob"),
-                new JobListItem(10L, "Linked Job", "content", "PUBLIC", "", "", alreadyLinked, "newjob")
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(
+                new JobListItem(9L, "Survey Job", "content", "PUBLIC", "", "", legacy, "newjob")
         ));
 
         var preview = clientMigrationService.previewLegacyJobMigration();

@@ -82,7 +82,7 @@ class PeriodSearchServiceTest {
         AdminMailSendJob matched = mailJob(41L, 9L, "SENT", "Survey Mail", LocalDateTime.now());
         AdminMailSendJob otherJob = mailJob(42L, 10L, "SENT", "Other", LocalDateTime.now());
         when(adminMailSendJobMapper.findAll()).thenReturn(List.of(matched, otherJob));
-        when(jobService.getJobs()).thenReturn(List.of(
+        when(jobService.getJobsByDocumentSrls(List.of(9L, 10L))).thenReturn(List.of(
                 new JobListItem(9L, "Survey Mail", "", "PUBLIC", "", "", null, "newjob"),
                 new JobListItem(10L, "Other Mail", "", "PUBLIC", "", "", null, "newjob")
         ));

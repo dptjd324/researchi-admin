@@ -59,6 +59,7 @@ public class ApplicationController {
             CsrfToken csrfToken
     ) {
         request.getSession(true);
+        jobService.requireApplicationBoard(documentSrl);
         populateListModel(model, documentSrl, jobService.getJob(documentSrl), keyword, page, request, csrfToken);
         return "applications/list";
     }
@@ -123,15 +124,17 @@ public class ApplicationController {
     ) {
         model.addAttribute("pageTitle", documentSrl == null ? "전체 지원서" : "공고별 지원서");
         model.addAttribute("pageDescription", "공고별 목록, 빠른 검색, 상태 변경, 응답 상세 확인을 지원하는 지원서 관리 화면입니다.");
+        int totalCount = applicationService.countApplications(documentSrl, keyword);
+        PaginationSupport.PageWindow pageWindow = PaginationSupport.applyMetadata(
+                model,
+                request,
+                totalCount,
+                page,
+                PaginationSupport.DEFAULT_PAGE_SIZE
+        );
         model.addAttribute(
                 "applications",
-                PaginationSupport.apply(
-                        model,
-                        request,
-                        applicationService.getApplications(documentSrl, keyword),
-                        page,
-                        PaginationSupport.DEFAULT_PAGE_SIZE
-                )
+                applicationService.getApplicationPage(documentSrl, keyword, pageWindow.pageSize(), pageWindow.offset())
         );
         model.addAttribute("jobFilters", applicationService.getJobFilters());
         model.addAttribute("selectedDocumentSrl", documentSrl);

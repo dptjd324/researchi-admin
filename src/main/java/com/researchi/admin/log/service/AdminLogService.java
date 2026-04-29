@@ -13,7 +13,6 @@ import com.researchi.admin.search.domain.SearchLogItem;
 import com.researchi.admin.search.mapper.AdminSearchLogMapper;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,65 +44,73 @@ public class AdminLogService {
         return adminActionLogMapper.findAll();
     }
 
+    public long countActionLogs() {
+        return adminActionLogMapper.countAll();
+    }
+
+    public List<ActionLogItem> getActionLogsPage(int limit, int offset) {
+        return adminActionLogMapper.findPage(limit, offset);
+    }
+
     public List<AdminMailSendJob> getMailLogs() {
-        Map<Long, String> titlesByDocumentSrl = new LinkedHashMap<>();
-        for (JobListItem job : jobService.getJobs()) {
-            titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
-        }
-        return adminMailSendJobMapper.findAll().stream()
-                .peek(job -> job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl())))
-                .toList();
+        return addJobTitles(adminMailSendJobMapper.findAll());
+    }
+
+    public long countMailLogs() {
+        return adminMailSendJobMapper.countAll();
+    }
+
+    public List<AdminMailSendJob> getMailLogsPage(int limit, int offset) {
+        return addJobTitles(adminMailSendJobMapper.findPage(limit, offset));
     }
 
     public List<SearchLogItem> getSearchLogs() {
         return adminSearchLogMapper.findAll();
     }
 
+    public long countSearchLogs() {
+        return adminSearchLogMapper.countAll();
+    }
+
+    public List<SearchLogItem> getSearchLogsPage(int limit, int offset) {
+        return adminSearchLogMapper.findPage(limit, offset);
+    }
+
     public List<AdminNotificationLog> getNotificationLogs() {
         return adminNotificationLogMapper.findAll();
     }
 
+    public long countNotificationLogs() {
+        return adminNotificationLogMapper.countAll();
+    }
+
+    public List<AdminNotificationLog> getNotificationLogsPage(int limit, int offset) {
+        return adminNotificationLogMapper.findPage(limit, offset);
+    }
+
+    private List<AdminMailSendJob> addJobTitles(List<AdminMailSendJob> mailJobs) {
+        Map<Long, String> titlesByDocumentSrl = new LinkedHashMap<>();
+        List<Long> documentSrls = mailJobs.stream()
+                .map(AdminMailSendJob::getDocumentSrl)
+                .toList();
+        for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
+            titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
+        }
+        return mailJobs.stream()
+                .peek(job -> job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl())))
+                .toList();
+    }
+
     public StatusBarSummary getStatusBarSummary() {
-        List<ActionLogItem> actionLogs = adminActionLogMapper.findAll();
-        List<AdminMailSendJob> mailLogs = adminMailSendJobMapper.findAll();
-        List<SearchLogItem> searchLogs = adminSearchLogMapper.findAll();
-        List<AdminNotificationLog> notificationLogs = adminNotificationLogMapper.findAll();
-
         return new StatusBarSummary(
-                actionLogs.size(),
-                mailLogs.size(),
-                searchLogs.size(),
-                notificationLogs.size(),
-                firstActionAt(actionLogs),
-                firstMailAt(mailLogs),
-                firstSearchAt(searchLogs),
-                firstNotificationAt(notificationLogs)
+                adminActionLogMapper.countAll(),
+                adminMailSendJobMapper.countAll(),
+                adminSearchLogMapper.countAll(),
+                adminNotificationLogMapper.countAll(),
+                adminActionLogMapper.findLatestCreatedAt(),
+                adminMailSendJobMapper.findLatestActivityAt(),
+                adminSearchLogMapper.findLatestSearchedAt(),
+                adminNotificationLogMapper.findLatestCreatedAt()
         );
-    }
-
-    private LocalDateTime firstActionAt(List<ActionLogItem> items) {
-        return items.isEmpty() ? null : items.get(0).getCreatedAt();
-    }
-
-    private LocalDateTime firstMailAt(List<AdminMailSendJob> items) {
-        if (items.isEmpty()) {
-            return null;
-        }
-        AdminMailSendJob item = items.get(0);
-        if (item.getSentAt() != null) {
-            return item.getSentAt();
-        }
-        if (item.getScheduledAt() != null) {
-            return item.getScheduledAt();
-        }
-        return item.getCreatedAt();
-    }
-
-    private LocalDateTime firstSearchAt(List<SearchLogItem> items) {
-        return items.isEmpty() ? null : items.get(0).getSearchedAt();
-    }
-
-    private LocalDateTime firstNotificationAt(List<AdminNotificationLog> items) {
-        return items.isEmpty() ? null : items.get(0).getCreatedAt();
     }
 }

@@ -53,4 +53,33 @@
         LEFT JOIN admin_user user ON user.id = log.admin_user_id
         ORDER BY log.created_at DESC, log.id DESC
     </select>
+
+    <select id="findPage" resultMap="actionLogItemResultMap">
+        SELECT
+            log.id,
+            log.admin_user_id,
+            user.login_id,
+            user.user_name,
+            log.action_type,
+            log.target_type,
+            log.target_id,
+            log.action_detail,
+            log.ip_address,
+            log.created_at
+        FROM admin_action_log log
+        LEFT JOIN admin_user user ON user.id = log.admin_user_id
+        ORDER BY log.created_at DESC, log.id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM admin_action_log
+    </select>
+
+    <select id="findLatestCreatedAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(created_at)
+        FROM admin_action_log
+    </select>
 </mapper>

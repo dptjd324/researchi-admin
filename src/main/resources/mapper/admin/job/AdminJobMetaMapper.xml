@@ -51,6 +51,31 @@
         WHERE document_srl = #{documentSrl}
     </select>
 
+    <select id="findByDocumentSrls" resultMap="adminJobMetaResultMap">
+        SELECT *
+        FROM admin_job_meta
+        WHERE document_srl IN
+        <foreach collection="documentSrls" item="documentSrl" open="(" separator="," close=")">
+            #{documentSrl}
+        </foreach>
+        ORDER BY document_srl DESC
+    </select>
+
+    <select id="findByClientId" resultMap="adminJobMetaResultMap">
+        SELECT *
+        FROM admin_job_meta
+        WHERE client_id = #{clientId}
+        ORDER BY document_srl DESC
+    </select>
+
+    <select id="findEnabledRecruitingJobs" resultMap="adminJobMetaResultMap">
+        SELECT *
+        FROM admin_job_meta
+        WHERE application_enabled = 'Y'
+          AND recruit_status = 'RECRUITING'
+        ORDER BY document_srl DESC
+    </select>
+
     <insert id="insert" parameterType="com.researchi.admin.job.domain.AdminJobMeta" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO admin_job_meta (
             document_srl,

@@ -40,4 +40,28 @@
         FROM admin_search_log
         ORDER BY searched_at DESC, id DESC
     </select>
+
+    <select id="findPage" resultMap="searchLogItemResultMap">
+        SELECT
+            id,
+            search_type,
+            keyword_text,
+            condition_json,
+            result_count,
+            searched_at
+        FROM admin_search_log
+        ORDER BY searched_at DESC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM admin_search_log
+    </select>
+
+    <select id="findLatestSearchedAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(searched_at)
+        FROM admin_search_log
+    </select>
 </mapper>

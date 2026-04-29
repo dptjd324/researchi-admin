@@ -115,6 +115,27 @@
         ORDER BY COALESCE(job.sent_at, job.scheduled_at, job.created_at) DESC, job.id DESC
     </select>
 
+    <select id="findPage" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        ORDER BY COALESCE(job.sent_at, job.scheduled_at, job.created_at) DESC, job.id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM admin_mail_send_job
+    </select>
+
+    <select id="findLatestActivityAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(COALESCE(sent_at, scheduled_at, created_at))
+        FROM admin_mail_send_job
+    </select>
+
     <select id="findByDocumentSrl" resultMap="adminMailSendJobResultMap">
         SELECT
             job.*,

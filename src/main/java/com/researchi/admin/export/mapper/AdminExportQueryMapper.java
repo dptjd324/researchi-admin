@@ -12,5 +12,13 @@ public interface AdminExportQueryMapper {
 
     List<ExportApplicationSource> findApplicationsByDocumentSrl(@Param("documentSrl") Long documentSrl);
 
+    List<ExportApplicationSource> findApplicationsPageByDocumentSrl(
+            @Param("documentSrl") Long documentSrl,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
     List<ExportAnswerSource> findAnswersByDocumentSrl(@Param("documentSrl") Long documentSrl);
+
+    List<ExportAnswerSource> findAnswersByApplicationIds(@Param("applicationIds") List<Long> applicationIds);
 }

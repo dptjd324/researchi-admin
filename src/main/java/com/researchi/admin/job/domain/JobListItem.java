@@ -20,6 +20,10 @@ public class JobListItem {
         if (meta != null && meta.getJobType() != null) {
             return meta.getJobType();
         }
-        return JobType.fromMid(mid).name();
+        return BoardConfig.fromMid(mid).name();
+    }
+
+    public boolean isApplicationBoard() {
+        return BoardConfig.isApplicationMid(mid);
     }
 }

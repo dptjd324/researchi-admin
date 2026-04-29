@@ -3,6 +3,7 @@ package com.researchi.admin.application.service;
 import com.researchi.admin.application.domain.ApplicationAnswerItem;
 import com.researchi.admin.application.domain.ApplicationDetail;
 import com.researchi.admin.application.domain.ApplicationExtraAnswerItem;
+import com.researchi.admin.application.domain.ApplicationJobCount;
 import com.researchi.admin.application.domain.ApplicationJobFilter;
 import com.researchi.admin.application.domain.ApplicationRecord;
 import com.researchi.admin.application.mapper.AdminApplicationQueryMapper;
@@ -59,7 +60,7 @@ public class ApplicationService {
         List<ApplicationRecord> applications = documentSrl == null
                 ? adminApplicationQueryMapper.findAll()
                 : adminApplicationQueryMapper.findByDocumentSrl(documentSrl);
-        Map<Long, JobListItem> jobsByDocumentSrl = jobsByDocumentSrl();
+        Map<Long, JobListItem> jobsByDocumentSrl = jobsByDocumentSrl(applications);
 
         return applications.stream()
                 .map(application -> enrich(application, jobsByDocumentSrl))
@@ -69,18 +70,56 @@ public class ApplicationService {
                 .toList();
     }
 
-    public List<ApplicationJobFilter> getJobFilters() {
-        Map<Long, Long> countsByDocumentSrl = new LinkedHashMap<>();
-        for (ApplicationRecord application : adminApplicationQueryMapper.findAll()) {
-            countsByDocumentSrl.merge(application.getDocumentSrl(), 1L, Long::sum);
-        }
+    public int countApplications(Long documentSrl) {
+        return adminApplicationQueryMapper.count(documentSrl);
+    }
 
-        Map<Long, JobListItem> jobsByDocumentSrl = jobsByDocumentSrl();
-        return countsByDocumentSrl.entrySet().stream()
-                .map(entry -> new ApplicationJobFilter(
-                        entry.getKey(),
-                        resolveJobTitle(entry.getKey(), jobsByDocumentSrl),
-                        entry.getValue()
+    public int countApplications(Long documentSrl, String keyword) {
+        String normalizedKeyword = normalizeKeyword(keyword);
+        if (normalizedKeyword == null) {
+            return countApplications(documentSrl);
+        }
+        return adminApplicationQueryMapper.countSearch(documentSrl, normalizedKeyword, matchingJobDocumentSrls(normalizedKeyword));
+    }
+
+    public List<ApplicationRecord> getApplicationPage(Long documentSrl, int limit, int offset) {
+        List<ApplicationRecord> page = adminApplicationQueryMapper.findPage(documentSrl, limit, offset);
+        Map<Long, JobListItem> jobsByDocumentSrl = jobsByDocumentSrl(page);
+        return page.stream()
+                .map(application -> enrich(application, jobsByDocumentSrl))
+                .peek(this::populatePersonalInfoDisplay)
+                .toList();
+    }
+
+    public List<ApplicationRecord> getApplicationPage(Long documentSrl, String keyword, int limit, int offset) {
+        String normalizedKeyword = normalizeKeyword(keyword);
+        if (normalizedKeyword == null) {
+            return getApplicationPage(documentSrl, limit, offset);
+        }
+        List<ApplicationRecord> page = adminApplicationQueryMapper.findSearchPage(
+                        documentSrl,
+                        normalizedKeyword,
+                        matchingJobDocumentSrls(normalizedKeyword),
+                        limit,
+                        offset
+                );
+        Map<Long, JobListItem> jobsByDocumentSrl = jobsByDocumentSrl(page);
+        return page.stream()
+                .map(application -> enrich(application, jobsByDocumentSrl))
+                .peek(this::populatePersonalInfoDisplay)
+                .toList();
+    }
+
+    public List<ApplicationJobFilter> getJobFilters() {
+        List<ApplicationJobCount> counts = adminApplicationQueryMapper.countByDocumentSrl();
+        Map<Long, JobListItem> jobsByDocumentSrl = jobsByDocumentSrlFromDocumentSrls(
+                counts.stream().map(ApplicationJobCount::getDocumentSrl).toList()
+        );
+        return counts.stream()
+                .map(count -> new ApplicationJobFilter(
+                        count.getDocumentSrl(),
+                        resolveJobTitle(count.getDocumentSrl(), jobsByDocumentSrl),
+                        count.getApplicationCount()
                 ))
                 .sorted(Comparator.comparing(ApplicationJobFilter::documentSrl).reversed())
                 .toList();
@@ -151,8 +190,16 @@ public class ApplicationService {
         );
     }
 
-    private Map<Long, JobListItem> jobsByDocumentSrl() {
-        return jobService.getJobs().stream()
+    private Map<Long, JobListItem> jobsByDocumentSrl(List<ApplicationRecord> applications) {
+        return jobsByDocumentSrlFromDocumentSrls(
+                applications.stream()
+                        .map(ApplicationRecord::getDocumentSrl)
+                        .toList()
+        );
+    }
+
+    private Map<Long, JobListItem> jobsByDocumentSrlFromDocumentSrls(List<Long> documentSrls) {
+        return jobService.getJobsByDocumentSrls(documentSrls).stream()
                 .collect(LinkedHashMap::new, (map, job) -> map.put(job.getDocumentSrl(), job), Map::putAll);
     }
 
@@ -196,6 +243,20 @@ public class ApplicationService {
                 || contains(application.getApplicationStatus(), normalizedKeyword)
                 || contains(application.getDeliveryStatus(), normalizedKeyword)
                 || contains(application.getJobTitle(), normalizedKeyword);
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<Long> matchingJobDocumentSrls(String normalizedKeyword) {
+        if (normalizedKeyword == null) {
+            return List.of();
+        }
+        return jobService.findApplicationDocumentSrlsByTitle(normalizedKeyword);
     }
 
     private boolean contains(String value, String keyword) {

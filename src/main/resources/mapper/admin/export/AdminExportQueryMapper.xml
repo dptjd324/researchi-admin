@@ -71,6 +71,40 @@
         ORDER BY applied_at DESC, id DESC
     </select>
 
+    <select id="findApplicationsPageByDocumentSrl" resultMap="exportApplicationSourceResultMap">
+        SELECT
+            id,
+            document_srl,
+            applicant_name,
+            gender_code,
+            birth_date,
+            age_text,
+            job_text,
+            organization_text,
+            mobile_phone_enc,
+            tel_phone_enc,
+            region_text,
+            address_enc,
+            extra_comment,
+            prior_research_text,
+            email_address_enc,
+            notify_email_yn,
+            notify_sms_yn,
+            notify_keyword_yn,
+            application_status,
+            is_new_applicant,
+            is_blacklisted,
+            black_mode_applied,
+            provide_yn,
+            delivery_status,
+            applied_at
+        FROM admin_job_application
+        WHERE document_srl = #{documentSrl}
+        ORDER BY applied_at DESC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
     <select id="findAnswersByDocumentSrl" resultMap="exportAnswerSourceResultMap">
         SELECT
             answer.application_id,
@@ -80,6 +114,20 @@
         FROM admin_form_submission_answer answer
         INNER JOIN admin_job_application application ON application.id = answer.application_id
         WHERE application.document_srl = #{documentSrl}
+        ORDER BY answer.application_id ASC, answer.id ASC
+    </select>
+
+    <select id="findAnswersByApplicationIds" resultMap="exportAnswerSourceResultMap">
+        SELECT
+            answer.application_id,
+            answer.field_id,
+            answer.answer_text,
+            answer.answer_json
+        FROM admin_form_submission_answer answer
+        WHERE answer.application_id IN
+        <foreach collection="applicationIds" item="applicationId" open="(" separator="," close=")">
+            #{applicationId}
+        </foreach>
         ORDER BY answer.application_id ASC, answer.id ASC
     </select>
 </mapper>

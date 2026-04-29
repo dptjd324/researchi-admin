@@ -20,6 +20,12 @@ public interface AdminMailSendJobMapper {
 
     List<AdminMailSendJob> findAll();
 
+    List<AdminMailSendJob> findPage(@Param("limit") int limit, @Param("offset") int offset);
+
+    long countAll();
+
+    LocalDateTime findLatestActivityAt();
+
     List<AdminMailSendJob> findByDocumentSrl(@Param("documentSrl") Long documentSrl);
 
     List<AdminMailSendJob> findDueScheduled(@Param("scheduledAt") LocalDateTime scheduledAt);

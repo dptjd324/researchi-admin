@@ -36,10 +36,12 @@ public class ClientMigrationService {
     }
 
     public ClientMigrationPreview previewLegacyJobMigration() {
-        Map<Long, String> titles = jobTitles();
-        List<ClientMigrationCandidate> candidates = adminJobMetaMapper.findAll().stream()
+        List<AdminJobMeta> legacyMetas = adminJobMetaMapper.findAll().stream()
                 .filter(meta -> meta.getClientId() == null)
                 .filter(this::hasLegacyClientValues)
+                .toList();
+        Map<Long, String> titles = jobTitles(legacyMetas);
+        List<ClientMigrationCandidate> candidates = legacyMetas.stream()
                 .map(meta -> new ClientMigrationCandidate(
                         meta.getDocumentSrl(),
                         titles.getOrDefault(meta.getDocumentSrl(), "Job #" + meta.getDocumentSrl()),
@@ -102,9 +104,12 @@ public class ClientMigrationService {
         return trimToNull(meta.getClientName()) != null && trimToNull(meta.getClientEmail()) != null;
     }
 
-    private Map<Long, String> jobTitles() {
+    private Map<Long, String> jobTitles(List<AdminJobMeta> metas) {
         Map<Long, String> titles = new LinkedHashMap<>();
-        for (JobListItem job : jobService.getJobs()) {
+        List<Long> documentSrls = metas.stream()
+                .map(AdminJobMeta::getDocumentSrl)
+                .toList();
+        for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
             titles.put(job.getDocumentSrl(), job.getTitle());
         }
         return titles;

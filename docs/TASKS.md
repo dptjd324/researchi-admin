@@ -1,5 +1,13 @@
 # TASKS.md
 
+## Board Scope Correction
+- [x] Include managed XE board mids: `notice`, `newjob`, `additional`, `fast`, `recruit`, `sharing`, `question`
+- [x] Keep applicant/application features limited to: `newjob`, `additional`, `fast`, `recruit`
+- [x] Add board classification for JOB, CONTENT, and QNA boards
+- [x] Add lightweight `admin_board_config` schema support
+- [x] Hide application form, applicant, matching, and mail controls for `notice`, `sharing`, and `question`
+- [x] Keep `page_tjVR38` excluded
+
 ## Phase 1. 프로젝트 부트스트랩
 - [x] Spring Boot 프로젝트 초기화
 - [x] Gradle 설정

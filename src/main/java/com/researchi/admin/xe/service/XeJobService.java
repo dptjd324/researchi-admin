@@ -1,5 +1,6 @@
 package com.researchi.admin.xe.service;
 
+import com.researchi.admin.job.domain.BoardConfig;
 import com.researchi.admin.xe.domain.XeJobDocument;
 import com.researchi.admin.xe.domain.XeModule;
 import com.researchi.admin.xe.mapper.XeJobMapper;
@@ -22,19 +23,58 @@ public class XeJobService {
     }
 
     public List<XeModule> getJobModules() {
-        return xeJobMapper.findJobModules();
+        return xeJobMapper.findJobModules(BoardConfig.managedMids());
     }
 
     public XeModule getModuleByMid(String mid) {
         return xeJobMapper.findModuleByMid(mid);
     }
 
-    public List<XeJobDocument> getJobDocuments() {
-        return xeJobMapper.findJobDocuments();
+    public List<XeJobDocument> getJobDocumentsByIds(List<Long> documentSrls) {
+        if (documentSrls == null || documentSrls.isEmpty()) {
+            return List.of();
+        }
+        return xeJobMapper.findJobDocumentsByIds(documentSrls, BoardConfig.managedMids());
+    }
+
+    public List<Long> getJobDocumentSrlsByTitle(String normalizedKeyword, List<String> keywordTokens) {
+        if (normalizedKeyword == null || normalizedKeyword.isBlank()) {
+            return List.of();
+        }
+        return xeJobMapper.findJobDocumentSrlsByTitle(normalizedKeyword, keywordTokens, BoardConfig.managedMids());
+    }
+
+    public List<Long> getApplicationJobDocumentSrlsByTitle(String normalizedKeyword, List<String> keywordTokens) {
+        if (normalizedKeyword == null || normalizedKeyword.isBlank()) {
+            return List.of();
+        }
+        return xeJobMapper.findJobDocumentSrlsByTitle(normalizedKeyword, keywordTokens, BoardConfig.applicationMids());
+    }
+
+    public List<XeJobDocument> getJobDocumentsPage(String mid, String normalizedKeyword, List<String> keywordTokens, int limit, int offset) {
+        return xeJobMapper.findJobDocumentsPage(mid, normalizedKeyword, keywordTokens, BoardConfig.managedMids(), limit, offset);
+    }
+
+    public List<XeJobDocument> getApplicationJobDocumentsPage(String mid, String normalizedKeyword, List<String> keywordTokens, int limit, int offset) {
+        return xeJobMapper.findJobDocumentsPage(mid, normalizedKeyword, keywordTokens, BoardConfig.applicationMids(), limit, offset);
+    }
+
+    public List<XeJobDocument> getJobDocumentsAfter(
+            String mid,
+            String normalizedKeyword,
+            List<String> keywordTokens,
+            Long afterDocumentSrl,
+            int limit
+    ) {
+        return xeJobMapper.findJobDocumentsAfter(mid, normalizedKeyword, keywordTokens, BoardConfig.managedMids(), afterDocumentSrl, limit);
+    }
+
+    public int countJobDocuments(String mid, String normalizedKeyword, List<String> keywordTokens) {
+        return xeJobMapper.countJobDocuments(mid, normalizedKeyword, keywordTokens, BoardConfig.managedMids());
     }
 
     public XeJobDocument getJobDocument(Long documentSrl) {
-        return xeJobMapper.findJobDocumentById(documentSrl);
+        return xeJobMapper.findJobDocumentById(documentSrl, BoardConfig.managedMids());
     }
 
     @Transactional("xeTransactionManager")

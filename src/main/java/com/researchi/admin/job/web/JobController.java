@@ -3,6 +3,7 @@ package com.researchi.admin.job.web;
 import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.client.service.ClientService;
 import com.researchi.admin.common.web.PaginationSupport;
+import com.researchi.admin.job.domain.BoardConfig;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.domain.JobType;
@@ -29,9 +30,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/jobs")
@@ -69,30 +73,75 @@ public class JobController {
             @RequestParam(name = "jobType", required = false) String jobType,
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "cursor", required = false) Long cursor,
             HttpServletRequest request,
             CsrfToken csrfToken
     ) {
         request.getSession(true);
-        List<JobListItem> jobs = jobService.getJobs();
-        if (jobType != null && !jobType.isBlank()) {
-            jobs = jobs.stream()
-                    .filter(item -> jobType.equals(item.getJobType()))
-                    .toList();
-        }
-        if (keyword != null && !keyword.isBlank()) {
-            jobs = jobs.stream()
-                    .filter(item -> matchesJobTitle(item, keyword))
-                    .toList();
-        }
-
         model.addAttribute("pageTitle", "\uACF5\uACE0");
-        model.addAttribute("pageDescription", "\uC2E0\uADDC \uC77C\uAC10\uACFC \uCD94\uAC00 \uC77C\uAC10\uC744 \uC870\uD68C\uD558\uACE0, \uBAA8\uC9D1 \uC0C1\uD0DC\uC640 \uC6B4\uC601 \uBA54\uD0C0 \uC815\uBCF4\uB97C \uAD00\uB9AC\uD569\uB2C8\uB2E4.");
-        model.addAttribute("jobs", PaginationSupport.apply(model, request, jobs, page, PaginationSupport.DEFAULT_PAGE_SIZE));
-        model.addAttribute("selectedJobType", jobType);
+        model.addAttribute("pageDescription", "Researchi XE managed boards.");
+        String normalizedJobType = isSupportedJobType(jobType) ? jobType : null;
+        int totalCount = jobService.countJobs(normalizedJobType, keyword);
+        PaginationSupport.PageWindow pageWindow = PaginationSupport.applyMetadata(
+                model,
+                request,
+                totalCount,
+                page,
+                PaginationSupport.DEFAULT_PAGE_SIZE
+        );
+        List<JobListItem> jobs = cursor != null && pageWindow.currentPage() > 1
+                ? jobService.getJobPageAfter(normalizedJobType, keyword, cursor, pageWindow.pageSize())
+                : jobService.getJobPage(normalizedJobType, keyword, pageWindow.pageSize(), pageWindow.offset());
+        model.addAttribute("jobs", jobs);
+        applyCursorNextPageUrl(model, request, jobs, pageWindow);
+        model.addAttribute("selectedJobType", normalizedJobType);
         model.addAttribute("keyword", keyword);
-        model.addAttribute("jobTypes", JobType.values());
+        model.addAttribute("jobTypes", BoardConfig.values());
         model.addAttribute("_csrf", csrfToken);
         return "jobs/list";
+    }
+
+    private void applyCursorNextPageUrl(
+            Model model,
+            HttpServletRequest request,
+            List<JobListItem> jobs,
+            PaginationSupport.PageWindow pageWindow
+    ) {
+        if (jobs.isEmpty() || pageWindow.currentPage() >= pageWindow.totalPages()) {
+            return;
+        }
+        Long lastDocumentSrl = jobs.get(jobs.size() - 1).getDocumentSrl();
+        if (lastDocumentSrl == null) {
+            return;
+        }
+        model.addAttribute("nextPageUrl", buildPageUrl(request, pageWindow.currentPage() + 1, lastDocumentSrl));
+    }
+
+    private String buildPageUrl(HttpServletRequest request, int page, Long cursor) {
+        Map<String, String[]> parameterMap = new LinkedHashMap<>(request.getParameterMap());
+        parameterMap.put("page", new String[]{String.valueOf(page)});
+        parameterMap.put("cursor", new String[]{String.valueOf(cursor)});
+
+        StringBuilder builder = new StringBuilder(request.getRequestURI());
+        boolean first = true;
+        for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
+            if (entry.getValue() == null || entry.getValue().length == 0) {
+                continue;
+            }
+            for (String value : entry.getValue()) {
+                if (value == null || value.isBlank()) {
+                    continue;
+                }
+                builder.append(first ? '?' : '&');
+                first = false;
+                builder.append(encode(entry.getKey())).append('=').append(encode(value));
+            }
+        }
+        return builder.toString();
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     @GetMapping("/new")
@@ -116,6 +165,7 @@ public class JobController {
         model.addAttribute("pageTitle", "\uACF5\uACE0 \uC0C1\uC138");
         model.addAttribute("pageDescription", "\uACF5\uACE0 \uB0B4\uC6A9, \uBAA8\uC9D1 \uC0C1\uD0DC, \uAC70\uB798\uCC98 \uBC0F \uC6B4\uC601 \uBA54\uD0C0 \uC815\uBCF4\uB97C \uD655\uC778\uD569\uB2C8\uB2E4.");
         model.addAttribute("jobDetail", jobDetail);
+        model.addAttribute("applicationBoard", jobDetail.isApplicationBoard());
         model.addAttribute(
                 "applicationFormNoticeItems",
                 jobDetail.getMeta() == null ? List.of() : ApplicationFormNoticeParser.parseItems(jobDetail.getMeta().getApplicationFormNotice())
@@ -196,7 +246,9 @@ public class JobController {
             AdminPrincipal principal,
             HttpServletRequest request
     ) {
-        if (!Boolean.TRUE.equals(form.getApplicationEnabled()) || !"RECRUITING".equals(form.getRecruitStatus())) {
+        if (!BoardConfig.fromCode(form.getJobType()).isApplicationEnabled()
+                || !Boolean.TRUE.equals(form.getApplicationEnabled())
+                || !"RECRUITING".equals(form.getRecruitStatus())) {
             return;
         }
         Long matchJobId = matchingService.run(documentSrl, principal, request);
@@ -208,7 +260,8 @@ public class JobController {
         model.addAttribute("pageTitle", pageTitle);
         model.addAttribute("pageDescription", "\uACF5\uACE0 \uB0B4\uC6A9, \uACF5\uAC1C \uC9C0\uC6D0 \uC5EC\uBD80, \uC790\uB3D9 \uBC1C\uC1A1 \uC124\uC815\uC744 \uAD00\uB9AC\uD569\uB2C8\uB2E4.");
         model.addAttribute("jobForm", form);
-        model.addAttribute("jobTypes", JobType.values());
+        model.addAttribute("jobTypes", documentSrl == null ? BoardConfig.applicationBoards() : Arrays.asList(BoardConfig.values()));
+        model.addAttribute("applicationBoard", BoardConfig.fromCode(form.getJobType()).isApplicationEnabled());
         model.addAttribute("mailTemplates", mailTemplateService.getActiveTemplates());
         model.addAttribute("clientOptions", clientService.getAllClientSummaries());
         model.addAttribute("documentSrl", documentSrl);
@@ -260,40 +313,10 @@ public class JobController {
         }
     }
 
-    private boolean matchesJobTitle(JobListItem item, String keyword) {
-        String title = normalizeSearchText(item.getTitle());
-        if (title.isBlank()) {
-            return false;
-        }
-
-        String normalizedKeyword = normalizeSearchText(keyword);
-        if (!normalizedKeyword.isBlank() && title.contains(normalizedKeyword)) {
+    private boolean isSupportedJobType(String jobType) {
+        if (jobType == null || jobType.isBlank()) {
             return true;
         }
-
-        List<String> tokens = Arrays.stream(keyword.trim().split("\\s+"))
-                .map(this::normalizeSearchText)
-                .filter(token -> !token.isBlank())
-                .distinct()
-                .toList();
-        if (tokens.isEmpty()) {
-            return false;
-        }
-        return tokens.stream().allMatch(title::contains);
-    }
-
-    private String normalizeSearchText(String value) {
-        if (value == null) {
-            return "";
-        }
-        String lowered = value.toLowerCase(Locale.ROOT);
-        StringBuilder builder = new StringBuilder(lowered.length());
-        for (int i = 0; i < lowered.length(); i++) {
-            char ch = lowered.charAt(i);
-            if (Character.isLetterOrDigit(ch)) {
-                builder.append(ch);
-            }
-        }
-        return builder.toString();
+        return Arrays.stream(BoardConfig.values()).anyMatch(value -> value.name().equals(jobType));
     }
 }
