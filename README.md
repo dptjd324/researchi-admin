@@ -1,5 +1,3 @@
-래는 GitHub 첫 화면용 배지 포함 README 버전입니다.
-
 # Researchi Admin
 
 ![Java](https://img.shields.io/badge/Java-17-blue)
