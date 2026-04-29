@@ -48,6 +48,8 @@ public class MailingService {
 
     private static final DateTimeFormatter MAIL_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
     private static final String DEFAULT_ATTACHMENT_TYPE = "XLSX";
+    private static final String DEFAULT_DIRECT_SUBJECT = "공고 지원서 안내";
+    private static final String DEFAULT_DIRECT_BODY = "지원서를 첨부해 드립니다.";
 
     private final AdminMailTemplateMapper adminMailTemplateMapper;
     private final AdminMailSendJobMapper adminMailSendJobMapper;
@@ -243,7 +245,7 @@ public class MailingService {
         if (enabled && (threshold == null || threshold < 1)) {
             throw new IllegalArgumentException("임계치 자동 발송에는 유효한 임계치가 필요합니다.");
         }
-        if (enabled) {
+        if (enabled && templateId != null) {
             requiredTemplate(templateId);
         }
 
@@ -275,7 +277,7 @@ public class MailingService {
     @Transactional("adminTransactionManager")
     public Long triggerThreshold(MailThresholdTriggerForm form, AdminPrincipal principal, HttpServletRequest request) {
         AdminJobMeta jobMeta = requireJobMeta(form.getDocumentSrl());
-        Snapshot snapshot = loadSnapshot(form.getDocumentSrl());
+        Snapshot snapshot = loadThresholdSnapshot(form.getDocumentSrl());
         int threshold = resolveManualThreshold(jobMeta, snapshot.applicationIds().size());
         if (snapshot.applicationIds().size() < threshold) {
             throw new IllegalStateException("임계치에 도달하지 않았습니다.");
@@ -294,7 +296,8 @@ public class MailingService {
                 threshold,
                 duplicateKey,
                 principal,
-                request
+                request,
+                snapshot
         );
         return requireImmediateSendSuccess(sendJobId);
     }
@@ -425,11 +428,7 @@ public class MailingService {
         if (jobMeta.getAutoSendThreshold() == null || jobMeta.getAutoSendThreshold() < 1) {
             return false;
         }
-        if (jobMeta.getAutoSendTemplateId() == null) {
-            return false;
-        }
-
-        Snapshot snapshot = loadSnapshot(documentSrl);
+        Snapshot snapshot = loadThresholdSnapshot(documentSrl);
         if (snapshot.applicationIds().size() < jobMeta.getAutoSendThreshold()) {
             return false;
         }
@@ -443,8 +442,8 @@ public class MailingService {
         sendNow(
                 documentSrl,
                 jobMeta.getAutoSendTemplateId(),
-                null,
-                null,
+                jobMeta.getAutoSendTemplateId() == null ? DEFAULT_DIRECT_SUBJECT : null,
+                jobMeta.getAutoSendTemplateId() == null ? DEFAULT_DIRECT_BODY : null,
                 MailAttachmentType.fromValue(
                         jobMeta.getAutoSendAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : jobMeta.getAutoSendAttachmentType()
                 ),
@@ -453,7 +452,8 @@ public class MailingService {
                 jobMeta.getAutoSendThreshold(),
                 duplicateKey,
                 new AdminPrincipal(null, "scheduler", "", "Scheduler", "Y", null),
-                null
+                null,
+                snapshot
         );
         adminJobMetaMapper.updateSchedulerState(documentSrl, LocalDateTime.now(), jobMeta.getNextAutoSendAt());
         return true;
@@ -472,7 +472,37 @@ public class MailingService {
             AdminPrincipal principal,
             HttpServletRequest request
     ) {
-        Snapshot snapshot = loadSnapshot(documentSrl);
+        return sendNow(
+                documentSrl,
+                templateId,
+                directMailSubject,
+                directMailBody,
+                attachmentType,
+                sendType,
+                triggerType,
+                thresholdSnapshot,
+                duplicatePreventKey,
+                principal,
+                request,
+                null
+        );
+    }
+
+    private Long sendNow(
+            Long documentSrl,
+            Long templateId,
+            String directMailSubject,
+            String directMailBody,
+            MailAttachmentType attachmentType,
+            String sendType,
+            String triggerType,
+            Integer thresholdSnapshot,
+            String duplicatePreventKey,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            Snapshot snapshotOverride
+    ) {
+        Snapshot snapshot = snapshotOverride != null ? snapshotOverride : loadSnapshot(documentSrl);
         RecipientSelection recipients = parseRecipients(documentSrl);
         MailContent mailContent = resolveMailContent(templateId, directMailSubject, directMailBody);
 
@@ -604,9 +634,20 @@ public class MailingService {
     }
 
     private Snapshot loadSnapshot(Long documentSrl) {
+        return loadSnapshot(documentSrl, null);
+    }
+
+    private Snapshot loadThresholdSnapshot(Long documentSrl) {
+        return loadSnapshot(documentSrl, adminMailSendJobMapper.findLastSuccessfulThresholdSentAt(documentSrl));
+    }
+
+    private Snapshot loadSnapshot(Long documentSrl, LocalDateTime appliedAfter) {
         List<Long> includedApplicationIds = new ArrayList<>();
         int blacklistExcludedCount = 0;
         for (ExportApplicationSource application : adminExportQueryMapper.findApplicationsByDocumentSrl(documentSrl)) {
+            if (appliedAfter != null && (application.getAppliedAt() == null || !application.getAppliedAt().isAfter(appliedAfter))) {
+                continue;
+            }
             if (!"Y".equals(application.getProvideYn())) {
                 continue;
             }

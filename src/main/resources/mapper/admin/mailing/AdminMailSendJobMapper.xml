@@ -136,6 +136,15 @@
         FROM admin_mail_send_job
     </select>
 
+    <select id="findLastSuccessfulThresholdSentAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(sent_at)
+        FROM admin_mail_send_job
+        WHERE document_srl = #{documentSrl}
+          AND trigger_type = 'THRESHOLD'
+          AND send_status = 'SENT'
+          AND sent_at IS NOT NULL
+    </select>
+
     <select id="findByDocumentSrl" resultMap="adminMailSendJobResultMap">
         SELECT
             job.*,

@@ -68,7 +68,7 @@ class MatchingServiceTest {
 
         when(keywordExtractionService.syncJobKeywords(9L)).thenReturn(List.of(
                 new KeywordCandidate("survey", "survey", "JOB_TITLE"),
-                new KeywordCandidate("panel", "panel", "JOB_META")
+                new KeywordCandidate("panel", "panel", "JOB_CONTENT")
         ));
         ApplicationRecord matched = application(101L, 3L, "Y", "Y", "N");
         ApplicationRecord unmatched = application(102L, 4L, "Y", "N", "N");

@@ -7,6 +7,7 @@ import com.researchi.admin.application.domain.ApplicationRecord;
 import com.researchi.admin.application.service.ApplicationService;
 import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
+import com.researchi.admin.job.support.ApplicationFormNoticeParser;
 import com.researchi.admin.keyword.config.KeywordProperties;
 import com.researchi.admin.keyword.domain.AdminApplicationKeyword;
 import com.researchi.admin.keyword.domain.AdminJobKeyword;
@@ -168,12 +169,10 @@ public class KeywordExtractionService {
         addKeywords(deduplicated, jobDocument.getTitle(), "JOB_TITLE");
         addKeywords(deduplicated, jobDocument.getContent(), "JOB_CONTENT");
         if (meta != null) {
-            addKeywords(deduplicated, meta.getRewardText(), "JOB_META");
-            addKeywords(deduplicated, meta.getPlaceText(), "JOB_META");
-            addKeywords(deduplicated, meta.getRegionText(), "JOB_META");
-            addKeywords(deduplicated, meta.getBrandText(), "JOB_META");
-            addKeywords(deduplicated, meta.getApplicationFormNotice(), "JOB_META");
-            addKeywords(deduplicated, meta.getInternalMemo(), "JOB_META");
+            addKeywords(deduplicated, meta.getRegionText(), "JOB_REGION");
+            for (String itemTitle : ApplicationFormNoticeParser.parseItems(meta.getApplicationFormNotice())) {
+                addKeywords(deduplicated, itemTitle, "JOB_EXTRA_TITLE");
+            }
         }
         return List.copyOf(deduplicated.values());
     }

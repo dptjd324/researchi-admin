@@ -148,42 +148,6 @@
                     <small class="field-help">옵션은 선택형 질문에서만 사용합니다. 한 줄에 하나씩 입력하세요. 예: 평일 가능</small>
                 </section>
 
-                <div class="form-grid triple" th:if="${applicationBoard}" hidden>
-                    <label>
-                        <span>자동 발송 방식</span>
-                        <select th:field="*{autoSendMode}">
-                            <option value="">선택</option>
-                            <option value="THRESHOLD">임계치 도달 시</option>
-                            <option value="SCHEDULED">예약 발송</option>
-                        </select>
-                        <small th:if="${#fields.hasErrors('autoSendMode')}" th:errors="*{autoSendMode}" class="field-error"></small>
-                    </label>
-                    <label><span>자동 발송 임계치</span><input type="number" th:field="*{autoSendThreshold}"></label>
-                    <label><span>자동 발송 시각</span><input type="time" th:field="*{autoSendTime}"></label>
-                    <label>
-                        <span>반복 사용 여부</span>
-                        <select th:field="*{autoSendRepeatYn}">
-                            <option value="N">아니오</option>
-                            <option value="Y">예</option>
-                        </select>
-                    </label>
-                    <label><span>반복 단위</span><input type="text" th:field="*{autoSendRepeatUnit}"></label>
-                    <label>
-                        <span>자동 발송 템플릿</span>
-                        <select th:field="*{autoSendTemplateId}">
-                            <option value="">선택</option>
-                            <option th:each="template : ${mailTemplates}" th:value="${template.id}" th:text="${template.templateName}">템플릿</option>
-                        </select>
-                        <small th:if="${#fields.hasErrors('autoSendTemplateId')}" th:errors="*{autoSendTemplateId}" class="field-error"></small>
-                    </label>
-                    <label>
-                        <span>자동 발송 첨부 형식</span>
-                        <select th:field="*{autoSendAttachmentType}">
-                            <option value="XLSX">엑셀 (XLSX)</option>
-                            <option value="TXT">텍스트 (TXT)</option>
-                        </select>
-                    </label>
-                </div>
 
                 <label>
                     <span>내부 메모</span>

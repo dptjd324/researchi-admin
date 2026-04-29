@@ -32,28 +32,17 @@
 
                         <label>
                             <span>메일 제목</span>
-                            <input type="text" th:field="*{mailSubject}" maxlength="255" placeholder="{{jobTitle}} 공고 지원서 안내">
+                            <input type="text" th:field="*{mailSubject}" maxlength="255" placeholder="메일 제목을 입력해 주세요.">
                             <div th:if="${#fields.hasErrors('mailSubject')}" class="field-error" th:errors="*{mailSubject}">제목 오류</div>
                         </label>
 
                         <label>
                             <span>메일 본문</span>
-                            <textarea th:field="*{mailBody}" rows="12" placeholder="{{jobTitle}} 공고의 지원서 {{applicationCount}}건을 첨부해 드립니다."></textarea>
+                            <textarea th:field="*{mailBody}" rows="12" placeholder="메일 본문을 입력해 주세요."></textarea>
                             <div th:if="${#fields.hasErrors('mailBody')}" class="field-error" th:errors="*{mailBody}">본문 오류</div>
                         </label>
 
-                        <div class="mail-variable-toolbar" data-mail-variable-toolbar>
-                            <button type="button" data-mail-variable="{{jobTitle}}">공고명</button>
-                            <button type="button" data-mail-variable="{{documentSrl}}">공고번호</button>
-                            <button type="button" data-mail-variable="{{applicationCount}}">지원서 수</button>
-                            <button type="button" data-mail-variable="{{attachmentType}}">첨부 형식</button>
-                            <button type="button" data-mail-variable="{{triggerType}}">발송 유형</button>
-                            <button type="button" data-mail-variable="{{sentAt}}">발송 시각</button>
-                            <button type="button" data-mail-variable="{{applicantName}}">지원자명</button>
-                            <button type="button" data-mail-variable="{{keywordSummary}}">키워드</button>
-                            <button type="button" data-mail-variable="{{applyUrl}}">지원 URL</button>
-                        </div>
-                        <p class="helper">제목 또는 본문 입력란에 커서를 둔 뒤 필요한 항목을 누르면 치환값이 삽입됩니다.</p>
+                        <p class="helper">제목과 본문은 입력한 그대로 저장됩니다.</p>
 
                         <label>
                             <span>사용 여부</span>
@@ -95,59 +84,6 @@
                 </section>
             </div>
 
-            <style>
-                .mail-variable-toolbar {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.4rem;
-                }
-
-                .mail-variable-toolbar button {
-                    min-height: 2rem;
-                    padding: 0 0.65rem;
-                    border: 1px solid #cbd5e1;
-                    border-radius: 0.45rem;
-                    background: #f8fafc;
-                    color: #334155;
-                    font-size: 0.9rem;
-                    font-weight: 700;
-                    cursor: pointer;
-                }
-
-                .mail-variable-toolbar button:hover {
-                    border-color: #94a3b8;
-                    background: #f1f5f9;
-                }
-            </style>
-            <script>
-                document.querySelectorAll('[data-mail-variable-toolbar]').forEach((toolbar) => {
-                    toolbar.addEventListener('click', (event) => {
-                        const button = event.target.closest('[data-mail-variable]');
-                        if (!button) {
-                            return;
-                        }
-                        const form = button.closest('form');
-                        const active = document.activeElement;
-                        const editableInForm = active
-                            && form
-                            && form.contains(active)
-                            && (active.matches('input[type="text"]') || active.matches('textarea'));
-                        const target = editableInForm
-                            ? active
-                            : form.querySelector('input[name="mailSubject"], textarea[name="mailBody"]');
-                        if (!target) {
-                            return;
-                        }
-                        const token = button.dataset.mailVariable;
-                        const start = target.selectionStart ?? target.value.length;
-                        const end = target.selectionEnd ?? target.value.length;
-                        target.value = target.value.slice(0, start) + token + target.value.slice(end);
-                        const nextPosition = start + token.length;
-                        target.focus();
-                        target.setSelectionRange(nextPosition, nextPosition);
-                    });
-                });
-            </script>
         </section>
     </th:block>
 </th:block>

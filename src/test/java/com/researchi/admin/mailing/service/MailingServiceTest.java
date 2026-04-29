@@ -135,6 +135,30 @@ class MailingServiceTest {
     }
 
     @Test
+    void updateThresholdSettingsAllowsDirectContentWhenTemplateIsEmpty() {
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+        when(adminJobMetaMapper.updateThresholdMailSettings(9L, "Y", "THRESHOLD", 5, null, "XLSX")).thenReturn(1);
+
+        MailThresholdSettingsForm form = new MailThresholdSettingsForm();
+        form.setDocumentSrl(9L);
+        form.setAutoSendEnabled(true);
+        form.setAutoSendThreshold(5);
+        form.setAutoSendTemplateId(null);
+        form.setAutoSendAttachmentType("XLSX");
+
+        mailingService.updateThresholdSettings(
+                form,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        verify(adminMailTemplateMapper, never()).findById(any());
+        verify(adminJobMetaMapper).updateThresholdMailSettings(9L, "Y", "THRESHOLD", 5, null, "XLSX");
+    }
+
+    @Test
     void manualSendBuildsSnapshotExcludesBlacklistedAndUpdatesDeliveryStatus() throws Exception {
         PublicFormProperties properties = new PublicFormProperties();
         properties.setEncryptionKey("test-encryption-key");
@@ -514,6 +538,123 @@ class MailingServiceTest {
         verify(adminMailSendTargetMapper, times(2)).insert(any());
         verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(101L), eq("SENT"), eq(88L), any());
         verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(102L), eq("SENT"), eq(88L), any());
+    }
+
+    @Test
+    void automaticThresholdUsesDefaultDirectContentWhenTemplateIsEmpty() throws Exception {
+        PublicFormProperties properties = new PublicFormProperties();
+        properties.setEncryptionKey("test-encryption-key");
+        properties.setCaptchaEnabled(false);
+        PublicFormProtectionService protectionService = new PublicFormProtectionService(properties);
+        mailingService = new MailingService(
+                adminMailTemplateMapper,
+                adminMailSendJobMapper,
+                adminMailSendTargetMapper,
+                adminMailingApplicationMapper,
+                adminJobMetaMapper,
+                adminExportQueryMapper,
+                exportService,
+                jobService,
+                clientService,
+                protectionService,
+                mailDispatchGateway,
+                adminActionLogService
+        );
+
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        jobMeta.setClientName("Client A");
+        jobMeta.setClientEmail("client@example.com");
+        jobMeta.setAutoSendEnabled("Y");
+        jobMeta.setAutoSendMode("THRESHOLD");
+        jobMeta.setAutoSendThreshold(2);
+        jobMeta.setAutoSendTemplateId(null);
+        jobMeta.setAutoSendAttachmentType("XLSX");
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+
+        when(adminExportQueryMapper.findApplicationsByDocumentSrl(9L)).thenReturn(List.of(
+                exportApplication(101L, "Y", "N"),
+                exportApplication(102L, "Y", "N")
+        ));
+        when(adminMailSendJobMapper.findByDuplicatePreventKey(any())).thenReturn(null);
+        when(exportService.prepareXlsx(eq(9L), eq(List.of(101L, 102L))))
+                .thenReturn(new ExportPayload("job-9.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1, 2}, 2));
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+        doAnswer(invocation -> {
+            AdminMailSendJob sendJob = invocation.getArgument(0);
+            sendJob.setId(90L);
+            return null;
+        }).when(adminMailSendJobMapper).insert(any(AdminMailSendJob.class));
+
+        boolean sent = mailingService.triggerThresholdAutomatically(9L);
+
+        assertThat(sent).isTrue();
+        ArgumentCaptor<AdminMailSendJob> sendJobCaptor = ArgumentCaptor.forClass(AdminMailSendJob.class);
+        verify(adminMailSendJobMapper).insert(sendJobCaptor.capture());
+        assertThat(sendJobCaptor.getValue().getTemplateId()).isNull();
+        assertThat(sendJobCaptor.getValue().getMailSubjectSnapshot()).isEqualTo("공고 지원서 안내");
+        assertThat(sendJobCaptor.getValue().getMailBodySnapshot()).isEqualTo("지원서를 첨부해 드립니다.");
+        verify(mailDispatchGateway).dispatch(any());
+    }
+
+    @Test
+    void automaticThresholdCountsOnlyApplicationsAfterLastSuccessfulThresholdSend() throws Exception {
+        PublicFormProperties properties = new PublicFormProperties();
+        properties.setEncryptionKey("test-encryption-key");
+        properties.setCaptchaEnabled(false);
+        PublicFormProtectionService protectionService = new PublicFormProtectionService(properties);
+        mailingService = new MailingService(
+                adminMailTemplateMapper,
+                adminMailSendJobMapper,
+                adminMailSendTargetMapper,
+                adminMailingApplicationMapper,
+                adminJobMetaMapper,
+                adminExportQueryMapper,
+                exportService,
+                jobService,
+                clientService,
+                protectionService,
+                mailDispatchGateway,
+                adminActionLogService
+        );
+
+        LocalDateTime lastThresholdSentAt = LocalDateTime.of(2026, 4, 30, 10, 0);
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        jobMeta.setClientName("Client A");
+        jobMeta.setClientEmail("client@example.com");
+        jobMeta.setAutoSendEnabled("Y");
+        jobMeta.setAutoSendMode("THRESHOLD");
+        jobMeta.setAutoSendThreshold(2);
+        jobMeta.setAutoSendAttachmentType("XLSX");
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+        when(adminMailSendJobMapper.findLastSuccessfulThresholdSentAt(9L)).thenReturn(lastThresholdSentAt);
+
+        when(adminExportQueryMapper.findApplicationsByDocumentSrl(9L)).thenReturn(List.of(
+                exportApplication(101L, "Y", "N", lastThresholdSentAt.minusMinutes(1)),
+                exportApplication(102L, "Y", "N", lastThresholdSentAt.plusMinutes(1)),
+                exportApplication(103L, "Y", "N", lastThresholdSentAt.plusMinutes(2))
+        ));
+        when(adminMailSendJobMapper.findByDuplicatePreventKey(any())).thenReturn(null);
+        when(exportService.prepareXlsx(eq(9L), eq(List.of(102L, 103L))))
+                .thenReturn(new ExportPayload("job-9.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1, 2}, 2));
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+        doAnswer(invocation -> {
+            AdminMailSendJob sendJob = invocation.getArgument(0);
+            sendJob.setId(91L);
+            return null;
+        }).when(adminMailSendJobMapper).insert(any(AdminMailSendJob.class));
+
+        boolean sent = mailingService.triggerThresholdAutomatically(9L);
+
+        assertThat(sent).isTrue();
+        ArgumentCaptor<AdminMailSendJob> sendJobCaptor = ArgumentCaptor.forClass(AdminMailSendJob.class);
+        verify(adminMailSendJobMapper).insert(sendJobCaptor.capture());
+        assertThat(sendJobCaptor.getValue().getTargetSnapshotCount()).isEqualTo(2);
+        verify(exportService).prepareXlsx(9L, List.of(102L, 103L));
+        verify(adminMailingApplicationMapper, never()).updateDeliveryStatus(eq(101L), any(), any(), any());
+        verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(102L), eq("SENT"), eq(91L), any());
+        verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(103L), eq("SENT"), eq(91L), any());
     }
 
     @Test
@@ -1059,6 +1200,12 @@ class MailingServiceTest {
         source.setId(id);
         source.setProvideYn(provideYn);
         source.setIsBlacklisted(blacklisted);
+        return source;
+    }
+
+    private com.researchi.admin.export.domain.ExportApplicationSource exportApplication(Long id, String provideYn, String blacklisted, LocalDateTime appliedAt) {
+        com.researchi.admin.export.domain.ExportApplicationSource source = exportApplication(id, provideYn, blacklisted);
+        source.setAppliedAt(appliedAt);
         return source;
     }
 

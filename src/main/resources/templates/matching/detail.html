@@ -37,7 +37,7 @@
 
                 <div class="note">
                     <strong>추출된 공고 키워드</strong>
-                    <span th:if="${#lists.isEmpty(overview.jobKeywords)}"> 저장된 공고 키워드가 없습니다. 매칭을 실행해 현재 공고와 메타 정보에서 다시 추출해 주세요.</span>
+                    <span th:if="${#lists.isEmpty(overview.jobKeywords)}"> 저장된 공고 키워드가 없습니다. 매칭을 실행해 현재 공고 제목, 본문, 지역, 9번 추가기재사항 제목에서 다시 추출해 주세요.</span>
                     <span th:if="${!#lists.isEmpty(overview.jobKeywords)}" th:text="${#strings.listJoin(overview.jobKeywords, ', ')}">키워드</span>
                 </div>
             </section>
