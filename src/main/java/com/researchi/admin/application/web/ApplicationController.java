@@ -38,6 +38,7 @@ public class ApplicationController {
 
     @GetMapping("/applications")
     public String applications(
+            @RequestParam(name = "documentSrl", required = false) Long documentSrl,
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "page", required = false) Integer page,
             Model model,
@@ -45,7 +46,12 @@ public class ApplicationController {
             CsrfToken csrfToken
     ) {
         request.getSession(true);
-        populateListModel(model, null, null, keyword, page, request, csrfToken);
+        if (documentSrl != null) {
+            jobService.requireApplicationBoard(documentSrl);
+            populateListModel(model, documentSrl, jobService.getJob(documentSrl), keyword, page, request, csrfToken);
+        } else {
+            populateListModel(model, null, null, keyword, page, request, csrfToken);
+        }
         return "applications/list";
     }
 

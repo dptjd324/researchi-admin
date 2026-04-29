@@ -127,13 +127,10 @@
                             <option th:value="false">미사용</option>
                         </select>
                     </label>
-                    <label>
-                        <span>자동 발송 사용 여부</span>
-                        <select th:field="*{autoSendEnabled}">
-                            <option th:value="false">미사용</option>
-                            <option th:value="true">사용</option>
-                        </select>
-                    </label>
+                </div>
+                <div th:if="${applicationBoard}">
+                    <input type="hidden" th:field="*{autoSendEnabled}">
+                    <p class="helper">자동 임계치 메일 설정은 메일 화면의 임계치 발송 영역에서 관리합니다.</p>
                 </div>
 
                 <section class="panel" th:if="${applicationBoard}" style="margin: 1rem 0;">
@@ -151,7 +148,7 @@
                     <small class="field-help">옵션은 선택형 질문에서만 사용합니다. 한 줄에 하나씩 입력하세요. 예: 평일 가능</small>
                 </section>
 
-                <div class="form-grid triple" th:if="${applicationBoard}">
+                <div class="form-grid triple" th:if="${applicationBoard}" hidden>
                     <label>
                         <span>자동 발송 방식</span>
                         <select th:field="*{autoSendMode}">

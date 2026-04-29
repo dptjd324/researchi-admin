@@ -25,8 +25,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -79,7 +81,14 @@ class JobServiceTest {
         assertThat(captor.getValue().getClientEmail()).isEqualTo("client@example.com");
         assertThat(captor.getValue().getClientEmails()).isEqualTo("client2@example.com");
         verify(keywordExtractionService).syncJobKeywords(321L);
-        verify(adminActionLogService).log(eq(1L), eq("JOB_CREATE"), eq("JOB"), eq("321"), eq("공고 등록"), any(HttpServletRequest.class));
+        verify(adminActionLogService).log(
+                eq(1L),
+                eq("JOB_CREATE"),
+                eq("JOB"),
+                eq("321"),
+                argThat(detail -> detail.contains("공고 등록") && detail.contains("documentSrl=321") && detail.contains("title=신규 공고")),
+                any(HttpServletRequest.class)
+        );
     }
 
     @Test
@@ -99,6 +108,23 @@ class JobServiceTest {
         verify(adminJobMetaMapper).insert(any(AdminJobMeta.class));
         verify(keywordExtractionService).syncJobKeywords(321L);
         verify(adminActionLogService).log(eq(1L), eq("JOB_CREATE"), eq("JOB"), eq("321"), any(), any(HttpServletRequest.class));
+    }
+
+    @Test
+    void createJobStopsBeforeBestEffortTasksWhenAdminMetaSaveFailsAfterXeCreate() {
+        JobForm form = baseForm();
+        form.setClientId(null);
+        AdminPrincipal principal = new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1));
+        when(xeJobService.createJobDocument(eq("newjob"), anyString(), anyString(), eq("PUBLIC"), anyString())).thenReturn(321L);
+        when(adminJobMetaMapper.findByDocumentSrl(321L)).thenReturn(null);
+        doThrow(new IllegalStateException("admin db fail")).when(adminJobMetaMapper).insert(any(AdminJobMeta.class));
+
+        assertThatThrownBy(() -> jobService.createJob(form, principal, mockRequest()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("admin db fail");
+
+        verify(keywordExtractionService, never()).syncJobKeywords(321L);
+        verify(adminActionLogService, never()).log(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -124,7 +150,36 @@ class JobServiceTest {
         verify(xeJobService).updateJobStatus(15L, "CLOSED");
         assertThat(meta.getRecruitStatus()).isEqualTo("CLOSED");
         verify(adminJobMetaMapper).update(meta);
-        verify(adminActionLogService).log(eq(1L), eq("JOB_STATUS_UPDATE"), eq("JOB"), eq("15"), eq("공고 상태 변경: CLOSED"), any(HttpServletRequest.class));
+        verify(adminActionLogService).log(
+                eq(1L),
+                eq("JOB_STATUS_UPDATE"),
+                eq("JOB"),
+                eq("15"),
+                argThat(detail -> detail.contains("documentSrl=15") && detail.contains("recruitStatus=CLOSED")),
+                any(HttpServletRequest.class)
+        );
+    }
+
+    @Test
+    void updateJobWritesDetailedActionLog() {
+        JobForm form = baseForm();
+        form.setClientId(null);
+        AdminPrincipal principal = new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1));
+        AdminJobMeta savedMeta = new AdminJobMeta();
+        savedMeta.setDocumentSrl(321L);
+        when(adminJobMetaMapper.findByDocumentSrl(321L)).thenReturn(null, savedMeta);
+
+        jobService.updateJob(321L, form, principal, mockRequest());
+
+        verify(xeJobService).updateJobDocument(321L, "newjob", "신규 공고", "본문", "PUBLIC");
+        verify(adminActionLogService).log(
+                eq(1L),
+                eq("JOB_UPDATE"),
+                eq("JOB"),
+                eq("321"),
+                argThat(detail -> detail.contains("documentSrl=321") && detail.contains("title=신규 공고")),
+                any(HttpServletRequest.class)
+        );
     }
 
     @Test

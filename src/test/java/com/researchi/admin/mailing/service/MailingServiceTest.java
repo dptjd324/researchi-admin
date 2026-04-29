@@ -9,12 +9,14 @@ import com.researchi.admin.export.mapper.AdminExportQueryMapper;
 import com.researchi.admin.export.service.ExportService;
 import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.domain.JobDetail;
+import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.domain.AdminMailSendTarget;
 import com.researchi.admin.mailing.domain.AdminMailTemplate;
 import com.researchi.admin.mailing.domain.MailingPreview;
+import com.researchi.admin.mailing.web.MailThresholdSettingsForm;
 import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
 import com.researchi.admin.mailing.mapper.AdminMailSendTargetMapper;
 import com.researchi.admin.mailing.mapper.AdminMailTemplateMapper;
@@ -74,6 +76,63 @@ class MailingServiceTest {
 
     @InjectMocks
     private MailingService mailingService;
+
+    @Test
+    void historyShowsFullRecipientsWhenStoredSnapshotIsMasked() {
+        AdminMailSendJob sendJob = new AdminMailSendJob();
+        sendJob.setId(77L);
+        sendJob.setDocumentSrl(9L);
+        when(adminMailSendJobMapper.findByDocumentSrl(9L)).thenReturn(List.of(sendJob));
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(
+                new JobListItem(9L, "Survey Job", "", "PUBLIC", null, null, null, "newjob")
+        ));
+
+        AdminMailSendTarget target = new AdminMailSendTarget();
+        target.setSendJobId(77L);
+        target.setTargetEmailMasked("dp***@naver.com");
+        when(adminMailSendTargetMapper.findBySendJobIds(List.of(77L))).thenReturn(List.of(target));
+
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        jobMeta.setClientName("Client A");
+        jobMeta.setClientEmail("dptjd324@naver.com");
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+
+        List<com.researchi.admin.mailing.domain.MailingHistoryItem> history = mailingService.getHistory(9L);
+
+        assertThat(history).hasSize(1);
+        assertThat(history.get(0).recipientAddresses()).containsExactly("dptjd324@naver.com");
+        assertThat(history.get(0).recipientAddressesSummary()).isEqualTo("dptjd324@naver.com");
+    }
+
+    @Test
+    void updateThresholdSettingsStoresOnlyThresholdMailFields() {
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+
+        AdminMailTemplate template = new AdminMailTemplate();
+        template.setId(3L);
+        template.setActiveYn("Y");
+        when(adminMailTemplateMapper.findById(3L)).thenReturn(template);
+        when(adminJobMetaMapper.updateThresholdMailSettings(9L, "Y", "THRESHOLD", 5, 3L, "TXT")).thenReturn(1);
+
+        MailThresholdSettingsForm form = new MailThresholdSettingsForm();
+        form.setDocumentSrl(9L);
+        form.setAutoSendEnabled(true);
+        form.setAutoSendThreshold(5);
+        form.setAutoSendTemplateId(3L);
+        form.setAutoSendAttachmentType("TXT");
+
+        mailingService.updateThresholdSettings(
+                form,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        verify(adminJobMetaMapper).updateThresholdMailSettings(9L, "Y", "THRESHOLD", 5, 3L, "TXT");
+        verify(adminActionLogService).log(eq(1L), eq("MAIL_THRESHOLD_SETTINGS_UPDATE"), eq("JOB"), eq("9"), any(), any());
+    }
 
     @Test
     void manualSendBuildsSnapshotExcludesBlacklistedAndUpdatesDeliveryStatus() throws Exception {

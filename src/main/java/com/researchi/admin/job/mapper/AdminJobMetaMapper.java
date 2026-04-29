@@ -37,4 +37,13 @@ public interface AdminJobMetaMapper {
             @Param("lastAutoSentAt") LocalDateTime lastAutoSentAt,
             @Param("nextAutoSendAt") LocalDateTime nextAutoSendAt
     );
+
+    int updateThresholdMailSettings(
+            @Param("documentSrl") Long documentSrl,
+            @Param("autoSendEnabled") String autoSendEnabled,
+            @Param("autoSendMode") String autoSendMode,
+            @Param("autoSendThreshold") Integer autoSendThreshold,
+            @Param("autoSendTemplateId") Long autoSendTemplateId,
+            @Param("autoSendAttachmentType") String autoSendAttachmentType
+    );
 }

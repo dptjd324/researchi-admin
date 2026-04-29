@@ -192,4 +192,16 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE document_srl = #{documentSrl}
     </update>
+
+    <update id="updateThresholdMailSettings">
+        UPDATE admin_job_meta
+        SET
+            auto_send_enabled = #{autoSendEnabled},
+            auto_send_mode = #{autoSendMode},
+            auto_send_threshold = #{autoSendThreshold},
+            auto_send_template_id = #{autoSendTemplateId},
+            auto_send_attachment_type = #{autoSendAttachmentType},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE document_srl = #{documentSrl}
+    </update>
 </mapper>

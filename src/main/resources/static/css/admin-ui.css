@@ -427,6 +427,10 @@ button:focus,
     background: var(--admin-surface-soft);
 }
 
+.detail-grid__wide {
+    grid-column: 1 / -1;
+}
+
 .detail-grid strong,
 .job-meta-grid strong {
     font-size: 0.86rem;

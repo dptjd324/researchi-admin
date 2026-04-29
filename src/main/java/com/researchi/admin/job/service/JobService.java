@@ -275,9 +275,14 @@ public class JobService {
                 request.getRemoteAddr()
         );
 
-        AdminJobMeta meta = toAdminJobMeta(documentSrl, form, null);
-        insertAdminJobMetaIfMissing(meta);
-        verifyAdminMetaExists(documentSrl);
+        try {
+            AdminJobMeta meta = toAdminJobMeta(documentSrl, form, null);
+            insertAdminJobMetaIfMissing(meta);
+            verifyAdminMetaExists(documentSrl);
+        } catch (RuntimeException ex) {
+            logXeAdminInconsistency("JOB_CREATE_ADMIN_META_SAVE_FAILED", documentSrl, boardConfig.getMid(), ex);
+            throw ex;
+        }
         syncJobKeywordsBestEffort(documentSrl);
 
         try {
@@ -286,7 +291,7 @@ public class JobService {
                 "JOB_CREATE",
                 "JOB",
                 String.valueOf(documentSrl),
-                "공고 등록",
+                jobAuditDetail("공고 등록", documentSrl, form, boardConfig),
                     request
             );
         } catch (RuntimeException ex) {
@@ -310,15 +315,20 @@ public class JobService {
                 toXeStatus(form.getRecruitStatus())
         );
 
-        if (BoardConfig.fromCode(form.getJobType()).isApplicationEnabled()) {
-            AdminJobMeta existing = adminJobMetaMapper.findByDocumentSrl(documentSrl);
-            AdminJobMeta meta = toAdminJobMeta(documentSrl, form, existing);
-            if (existing == null) {
-                insertAdminJobMetaIfMissing(meta);
-            } else {
-                adminJobMetaMapper.update(meta);
+        try {
+            if (BoardConfig.fromCode(form.getJobType()).isApplicationEnabled()) {
+                AdminJobMeta existing = adminJobMetaMapper.findByDocumentSrl(documentSrl);
+                AdminJobMeta meta = toAdminJobMeta(documentSrl, form, existing);
+                if (existing == null) {
+                    insertAdminJobMetaIfMissing(meta);
+                } else {
+                    adminJobMetaMapper.update(meta);
+                }
+                verifyAdminMetaExists(documentSrl);
             }
-            verifyAdminMetaExists(documentSrl);
+        } catch (RuntimeException ex) {
+            logXeAdminInconsistency("JOB_UPDATE_ADMIN_META_SAVE_FAILED", documentSrl, BoardConfig.fromCode(form.getJobType()).getMid(), ex);
+            throw ex;
         }
         syncJobKeywordsBestEffort(documentSrl);
 
@@ -328,7 +338,7 @@ public class JobService {
                 "JOB_UPDATE",
                 "JOB",
                 String.valueOf(documentSrl),
-                "공고 수정",
+                jobAuditDetail("공고 수정", documentSrl, form, BoardConfig.fromCode(form.getJobType())),
                     request
             );
         } catch (RuntimeException ex) {
@@ -346,13 +356,20 @@ public class JobService {
         String normalizedRecruitStatus = Objects.requireNonNull(recruitStatus);
         xeJobService.updateJobStatus(documentSrl, toXeStatus(normalizedRecruitStatus));
 
-        XeJobDocument document = requireXeJobDocument(documentSrl);
-        AdminJobMeta existing = adminJobMetaMapper.findByDocumentSrl(documentSrl);
-        if (existing == null && BoardConfig.isApplicationMid(document.getMid())) {
-            insertAdminJobMetaIfMissing(defaultMetaForExistingJob(documentSrl, normalizedRecruitStatus));
-        } else if (existing != null) {
-            existing.setRecruitStatus(normalizedRecruitStatus);
-            adminJobMetaMapper.update(existing);
+        String actionDetail = jobStatusAuditDetail(documentSrl, normalizedRecruitStatus, null);
+        try {
+            XeJobDocument document = requireXeJobDocument(documentSrl);
+            actionDetail = jobStatusAuditDetail(documentSrl, normalizedRecruitStatus, document.getMid());
+            AdminJobMeta existing = adminJobMetaMapper.findByDocumentSrl(documentSrl);
+            if (existing == null && BoardConfig.isApplicationMid(document.getMid())) {
+                insertAdminJobMetaIfMissing(defaultMetaForExistingJob(documentSrl, normalizedRecruitStatus));
+            } else if (existing != null) {
+                existing.setRecruitStatus(normalizedRecruitStatus);
+                adminJobMetaMapper.update(existing);
+            }
+        } catch (RuntimeException ex) {
+            logXeAdminInconsistency("JOB_STATUS_ADMIN_META_SAVE_FAILED", documentSrl, null, ex);
+            throw ex;
         }
 
         try {
@@ -361,7 +378,7 @@ public class JobService {
                 "JOB_STATUS_UPDATE",
                 "JOB",
                 String.valueOf(documentSrl),
-                "공고 상태 변경: " + normalizedRecruitStatus,
+                actionDetail,
                     request
             );
         } catch (RuntimeException ex) {
@@ -461,6 +478,56 @@ public class JobService {
         return meta;
     }
 
+    private String jobAuditDetail(String action, Long documentSrl, JobForm form, BoardConfig boardConfig) {
+        StringBuilder detail = new StringBuilder(action)
+                .append(": documentSrl=").append(documentSrl)
+                .append(", mid=").append(boardConfig.getMid())
+                .append(", title=").append(auditText(form.getTitle()))
+                .append(", recruitStatus=").append(form.getRecruitStatus())
+                .append(", applicationEnabled=").append(booleanToYn(form.getApplicationEnabled()))
+                .append(", closeDate=").append(form.getCloseDate())
+                .append(", reward=").append(auditText(form.getRewardText()))
+                .append(", place=").append(auditText(form.getPlaceText()))
+                .append(", age=").append(form.getAgeMin()).append("-").append(form.getAgeMax())
+                .append(", gender=").append(defaultString(form.getGenderCode(), "-"))
+                .append(", region=").append(auditText(form.getRegionText()))
+                .append(", brand=").append(auditText(form.getBrandText()))
+                .append(", recruitLimit=").append(form.getRecruitLimit())
+                .append(", clientId=").append(form.getClientId())
+                .append(", autoSendEnabled=").append(booleanToYn(form.getAutoSendEnabled()))
+                .append(", autoSendMode=").append(defaultString(form.getAutoSendMode(), "-"))
+                .append(", autoSendThreshold=").append(form.getAutoSendThreshold())
+                .append(", autoSendAttachmentType=").append(defaultString(form.getAutoSendAttachmentType(), "XLSX"));
+        return limitAuditDetail(detail.toString());
+    }
+
+    private String jobStatusAuditDetail(Long documentSrl, String recruitStatus, String mid) {
+        return limitAuditDetail(
+                "공고 상태 변경: documentSrl=" + documentSrl
+                        + ", mid=" + defaultString(mid, "-")
+                        + ", recruitStatus=" + recruitStatus
+                        + ", xeStatus=" + toXeStatus(recruitStatus)
+        );
+    }
+
+    private String auditText(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        if (normalized.length() > 80) {
+            return normalized.substring(0, 80) + "...";
+        }
+        return normalized;
+    }
+
+    private String limitAuditDetail(String value) {
+        if (value == null || value.length() <= 1000) {
+            return value;
+        }
+        return value.substring(0, 1000);
+    }
+
     private AdminJobMeta defaultMetaForExistingJob(Long documentSrl, String recruitStatus) {
         XeJobDocument document = xeJobService.getJobDocument(documentSrl);
         if (document == null) {
@@ -490,6 +557,12 @@ public class JobService {
         AdminJobMeta meta = defaultMetaForExistingJob(document.getDocumentSrl(), recruitStatus);
         insertAdminJobMetaIfMissing(meta);
         verifyAdminMetaExists(document.getDocumentSrl());
+        log.warn(
+                "XE_ADMIN_INCONSISTENCY_REPAIRED reason=ADMIN_META_MISSING documentSrl={} mid={} recruitStatus={}",
+                document.getDocumentSrl(),
+                document.getMid(),
+                recruitStatus
+        );
         return meta;
     }
 
@@ -506,6 +579,16 @@ public class JobService {
         if (adminJobMetaMapper.findByDocumentSrl(documentSrl) == null) {
             throw new IllegalStateException("Admin DB 공고 메타 저장을 확인하지 못했습니다. documentSrl=" + documentSrl);
         }
+    }
+
+    private void logXeAdminInconsistency(String reason, Long documentSrl, String mid, RuntimeException ex) {
+        log.error(
+                "XE_ADMIN_INCONSISTENCY_DETECTED reason={} documentSrl={} mid={}",
+                reason,
+                documentSrl,
+                mid,
+                ex
+        );
     }
 
     private void syncJobKeywordsBestEffort(Long documentSrl) {

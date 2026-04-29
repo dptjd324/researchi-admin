@@ -34,7 +34,8 @@
             <div th:if="${param.blacklistFailed}" class="notice error">블랙리스트 등록에 실패했습니다. 지원자 정보를 확인해 주세요.</div>
 
             <div class="list-toolbar">
-                <form method="get" th:action="${selectedDocumentSrl != null ? '/jobs/' + selectedDocumentSrl + '/applications' : '/applications'}" class="search-form">
+                <form method="get" th:action="@{/applications}" class="search-form">
+                    <input th:if="${selectedDocumentSrl != null}" type="hidden" name="documentSrl" th:value="${selectedDocumentSrl}">
                     <input type="text" name="keyword" th:value="${keyword}" placeholder="지원자명, 연락처, 이메일, 지역, 공고명 검색">
                     <button type="submit">검색</button>
                     <a th:href="${selectedDocumentSrl != null ? '/jobs/' + selectedDocumentSrl + '/applications' : '/applications'}" class="secondary-link">초기화</a>
@@ -42,6 +43,22 @@
             </div>
 
             <div class="application-filter-strip" th:if="${!#lists.isEmpty(jobFilters)}">
+                <form method="get" th:action="@{/applications}" class="application-job-filter__form">
+                    <label for="application-job-filter-select">공고 선택</label>
+                    <select id="application-job-filter-select" name="documentSrl">
+                        <option value="" th:selected="${selectedDocumentSrl == null}">전체 지원서</option>
+                        <option th:each="jobFilter : ${jobFilters}"
+                                th:value="${jobFilter.documentSrl}"
+                                th:text="${jobFilter.jobTitle + ' (' + jobFilter.applicationCount + ')'}"
+                                th:selected="${selectedDocumentSrl == jobFilter.documentSrl}">공고명 (0)</option>
+                    </select>
+                    <input th:if="${keyword != null and !#strings.isEmpty(keyword)}" type="hidden" name="keyword" th:value="${keyword}">
+                    <button type="submit">공고 보기</button>
+                </form>
+                <p class="application-job-filter__summary">
+                    <span th:if="${selectedDocumentSrl == null}" th:text="${'전체 공고 ' + #lists.size(jobFilters) + '개'}">전체 공고 0개</span>
+                    <span th:if="${selectedDocumentSrl != null}" th:text="${'선택 공고 #' + selectedDocumentSrl}">선택 공고</span>
+                </p>
                 <button type="button" class="application-filter-strip__nav" data-direction="prev" aria-label="이전 공고 보기">‹</button>
                 <div class="application-filter-strip__viewport" id="application-filter-viewport">
                     <div class="filter-row application-filter-strip__row">
@@ -122,15 +139,44 @@
         <style>
             .application-filter-strip {
                 display: grid;
-                grid-template-columns: auto minmax(0, 1fr) auto;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 0.75rem;
+                align-items: end;
+                margin-bottom: 1rem;
+                padding: 0.875rem;
+                border: 1px solid rgba(18, 53, 36, 0.14);
+                border-radius: 8px;
+                background: #f8fbfa;
+            }
+
+            .application-job-filter__form {
+                display: grid;
+                grid-template-columns: auto minmax(260px, 1fr) auto;
                 gap: 0.75rem;
                 align-items: center;
-                margin-bottom: 1rem;
+                margin: 0;
+            }
+
+            .application-job-filter__form label {
+                margin: 0;
+                font-weight: 700;
+                color: #20303d;
+                white-space: nowrap;
+            }
+
+            .application-job-filter__form select {
+                min-width: 0;
+            }
+
+            .application-job-filter__summary {
+                margin: 0;
+                color: #5d6b7a;
+                font-size: 0.9rem;
+                white-space: nowrap;
             }
 
             .application-filter-strip__viewport {
-                overflow: hidden;
-                position: relative;
+                display: none;
             }
 
             .application-filter-strip__row {
@@ -146,18 +192,7 @@
             }
 
             .application-filter-strip__nav {
-                width: 40px;
-                height: 40px;
-                border: 1px solid rgba(18, 53, 36, 0.16);
-                border-radius: 999px;
-                background: #ffffff;
-                color: #0e5b4f;
-                font-size: 24px;
-                line-height: 1;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 8px 20px rgba(13, 63, 54, 0.08);
+                display: none;
             }
 
             .application-filter-strip__nav[disabled] {
@@ -170,12 +205,13 @@
                     grid-template-columns: 1fr;
                 }
 
-                .application-filter-strip__nav {
-                    display: none;
+                .application-job-filter__form {
+                    grid-template-columns: 1fr;
+                    align-items: stretch;
                 }
 
-                .application-filter-strip__viewport {
-                    overflow-x: auto;
+                .application-job-filter__summary {
+                    white-space: normal;
                 }
             }
         </style>

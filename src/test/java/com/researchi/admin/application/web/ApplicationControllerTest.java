@@ -48,7 +48,7 @@ class ApplicationControllerTest {
         request.setQueryString("keyword=kim");
         ExtendedModelMap model = new ExtendedModelMap();
 
-        String viewName = applicationController.applications("kim", null, model, request, null);
+        String viewName = applicationController.applications(null, "kim", null, model, request, null);
 
         assertThat(viewName).isEqualTo("applications/list");
         assertThat(model.get("pageTitle")).isEqualTo("전체 지원서");
@@ -73,7 +73,7 @@ class ApplicationControllerTest {
         request.setQueryString("page=2");
         ExtendedModelMap model = new ExtendedModelMap();
 
-        String viewName = applicationController.applications(null, 2, model, request, null);
+        String viewName = applicationController.applications(null, null, 2, model, request, null);
 
         assertThat(viewName).isEqualTo("applications/list");
         assertThat(model.get("applications")).asList().hasSize(1);
@@ -105,6 +105,29 @@ class ApplicationControllerTest {
         assertThat(model.get("selectedJobDetail")).isNotNull();
         assertThat(model.get("returnTo")).isEqualTo("/jobs/9/applications?keyword=kim");
         assertThat(model.get("currentPage")).isEqualTo(1);
+    }
+
+    @Test
+    void applicationsCanScopeByDocumentSrlQueryParam() {
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+        when(applicationService.countApplications(9L, "kim")).thenReturn(1);
+        when(applicationService.getApplicationPage(9L, "kim", 12, 0)).thenReturn(List.of(applicationRecord(11L, 9L)));
+        when(applicationService.getJobFilters()).thenReturn(List.of());
+        when(applicationService.getAllowedStatuses()).thenReturn(List.of("RECEIVED", "REVIEWING"));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/applications");
+        request.setQueryString("documentSrl=9&keyword=kim");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String viewName = applicationController.applications(9L, "kim", null, model, request, null);
+
+        assertThat(viewName).isEqualTo("applications/list");
+        assertThat(model.get("selectedDocumentSrl")).isEqualTo(9L);
+        assertThat(model.get("returnTo")).isEqualTo("/applications?documentSrl=9&keyword=kim");
+        verify(jobService).requireApplicationBoard(9L);
+        verify(jobService).getJob(9L);
+        verify(applicationService).countApplications(9L, "kim");
+        verify(applicationService).getApplicationPage(9L, "kim", 12, 0);
     }
 
     @Test

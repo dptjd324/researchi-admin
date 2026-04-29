@@ -4,6 +4,7 @@ import com.researchi.admin.job.domain.BoardConfig;
 import com.researchi.admin.xe.domain.XeJobDocument;
 import com.researchi.admin.xe.domain.XeModule;
 import com.researchi.admin.xe.mapper.XeJobMapper;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import java.util.List;
 public class XeJobService {
 
     private static final DateTimeFormatter XE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final int CREATE_RETRY_LIMIT = 3;
 
     private final XeJobMapper xeJobMapper;
 
@@ -84,29 +86,19 @@ public class XeJobService {
             throw new IllegalArgumentException("공고 게시판을 찾을 수 없습니다.");
         }
 
-        Long nextDocumentSrl = xeJobMapper.findNextDocumentSrl();
-        if (nextDocumentSrl == null) {
-            nextDocumentSrl = 1L;
+        DuplicateKeyException lastDuplicateKeyException = null;
+        for (int attempt = 1; attempt <= CREATE_RETRY_LIMIT; attempt++) {
+            Long nextDocumentSrl = nextDocumentSrl();
+            Long nextListOrder = nextListOrder();
+            XeJobDocument document = newJobDocument(module, nextDocumentSrl, nextListOrder, title, content, status, ipAddress);
+            try {
+                xeJobMapper.insertJobDocument(document);
+                return nextDocumentSrl;
+            } catch (DuplicateKeyException ex) {
+                lastDuplicateKeyException = ex;
+            }
         }
-
-        Long nextListOrder = xeJobMapper.findNextListOrder();
-        if (nextListOrder == null) {
-            nextListOrder = -1L;
-        }
-
-        String now = now();
-        XeJobDocument document = new XeJobDocument();
-        document.setDocumentSrl(nextDocumentSrl);
-        document.setModuleSrl(module.getModuleSrl());
-        document.setTitle(title);
-        document.setContent(content);
-        document.setStatus(status);
-        document.setRegdate(now);
-        document.setLastUpdate(now);
-        document.setIpAddress(ipAddress == null || ipAddress.isBlank() ? "127.0.0.1" : ipAddress);
-        document.setListOrder(nextListOrder);
-        xeJobMapper.insertJobDocument(document);
-        return nextDocumentSrl;
+        throw lastDuplicateKeyException;
     }
 
     @Transactional("xeTransactionManager")
@@ -123,12 +115,51 @@ public class XeJobService {
         document.setContent(content);
         document.setStatus(status);
         document.setLastUpdate(now());
-        xeJobMapper.updateJobDocument(document);
+        int updated = xeJobMapper.updateJobDocument(document, BoardConfig.managedMids());
+        if (updated == 0) {
+            throw new IllegalArgumentException("공고 게시판을 찾을 수 없습니다.");
+        }
     }
 
     @Transactional("xeTransactionManager")
     public void updateJobStatus(Long documentSrl, String status) {
-        xeJobMapper.updateJobDocumentStatus(documentSrl, status, now());
+        int updated = xeJobMapper.updateJobDocumentStatus(documentSrl, status, now(), BoardConfig.managedMids());
+        if (updated == 0) {
+            throw new IllegalArgumentException("공고 게시판을 찾을 수 없습니다.");
+        }
+    }
+
+    private Long nextDocumentSrl() {
+        Long nextDocumentSrl = xeJobMapper.findNextDocumentSrl();
+        return nextDocumentSrl == null ? 1L : nextDocumentSrl;
+    }
+
+    private Long nextListOrder() {
+        Long nextListOrder = xeJobMapper.findNextListOrder();
+        return nextListOrder == null ? -1L : nextListOrder;
+    }
+
+    private XeJobDocument newJobDocument(
+            XeModule module,
+            Long documentSrl,
+            Long listOrder,
+            String title,
+            String content,
+            String status,
+            String ipAddress
+    ) {
+        String now = now();
+        XeJobDocument document = new XeJobDocument();
+        document.setDocumentSrl(documentSrl);
+        document.setModuleSrl(module.getModuleSrl());
+        document.setTitle(title);
+        document.setContent(content);
+        document.setStatus(status);
+        document.setRegdate(now);
+        document.setLastUpdate(now);
+        document.setIpAddress(ipAddress == null || ipAddress.isBlank() ? "127.0.0.1" : ipAddress);
+        document.setListOrder(listOrder);
+        return document;
     }
 
     private String now() {

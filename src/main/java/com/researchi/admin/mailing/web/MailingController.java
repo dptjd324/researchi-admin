@@ -1,6 +1,7 @@
 package com.researchi.admin.mailing.web;
 
 import com.researchi.admin.auth.service.AdminPrincipal;
+import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.mailing.domain.MailAttachmentType;
 import com.researchi.admin.mailing.domain.MailingPreview;
@@ -53,7 +54,7 @@ public class MailingController {
             CsrfToken csrfToken
     ) {
         request.getSession(true);
-        populateModel(model, documentSrl, defaultManualForm(documentSrl), defaultScheduleForm(documentSrl), defaultThresholdForm(documentSrl), csrfToken);
+        populateModel(model, documentSrl, defaultManualForm(documentSrl), defaultScheduleForm(documentSrl), defaultThresholdForm(documentSrl), defaultThresholdSettingsForm(documentSrl), csrfToken);
         return "mail/history";
     }
 
@@ -66,7 +67,7 @@ public class MailingController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            populateModel(model, form.getDocumentSrl(), form, defaultScheduleForm(form.getDocumentSrl()), defaultThresholdForm(form.getDocumentSrl()), resolveCsrfToken(request));
+            populateModel(model, form.getDocumentSrl(), form, defaultScheduleForm(form.getDocumentSrl()), defaultThresholdForm(form.getDocumentSrl()), defaultThresholdSettingsForm(form.getDocumentSrl()), resolveCsrfToken(request));
             return "mail/history";
         }
         try {
@@ -75,7 +76,7 @@ public class MailingController {
             return redirectToHistory(form.getDocumentSrl(), "manualSent");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             bindingResult.reject("manualError", ex.getMessage());
-            populateModel(model, form.getDocumentSrl(), form, defaultScheduleForm(form.getDocumentSrl()), defaultThresholdForm(form.getDocumentSrl()), resolveCsrfToken(request));
+            populateModel(model, form.getDocumentSrl(), form, defaultScheduleForm(form.getDocumentSrl()), defaultThresholdForm(form.getDocumentSrl()), defaultThresholdSettingsForm(form.getDocumentSrl()), resolveCsrfToken(request));
             return "mail/history";
         }
     }
@@ -89,7 +90,7 @@ public class MailingController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), form, defaultThresholdForm(form.getDocumentSrl()), resolveCsrfToken(request));
+            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), form, defaultThresholdForm(form.getDocumentSrl()), defaultThresholdSettingsForm(form.getDocumentSrl()), resolveCsrfToken(request));
             return "mail/history";
         }
         try {
@@ -98,7 +99,7 @@ public class MailingController {
             return redirectToHistory(form.getDocumentSrl(), "scheduled");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             bindingResult.reject("scheduleError", ex.getMessage());
-            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), form, defaultThresholdForm(form.getDocumentSrl()), resolveCsrfToken(request));
+            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), form, defaultThresholdForm(form.getDocumentSrl()), defaultThresholdSettingsForm(form.getDocumentSrl()), resolveCsrfToken(request));
             return "mail/history";
         }
     }
@@ -112,7 +113,7 @@ public class MailingController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), defaultScheduleForm(form.getDocumentSrl()), form, resolveCsrfToken(request));
+            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), defaultScheduleForm(form.getDocumentSrl()), form, defaultThresholdSettingsForm(form.getDocumentSrl()), resolveCsrfToken(request));
             return "mail/history";
         }
         try {
@@ -121,7 +122,30 @@ public class MailingController {
             return redirectToHistory(form.getDocumentSrl(), "thresholdSent");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             bindingResult.reject("thresholdError", ex.getMessage());
-            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), defaultScheduleForm(form.getDocumentSrl()), form, resolveCsrfToken(request));
+            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), defaultScheduleForm(form.getDocumentSrl()), form, defaultThresholdSettingsForm(form.getDocumentSrl()), resolveCsrfToken(request));
+            return "mail/history";
+        }
+    }
+
+    @PostMapping("/threshold-settings")
+    public String thresholdSettings(
+            @Valid @ModelAttribute("thresholdSettingsForm") MailThresholdSettingsForm form,
+            BindingResult bindingResult,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request,
+            Model model
+    ) {
+        if (bindingResult.hasErrors()) {
+            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), defaultScheduleForm(form.getDocumentSrl()), defaultThresholdForm(form.getDocumentSrl()), form, resolveCsrfToken(request));
+            return "mail/history";
+        }
+        try {
+            jobService.requireApplicationBoard(form.getDocumentSrl());
+            mailingService.updateThresholdSettings(form, principal, request);
+            return redirectToHistory(form.getDocumentSrl(), "thresholdSettingsSaved");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            bindingResult.reject("thresholdSettingsError", ex.getMessage());
+            populateModel(model, form.getDocumentSrl(), defaultManualForm(form.getDocumentSrl()), defaultScheduleForm(form.getDocumentSrl()), defaultThresholdForm(form.getDocumentSrl()), form, resolveCsrfToken(request));
             return "mail/history";
         }
     }
@@ -139,7 +163,7 @@ public class MailingController {
             return redirectToHistory(documentSrl, "cancelled");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             model.addAttribute("cancelError", ex.getMessage());
-            populateModel(model, documentSrl, defaultManualForm(documentSrl), defaultScheduleForm(documentSrl), defaultThresholdForm(documentSrl), resolveCsrfToken(request));
+            populateModel(model, documentSrl, defaultManualForm(documentSrl), defaultScheduleForm(documentSrl), defaultThresholdForm(documentSrl), defaultThresholdSettingsForm(documentSrl), resolveCsrfToken(request));
             return "mail/history";
         }
     }
@@ -150,6 +174,7 @@ public class MailingController {
             MailSendManualForm manualForm,
             MailScheduleForm scheduleForm,
             MailThresholdTriggerForm thresholdForm,
+            MailThresholdSettingsForm thresholdSettingsForm,
             CsrfToken csrfToken
     ) {
         Map<Long, MailingPreview> previewCache = new LinkedHashMap<>();
@@ -163,6 +188,7 @@ public class MailingController {
         model.addAttribute("manualForm", manualForm);
         model.addAttribute("scheduleForm", scheduleForm);
         model.addAttribute("thresholdForm", thresholdForm);
+        model.addAttribute("thresholdSettingsForm", thresholdSettingsForm);
         model.addAttribute("manualPreview", resolvePreview(previewCache, manualForm.getDocumentSrl()));
         model.addAttribute("schedulePreview", resolvePreview(previewCache, scheduleForm.getDocumentSrl()));
         model.addAttribute("thresholdPreview", resolvePreview(previewCache, thresholdForm.getDocumentSrl()));
@@ -192,6 +218,23 @@ public class MailingController {
     private MailThresholdTriggerForm defaultThresholdForm(Long documentSrl) {
         MailThresholdTriggerForm form = new MailThresholdTriggerForm();
         form.setDocumentSrl(documentSrl);
+        return form;
+    }
+
+    private MailThresholdSettingsForm defaultThresholdSettingsForm(Long documentSrl) {
+        MailThresholdSettingsForm form = new MailThresholdSettingsForm();
+        form.setDocumentSrl(documentSrl);
+        if (documentSrl == null) {
+            return form;
+        }
+        AdminJobMeta meta = jobService.ensureJobMeta(documentSrl);
+        if (meta == null) {
+            return form;
+        }
+        form.setAutoSendEnabled("Y".equals(meta.getAutoSendEnabled()) && "THRESHOLD".equals(meta.getAutoSendMode()));
+        form.setAutoSendThreshold(meta.getAutoSendThreshold());
+        form.setAutoSendTemplateId(meta.getAutoSendTemplateId());
+        form.setAutoSendAttachmentType(meta.getAutoSendAttachmentType() != null ? meta.getAutoSendAttachmentType() : "XLSX");
         return form;
     }
 

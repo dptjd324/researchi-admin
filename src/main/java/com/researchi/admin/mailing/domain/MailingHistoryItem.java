@@ -5,10 +5,23 @@ import java.util.stream.Collectors;
 
 public record MailingHistoryItem(
         AdminMailSendJob sendJob,
-        List<AdminMailSendTarget> targets
+        List<AdminMailSendTarget> targets,
+        List<String> recipientAddresses
 ) {
 
-    public List<String> recipientAddresses() {
+    public MailingHistoryItem(AdminMailSendJob sendJob, List<AdminMailSendTarget> targets) {
+        this(sendJob, targets, recipientAddressesFromTargets(targets));
+    }
+
+    public MailingHistoryItem {
+        targets = targets == null ? List.of() : List.copyOf(targets);
+        recipientAddresses = recipientAddresses == null ? List.of() : List.copyOf(recipientAddresses);
+    }
+
+    public static List<String> recipientAddressesFromTargets(List<AdminMailSendTarget> targets) {
+        if (targets == null || targets.isEmpty()) {
+            return List.of();
+        }
         return targets.stream()
                 .map(AdminMailSendTarget::getTargetEmailMasked)
                 .filter(value -> value != null && !value.isBlank())

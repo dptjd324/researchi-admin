@@ -24,6 +24,7 @@ import com.researchi.admin.mailing.mapper.AdminMailTemplateMapper;
 import com.researchi.admin.mailing.mapper.AdminMailingApplicationMapper;
 import com.researchi.admin.mailing.web.MailScheduleForm;
 import com.researchi.admin.mailing.web.MailSendManualForm;
+import com.researchi.admin.mailing.web.MailThresholdSettingsForm;
 import com.researchi.admin.mailing.web.MailThresholdTriggerForm;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.mail.internet.InternetAddress;
@@ -116,9 +117,34 @@ public class MailingService {
 
         List<MailingHistoryItem> historyItems = new ArrayList<>();
         for (AdminMailSendJob job : jobs) {
-            historyItems.add(new MailingHistoryItem(job, targetsBySendJobId.getOrDefault(job.getId(), List.of())));
+            List<AdminMailSendTarget> targets = targetsBySendJobId.getOrDefault(job.getId(), List.of());
+            historyItems.add(new MailingHistoryItem(job, targets, recipientAddressesForHistory(job, targets)));
         }
         return historyItems;
+    }
+
+    private List<String> recipientAddressesForHistory(AdminMailSendJob job, List<AdminMailSendTarget> targets) {
+        List<String> snapshotRecipients = MailingHistoryItem.recipientAddressesFromTargets(targets);
+        if (snapshotRecipients.isEmpty() || snapshotRecipients.stream().noneMatch(this::looksMaskedEmail)) {
+            return snapshotRecipients;
+        }
+        if (job == null || job.getDocumentSrl() == null) {
+            return snapshotRecipients;
+        }
+
+        try {
+            List<String> currentRecipients = parseRecipients(job.getDocumentSrl()).recipients();
+            if (!currentRecipients.isEmpty()) {
+                return currentRecipients;
+            }
+        } catch (RuntimeException ignored) {
+            return snapshotRecipients;
+        }
+        return snapshotRecipients;
+    }
+
+    private boolean looksMaskedEmail(String value) {
+        return value != null && value.contains("*");
     }
 
     public MailingPreview getPreview(Long documentSrl) {
@@ -200,6 +226,50 @@ public class MailingService {
                 request
         );
         return sendJob.getId();
+    }
+
+    @Transactional("adminTransactionManager")
+    public void updateThresholdSettings(MailThresholdSettingsForm form, AdminPrincipal principal, HttpServletRequest request) {
+        AdminJobMeta jobMeta = requireJobMeta(form.getDocumentSrl());
+        boolean enabled = Boolean.TRUE.equals(form.getAutoSendEnabled());
+        String autoSendEnabled = enabled ? "Y" : "N";
+        String autoSendMode = enabled ? "THRESHOLD" : null;
+        Integer threshold = enabled ? form.getAutoSendThreshold() : null;
+        Long templateId = enabled ? form.getAutoSendTemplateId() : null;
+        String attachmentType = enabled
+                ? MailAttachmentType.fromValue(form.getAutoSendAttachmentType()).name()
+                : DEFAULT_ATTACHMENT_TYPE;
+
+        if (enabled && (threshold == null || threshold < 1)) {
+            throw new IllegalArgumentException("임계치 자동 발송에는 유효한 임계치가 필요합니다.");
+        }
+        if (enabled) {
+            requiredTemplate(templateId);
+        }
+
+        int updated = adminJobMetaMapper.updateThresholdMailSettings(
+                jobMeta.getDocumentSrl(),
+                autoSendEnabled,
+                autoSendMode,
+                threshold,
+                templateId,
+                attachmentType
+        );
+        if (updated == 0) {
+            throw new IllegalStateException("공고 메일 설정을 저장하지 못했습니다.");
+        }
+        adminActionLogService.log(
+                principal.getId(),
+                "MAIL_THRESHOLD_SETTINGS_UPDATE",
+                "JOB",
+                String.valueOf(jobMeta.getDocumentSrl()),
+                "임계치 메일 설정 저장: documentSrl=" + jobMeta.getDocumentSrl()
+                        + ", autoSendEnabled=" + autoSendEnabled
+                        + ", autoSendThreshold=" + threshold
+                        + ", autoSendTemplateId=" + templateId
+                        + ", autoSendAttachmentType=" + attachmentType,
+                request
+        );
     }
 
     @Transactional("adminTransactionManager")

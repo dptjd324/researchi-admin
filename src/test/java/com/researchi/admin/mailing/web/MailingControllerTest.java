@@ -102,6 +102,27 @@ class MailingControllerTest {
     }
 
     @Test
+    void thresholdSettingsRedirectsAfterSave() {
+        MailThresholdSettingsForm form = new MailThresholdSettingsForm();
+        form.setDocumentSrl(9L);
+        form.setAutoSendEnabled(true);
+        form.setAutoSendThreshold(3);
+        form.setAutoSendTemplateId(5L);
+        form.setAutoSendAttachmentType("XLSX");
+
+        String viewName = mailingController.thresholdSettings(
+                form,
+                new BeanPropertyBindingResult(form, "thresholdSettingsForm"),
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest(),
+                new ExtendedModelMap()
+        );
+
+        assertThat(viewName).isEqualTo("redirect:/mail/send/history?documentSrl=9&thresholdSettingsSaved");
+        verify(mailingService).updateThresholdSettings(any(), any(), any());
+    }
+
+    @Test
     void cancelRedirectsAfterSuccessfulCancellation() {
         String viewName = mailingController.cancel(
                 77L,

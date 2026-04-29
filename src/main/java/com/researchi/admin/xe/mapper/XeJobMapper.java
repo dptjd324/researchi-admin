@@ -58,7 +58,12 @@ public interface XeJobMapper {
 
     void insertJobDocument(XeJobDocument jobDocument);
 
-    void updateJobDocument(XeJobDocument jobDocument);
+    int updateJobDocument(@Param("jobDocument") XeJobDocument jobDocument, @Param("mids") List<String> mids);
 
-    void updateJobDocumentStatus(@Param("documentSrl") Long documentSrl, @Param("status") String status, @Param("lastUpdate") String lastUpdate);
+    int updateJobDocumentStatus(
+            @Param("documentSrl") Long documentSrl,
+            @Param("status") String status,
+            @Param("lastUpdate") String lastUpdate,
+            @Param("mids") List<String> mids
+    );
 }

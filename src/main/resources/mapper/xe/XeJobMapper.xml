@@ -281,15 +281,23 @@
         )
     </insert>
 
-    <update id="updateJobDocument" parameterType="com.researchi.admin.xe.domain.XeJobDocument">
+    <update id="updateJobDocument">
         UPDATE xe_documents
         SET
-            module_srl = #{moduleSrl},
-            title = #{title},
-            content = #{content},
-            status = #{status},
-            last_update = #{lastUpdate}
-        WHERE document_srl = #{documentSrl}
+            module_srl = #{jobDocument.moduleSrl},
+            title = #{jobDocument.title},
+            content = #{jobDocument.content},
+            status = #{jobDocument.status},
+            last_update = #{jobDocument.lastUpdate}
+        WHERE document_srl = #{jobDocument.documentSrl}
+          AND module_srl IN (
+            SELECT module_srl
+            FROM xe_modules
+            WHERE mid IN
+            <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+                #{managedMid}
+            </foreach>
+          )
     </update>
 
     <update id="updateJobDocumentStatus">
@@ -298,5 +306,13 @@
             status = #{status},
             last_update = #{lastUpdate}
         WHERE document_srl = #{documentSrl}
+          AND module_srl IN (
+            SELECT module_srl
+            FROM xe_modules
+            WHERE mid IN
+            <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+                #{managedMid}
+            </foreach>
+          )
     </update>
 </mapper>
