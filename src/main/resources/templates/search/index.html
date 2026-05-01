@@ -52,6 +52,7 @@
                     <label>
                         <span>날짜 프리셋</span>
                         <select th:field="*{datePreset}">
+                            <option value="ALL">전체 기간</option>
                             <option value="TODAY">오늘</option>
                             <option value="THIS_WEEK">이번 주</option>
                             <option value="SPECIFIC_DAY">특정 날짜</option>
@@ -126,7 +127,9 @@
                 <article class="job-item" th:each="log : ${result.actionLogs}">
                     <div class="job-item-head">
                         <div>
-                            <p class="eyebrow" th:text="${@uiLabels.actionType(log.actionType)}">로그인</p>
+                            <p class="eyebrow action-type-badge"
+                               th:classappend="${@uiLabels.actionTypeToneClass(log.actionType)}"
+                               th:text="${@uiLabels.actionType(log.actionType)}">로그인</p>
                             <h3 class="h5 mb-2" th:text="${log.userName ?: log.loginId ?: '이름 없는 관리자'}">관리자</h3>
                             <p class="job-summary" th:text="${@uiLabels.targetType(log.targetType) + ' | ' + (log.targetId ?: '-')}">대상</p>
                         </div>

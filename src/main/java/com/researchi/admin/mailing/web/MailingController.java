@@ -211,7 +211,10 @@ public class MailingController {
     private MailScheduleForm defaultScheduleForm(Long documentSrl) {
         MailScheduleForm form = new MailScheduleForm();
         form.setDocumentSrl(documentSrl);
-        form.setScheduledAt(LocalDateTime.now().plusHours(1).truncatedTo(ChronoUnit.MINUTES));
+        LocalDateTime defaultScheduledAt = LocalDateTime.now().plusHours(1).truncatedTo(ChronoUnit.MINUTES);
+        form.setScheduledAt(defaultScheduledAt);
+        form.setDailyRepeat(Boolean.FALSE);
+        form.setDailySendTime(defaultScheduledAt.toLocalTime());
         return form;
     }
 

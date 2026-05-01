@@ -295,8 +295,9 @@ public class PeriodSearchService {
 
     private DateRange resolveDateRange(PeriodSearchForm form) {
         LocalDate today = LocalDate.now();
-        String preset = form.getDatePreset() == null ? "TODAY" : form.getDatePreset().trim().toUpperCase(Locale.ROOT);
+        String preset = form.getDatePreset() == null ? "ALL" : form.getDatePreset().trim().toUpperCase(Locale.ROOT);
         return switch (preset) {
+            case "ALL" -> new DateRange(null, null);
             case "THIS_WEEK" -> {
                 LocalDate from = today.with(DayOfWeek.MONDAY);
                 yield new DateRange(from, from.plusDays(6));

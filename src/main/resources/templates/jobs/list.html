@@ -14,6 +14,8 @@
             </div>
 
             <div th:if="${param.statusUpdated}" class="notice success">공고 상태를 변경했습니다.</div>
+            <div th:if="${param.deleted}" class="notice success">게시글을 삭제했습니다.</div>
+            <div th:if="${param.deleteScheduled}" class="notice success">게시글을 삭제 예약했습니다. 6개월 후 영구 삭제됩니다.</div>
 
             <div class="list-toolbar">
                 <form method="get" th:action="@{/jobs}" class="search-form">
@@ -49,7 +51,7 @@
                             <a th:href="@{/jobs/{documentSrl}/edit(documentSrl=${job.documentSrl})}" class="secondary-link">수정</a>
                         </div>
                     </div>
-                    <p class="job-summary" th:text="${#strings.abbreviate(job.content, 160)}">공고 요약</p>
+                    <p class="job-summary" th:text="${#strings.abbreviate(@uiLabels.htmlToText(job.content), 160)}">공고 요약</p>
                     <div class="job-meta-grid">
                         <span><strong>문서번호</strong><span th:text="${job.documentSrl}">1</span></span>
                         <span><strong>게시판</strong><span th:text="${@uiLabels.jobBoard(job.mid)}">신규 공고</span></span>
@@ -73,6 +75,8 @@
                 현재 조건에 맞는 공고가 없습니다.
             </div>
             <div class="pagination-bar" th:if="${paginationEnabled}">
+                <a th:if="${firstPageUrl != null}" th:href="${firstPageUrl}" class="pagination-bar__nav" aria-label="첫 페이지">처음</a>
+                <span th:if="${firstPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">처음</span>
                 <a th:if="${previousPageUrl != null}" th:href="${previousPageUrl}" class="pagination-bar__nav" aria-label="이전 페이지">‹</a>
                 <span th:if="${previousPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">‹</span>
                 <a th:each="pageLink : ${pageLinks}"
@@ -82,6 +86,8 @@
                    class="pagination-bar__page">1</a>
                 <a th:if="${nextPageUrl != null}" th:href="${nextPageUrl}" class="pagination-bar__nav" aria-label="다음 페이지">›</a>
                 <span th:if="${nextPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">›</span>
+                <a th:if="${lastPageUrl != null}" th:href="${lastPageUrl}" class="pagination-bar__nav" aria-label="마지막 페이지">마지막</a>
+                <span th:if="${lastPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">마지막</span>
             </div>
         </section>
     </th:block>

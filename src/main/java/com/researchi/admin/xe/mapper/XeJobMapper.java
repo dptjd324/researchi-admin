@@ -66,4 +66,6 @@ public interface XeJobMapper {
             @Param("lastUpdate") String lastUpdate,
             @Param("mids") List<String> mids
     );
+
+    int deleteJobDocument(@Param("documentSrl") Long documentSrl, @Param("mids") List<String> mids);
 }

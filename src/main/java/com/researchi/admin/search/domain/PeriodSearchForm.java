@@ -10,7 +10,7 @@ public class PeriodSearchForm {
     private String keyword;
     private Long documentSrl;
     private String status;
-    private String datePreset = "TODAY";
+    private String datePreset = "ALL";
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate specificDate;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)

@@ -19,6 +19,7 @@ public final class PaginationSupport {
     }
 
     public static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int PAGE_LINK_BLOCK_SIZE = 10;
 
     private PaginationSupport() {
     }
@@ -56,8 +57,10 @@ public final class PaginationSupport {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("paginationEnabled", safeTotalItems > pageSize);
         model.addAttribute("pageLinks", buildPageLinks(request, currentPage, totalPages));
+        model.addAttribute("firstPageUrl", currentPage > 1 ? buildPageUrl(request, 1) : null);
         model.addAttribute("previousPageUrl", currentPage > 1 ? buildPageUrl(request, currentPage - 1) : null);
         model.addAttribute("nextPageUrl", currentPage < totalPages ? buildPageUrl(request, currentPage + 1) : null);
+        model.addAttribute("lastPageUrl", currentPage < totalPages ? buildPageUrl(request, totalPages) : null);
         model.addAttribute("pageSize", pageSize);
         model.addAttribute("totalItemCount", safeTotalItems);
 
@@ -92,13 +95,8 @@ public final class PaginationSupport {
     }
 
     private static List<PageLink> buildPageLinks(HttpServletRequest request, int currentPage, int totalPages) {
-        int startPage = Math.max(1, currentPage - 1);
-        int endPage = Math.min(totalPages, startPage + 2);
-        startPage = Math.max(1, endPage - 3);
-        if (totalPages <= 4) {
-            startPage = 1;
-            endPage = totalPages;
-        }
+        int startPage = ((currentPage - 1) / PAGE_LINK_BLOCK_SIZE) * PAGE_LINK_BLOCK_SIZE + 1;
+        int endPage = Math.min(totalPages, startPage + PAGE_LINK_BLOCK_SIZE - 1);
 
         return IntStream.rangeClosed(startPage, endPage)
                 .mapToObj(pageNumber -> new PageLink(pageNumber, buildPageUrl(request, pageNumber), pageNumber == currentPage))

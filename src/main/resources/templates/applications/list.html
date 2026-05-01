@@ -79,7 +79,8 @@
                 <article class="job-item" th:each="applicationItem : ${applications}">
                     <div class="job-item-head">
                         <div>
-                            <p class="eyebrow" th:text="${applicationItem.isNewApplicant == 'Y' ? '신규 지원자' : '기존 지원자'}">신규 지원자</p>
+                            <span th:if="${applicationItem.isNewApplicant == 'Y'}" class="applicant-type-badge applicant-type-badge--new" aria-label="신규 지원자">● 신규</span>
+                            <span th:if="${applicationItem.isNewApplicant != 'Y'}" class="applicant-type-badge applicant-type-badge--existing" aria-label="기존 지원자">◆ 기존</span>
                             <h3 class="h5 mb-2" th:text="${applicationItem.applicantName}">지원자명</h3>
                             <p class="job-summary">
                                 <a th:href="@{/jobs/{documentSrl}(documentSrl=${applicationItem.documentSrl})}"
@@ -100,6 +101,7 @@
                     </div>
 
                     <div class="job-meta-grid">
+                        <span><strong>지원자 구분</strong><span th:text="${applicationItem.isNewApplicant == 'Y' ? '신규 지원자' : '기존 지원자'}">신규 지원자</span></span>
                         <span><strong>상태</strong><span th:text="${@uiLabels.applicationStatus(applicationItem.applicationStatus)}">접수</span></span>
                         <span><strong>발송 상태</strong><span th:text="${@uiLabels.deliveryStatus(applicationItem.deliveryStatus)}">대기</span></span>
                         <span><strong>전화번호</strong><span th:text="${applicationItem.mobilePhoneDisplay ?: '-'}">01012345678</span></span>
@@ -124,6 +126,8 @@
                 현재 조건에 맞는 지원서가 없습니다.
             </div>
             <div class="pagination-bar" th:if="${paginationEnabled}">
+                <a th:if="${firstPageUrl != null}" th:href="${firstPageUrl}" class="pagination-bar__nav" aria-label="첫 페이지">처음</a>
+                <span th:if="${firstPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">처음</span>
                 <a th:if="${previousPageUrl != null}" th:href="${previousPageUrl}" class="pagination-bar__nav" aria-label="이전 페이지">‹</a>
                 <span th:if="${previousPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">‹</span>
                 <a th:each="pageLink : ${pageLinks}"
@@ -133,6 +137,8 @@
                    class="pagination-bar__page">1</a>
                 <a th:if="${nextPageUrl != null}" th:href="${nextPageUrl}" class="pagination-bar__nav" aria-label="다음 페이지">›</a>
                 <span th:if="${nextPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">›</span>
+                <a th:if="${lastPageUrl != null}" th:href="${lastPageUrl}" class="pagination-bar__nav" aria-label="마지막 페이지">마지막</a>
+                <span th:if="${lastPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">마지막</span>
             </div>
         </section>
 

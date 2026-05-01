@@ -57,6 +57,7 @@
         <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
             #{managedMid}
         </foreach>
+          AND COALESCE(d.status, '') != 'DELETED'
           AND d.document_srl IN
         <foreach collection="documentSrls" item="documentSrl" open="(" separator="," close=")">
             #{documentSrl}
@@ -72,6 +73,7 @@
         <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
             #{managedMid}
         </foreach>
+          AND COALESCE(d.status, '') != 'DELETED'
         <if test="normalizedKeyword != null and normalizedKeyword != ''">
           AND (
             LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(d.title, ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '(', ''), ')', ''))
@@ -103,6 +105,7 @@
         <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
             #{managedMid}
         </foreach>
+          AND COALESCE(d.status, '') != 'DELETED'
         <if test="mid != null and mid != ''">
           AND m.mid = #{mid}
         </if>
@@ -139,6 +142,7 @@
         <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
             #{managedMid}
         </foreach>
+          AND COALESCE(d.status, '') != 'DELETED'
           AND d.document_srl &lt; #{afterDocumentSrl}
         <if test="mid != null and mid != ''">
           AND m.mid = #{mid}
@@ -167,6 +171,7 @@
         <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
             #{managedMid}
         </foreach>
+          AND COALESCE(d.status, '') != 'DELETED'
         <if test="mid != null and mid != ''">
           AND m.mid = #{mid}
         </if>
@@ -197,6 +202,7 @@
         FROM xe_documents d
         INNER JOIN xe_modules m ON m.module_srl = d.module_srl
         WHERE d.document_srl = #{documentSrl}
+          AND COALESCE(d.status, '') != 'DELETED'
           AND m.mid IN
         <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
             #{managedMid}
@@ -315,4 +321,17 @@
             </foreach>
           )
     </update>
+
+    <delete id="deleteJobDocument">
+        DELETE FROM xe_documents
+        WHERE document_srl = #{documentSrl}
+          AND module_srl IN (
+            SELECT module_srl
+            FROM xe_modules
+            WHERE mid IN
+            <foreach collection="mids" item="managedMid" open="(" separator="," close=")">
+                #{managedMid}
+            </foreach>
+          )
+    </delete>
 </mapper>

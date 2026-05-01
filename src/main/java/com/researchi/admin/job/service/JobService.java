@@ -11,7 +11,9 @@ import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.domain.JobType;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.web.JobForm;
+import com.researchi.admin.keyword.mapper.AdminJobKeywordMapper;
 import com.researchi.admin.keyword.service.KeywordExtractionService;
+import com.researchi.admin.scheduler.config.SchedulerProperties;
 import com.researchi.admin.xe.domain.XeJobDocument;
 import com.researchi.admin.xe.domain.XeModule;
 import com.researchi.admin.xe.service.XeJobService;
@@ -21,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -36,22 +39,28 @@ public class JobService {
 
     private final XeJobService xeJobService;
     private final AdminJobMetaMapper adminJobMetaMapper;
+    private final AdminJobKeywordMapper adminJobKeywordMapper;
     private final AdminActionLogService adminActionLogService;
     private final KeywordExtractionService keywordExtractionService;
     private final ClientService clientService;
+    private final SchedulerProperties schedulerProperties;
 
     public JobService(
             XeJobService xeJobService,
             AdminJobMetaMapper adminJobMetaMapper,
+            AdminJobKeywordMapper adminJobKeywordMapper,
             AdminActionLogService adminActionLogService,
             KeywordExtractionService keywordExtractionService,
-            ClientService clientService
+            ClientService clientService,
+            SchedulerProperties schedulerProperties
     ) {
         this.xeJobService = xeJobService;
         this.adminJobMetaMapper = adminJobMetaMapper;
+        this.adminJobKeywordMapper = adminJobKeywordMapper;
         this.adminActionLogService = adminActionLogService;
         this.keywordExtractionService = keywordExtractionService;
         this.clientService = clientService;
+        this.schedulerProperties = schedulerProperties;
     }
 
     public List<JobListItem> getJobsByDocumentSrls(List<Long> documentSrls) {
@@ -257,6 +266,28 @@ public class JobService {
         return xeJobService.getJobModules();
     }
 
+    public List<BoardConfig> getAvailableApplicationBoardConfigs() {
+        List<String> availableMids = getJobModules().stream()
+                .map(XeModule::getMid)
+                .filter(Objects::nonNull)
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .toList();
+        return BoardConfig.applicationBoards().stream()
+                .filter(boardConfig -> availableMids.contains(boardConfig.getMid().toLowerCase(Locale.ROOT)))
+                .toList();
+    }
+
+    public boolean hasBoardModule(String jobType) {
+        if (jobType == null || jobType.isBlank()) {
+            return false;
+        }
+        BoardConfig boardConfig = BoardConfig.fromCode(jobType);
+        return getJobModules().stream()
+                .map(XeModule::getMid)
+                .filter(Objects::nonNull)
+                .anyMatch(mid -> mid.equalsIgnoreCase(boardConfig.getMid()));
+    }
+
     @Transactional("adminTransactionManager")
     public Long createJob(
             JobForm form,
@@ -344,6 +375,66 @@ public class JobService {
         } catch (RuntimeException ex) {
             log.warn("Failed to write job action log. actionType={}, documentSrl={}", "JOB_UPDATE", documentSrl, ex);
         }
+    }
+
+    @Transactional("adminTransactionManager")
+    public void deleteContentJob(
+            Long documentSrl,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            String deleteReason
+    ) {
+        String normalizedReason = trimToNull(deleteReason);
+        if (normalizedReason == null) {
+            throw new IllegalArgumentException("삭제 사유를 입력해 주세요.");
+        }
+        XeJobDocument document = requireXeJobDocument(documentSrl);
+        AdminJobMeta meta = ensureMetaForDelete(document, fromXeStatus(document.getStatus()));
+        LocalDateTime deletedAt = LocalDateTime.now();
+        LocalDateTime permanentDeleteAfter = deletedAt.plusMonths(Math.max(1, schedulerProperties.getRetentionMonths()));
+
+        xeJobService.updateJobStatus(documentSrl, "DELETED");
+        adminJobMetaMapper.markDeleted(documentSrl, normalizedReason, deletedAt, permanentDeleteAfter);
+
+        try {
+            adminActionLogService.log(
+                    principal == null ? null : principal.getId(),
+                    "JOB_DELETE",
+                    "JOB",
+                    String.valueOf(documentSrl),
+                    limitAuditDetail("공고 삭제 예약: documentSrl=" + documentSrl
+                            + ", mid=" + document.getMid()
+                            + ", title=" + auditText(document.getTitle())
+                            + ", reason=" + auditText(normalizedReason)
+                            + ", permanentDeleteAfter=" + permanentDeleteAfter),
+                    request
+            );
+        } catch (RuntimeException ex) {
+            log.warn("Failed to write job action log. actionType={}, documentSrl={}", "JOB_DELETE", documentSrl, ex);
+        }
+    }
+
+    @Transactional("adminTransactionManager")
+    public int permanentlyDeleteExpiredDeletedJobs(LocalDateTime now) {
+        int deleted = 0;
+        for (AdminJobMeta meta : adminJobMetaMapper.findDeletedReadyForPermanentDelete(now)) {
+            Long documentSrl = meta.getDocumentSrl();
+            if (documentSrl == null) {
+                continue;
+            }
+            try {
+                boolean xeDeleted = xeJobService.deleteJobDocumentIfPresent(documentSrl);
+                adminJobKeywordMapper.deleteByDocumentSrl(documentSrl);
+                int metaDeleted = adminJobMetaMapper.deleteByDocumentSrl(documentSrl);
+                if (metaDeleted > 0) {
+                    deleted++;
+                    logPermanentDelete(documentSrl, meta, xeDeleted);
+                }
+            } catch (RuntimeException ex) {
+                log.warn("Failed to permanently delete expired job. documentSrl={}", documentSrl, ex);
+            }
+        }
+        return deleted;
     }
 
     @Transactional("adminTransactionManager")
@@ -454,13 +545,11 @@ public class JobService {
         meta.setRecruitLimit(form.getRecruitLimit());
         if (form.getClientId() != null) {
             applyClientSnapshot(meta, form.getClientId());
-        } else if (existingMeta != null && existingMeta.getClientId() == null) {
-            meta.setClientId(null);
-            meta.setClientName(existingMeta.getClientName());
-            meta.setClientEmail(existingMeta.getClientEmail());
-            meta.setClientEmails(existingMeta.getClientEmails());
         } else {
-            applyClientSnapshot(meta, null);
+            meta.setClientId(null);
+            meta.setClientName(trimToNull(form.getClientName()));
+            meta.setClientEmail(trimToNull(form.getClientEmail()));
+            meta.setClientEmails(normalizeEmailList(form.getClientEmails()));
         }
         meta.setCloseDate(form.getCloseDate());
         meta.setInternalMemo(form.getInternalMemo());
@@ -545,6 +634,42 @@ public class JobService {
         return meta;
     }
 
+    private AdminJobMeta ensureMetaForDelete(XeJobDocument document, String recruitStatus) {
+        AdminJobMeta existing = adminJobMetaMapper.findByDocumentSrl(document.getDocumentSrl());
+        if (existing != null) {
+            return existing;
+        }
+        AdminJobMeta meta = new AdminJobMeta();
+        meta.setDocumentSrl(document.getDocumentSrl());
+        meta.setJobType(BoardConfig.fromMid(document.getMid()).name());
+        meta.setRecruitStatus(recruitStatus);
+        meta.setApplicationEnabled(BoardConfig.isApplicationMid(document.getMid()) ? "Y" : "N");
+        meta.setAutoSendEnabled("N");
+        meta.setAutoSendRepeatYn("N");
+        meta.setAutoSendAttachmentType("XLSX");
+        insertAdminJobMetaIfMissing(meta);
+        return meta;
+    }
+
+    private void logPermanentDelete(Long documentSrl, AdminJobMeta meta, boolean xeDeleted) {
+        try {
+            adminActionLogService.log(
+                    null,
+                    "JOB_PERMANENT_DELETE",
+                    "JOB",
+                    String.valueOf(documentSrl),
+                    limitAuditDetail("공고 영구 삭제: documentSrl=" + documentSrl
+                            + ", reason=" + auditText(meta.getDeleteReason())
+                            + ", deletedAt=" + meta.getDeletedAt()
+                            + ", permanentDeleteAfter=" + meta.getPermanentDeleteAfter()
+                            + ", xeDeleted=" + xeDeleted),
+                    null
+            );
+        } catch (RuntimeException ex) {
+            log.warn("Failed to write permanent job delete action log. documentSrl={}", documentSrl, ex);
+        }
+    }
+
     private XeJobDocument requireXeJobDocument(Long documentSrl) {
         XeJobDocument document = xeJobService.getJobDocument(documentSrl);
         if (document == null) {
@@ -616,6 +741,19 @@ public class JobService {
                 .orElse(null));
     }
 
+    private String normalizeEmailList(String value) {
+        String trimmed = trimToNull(value);
+        if (trimmed == null) {
+            return null;
+        }
+        return Arrays.stream(trimmed.split("[,;\\s]+"))
+                .map(this::trimToNull)
+                .filter(Objects::nonNull)
+                .distinct()
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse(null);
+    }
+
     private void hydrateClientSnapshot(AdminJobMeta meta) {
         if (meta == null || meta.getClientId() == null) {
             return;
@@ -629,6 +767,14 @@ public class JobService {
 
     private String defaultString(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private String toXeStatus(String recruitStatus) {

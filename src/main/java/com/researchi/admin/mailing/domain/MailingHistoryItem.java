@@ -6,11 +6,16 @@ import java.util.stream.Collectors;
 public record MailingHistoryItem(
         AdminMailSendJob sendJob,
         List<AdminMailSendTarget> targets,
-        List<String> recipientAddresses
+        List<String> recipientAddresses,
+        int cumulativeSentCount
 ) {
 
     public MailingHistoryItem(AdminMailSendJob sendJob, List<AdminMailSendTarget> targets) {
-        this(sendJob, targets, recipientAddressesFromTargets(targets));
+        this(sendJob, targets, recipientAddressesFromTargets(targets), 0);
+    }
+
+    public MailingHistoryItem(AdminMailSendJob sendJob, List<AdminMailSendTarget> targets, List<String> recipientAddresses) {
+        this(sendJob, targets, recipientAddresses, 0);
     }
 
     public MailingHistoryItem {

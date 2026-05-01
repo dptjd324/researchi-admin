@@ -126,6 +126,30 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "auto_send_attachment_type",
                 "ALTER TABLE admin_job_meta ADD COLUMN auto_send_attachment_type VARCHAR(20) NULL AFTER auto_send_template_id"
         );
+        addColumnIfMissing(
+                connection,
+                "admin_job_meta",
+                "deleted_yn",
+                "ALTER TABLE admin_job_meta ADD COLUMN deleted_yn CHAR(1) NOT NULL DEFAULT 'N' AFTER next_auto_send_at"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_job_meta",
+                "delete_reason",
+                "ALTER TABLE admin_job_meta ADD COLUMN delete_reason VARCHAR(500) NULL AFTER deleted_yn"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_job_meta",
+                "deleted_at",
+                "ALTER TABLE admin_job_meta ADD COLUMN deleted_at DATETIME NULL AFTER delete_reason"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_job_meta",
+                "permanent_delete_after",
+                "ALTER TABLE admin_job_meta ADD COLUMN permanent_delete_after DATETIME NULL AFTER deleted_at"
+        );
     }
 
     private void ensureAdminMailSendJobColumns(Connection connection) throws Exception {
@@ -152,6 +176,18 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "admin_mail_send_job",
                 "attachment_type",
                 "ALTER TABLE admin_mail_send_job ADD COLUMN attachment_type VARCHAR(20) NOT NULL DEFAULT 'XLSX' AFTER template_id"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "repeat_yn",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN repeat_yn CHAR(1) NOT NULL DEFAULT 'N' AFTER duplicate_prevent_key"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "repeat_unit",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN repeat_unit VARCHAR(20) NULL AFTER repeat_yn"
         );
     }
 
@@ -200,6 +236,13 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "idx_admin_job_meta_apply_recruit_document",
                 List.of("application_enabled", "recruit_status", "document_srl"),
                 "CREATE INDEX idx_admin_job_meta_apply_recruit_document ON admin_job_meta (application_enabled, recruit_status, document_srl)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_job_meta",
+                "idx_admin_job_meta_deleted_due",
+                List.of("deleted_yn", "permanent_delete_after", "document_srl"),
+                "CREATE INDEX idx_admin_job_meta_deleted_due ON admin_job_meta (deleted_yn, permanent_delete_after, document_srl)"
         );
         createIndexIfMissing(
                 connection,

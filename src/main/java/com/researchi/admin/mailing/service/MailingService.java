@@ -33,9 +33,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -117,12 +119,55 @@ public class MailingService {
             targetsBySendJobId.computeIfAbsent(target.getSendJobId(), ignored -> new ArrayList<>()).add(target);
         }
 
+        Map<Long, Integer> cumulativeSentCountsBySendJobId = cumulativeSentCountsBySendJobId(jobs);
         List<MailingHistoryItem> historyItems = new ArrayList<>();
         for (AdminMailSendJob job : jobs) {
             List<AdminMailSendTarget> targets = targetsBySendJobId.getOrDefault(job.getId(), List.of());
-            historyItems.add(new MailingHistoryItem(job, targets, recipientAddressesForHistory(job, targets)));
+            historyItems.add(new MailingHistoryItem(
+                    job,
+                    targets,
+                    recipientAddressesForHistory(job, targets),
+                    cumulativeSentCountsBySendJobId.getOrDefault(job.getId(), 0)
+            ));
         }
         return historyItems;
+    }
+
+    private Map<Long, Integer> cumulativeSentCountsBySendJobId(List<AdminMailSendJob> jobs) {
+        Map<Long, Integer> countsByDocumentSrl = new LinkedHashMap<>();
+        Map<Long, Integer> countsBySendJobId = new LinkedHashMap<>();
+        List<AdminMailSendJob> chronologicalJobs = jobs.stream()
+                .filter(job -> job != null && job.getId() != null)
+                .sorted(Comparator
+                        .comparing(this::historyActivityAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(AdminMailSendJob::getId, Comparator.nullsFirst(Comparator.naturalOrder())))
+                .toList();
+        for (AdminMailSendJob job : chronologicalJobs) {
+            Long documentSrl = job.getDocumentSrl();
+            if (documentSrl == null) {
+                countsBySendJobId.put(job.getId(), 0);
+                continue;
+            }
+            if ("SENT".equals(job.getSendStatus())) {
+                countsByDocumentSrl.merge(documentSrl, nullToZero(job.getTargetSnapshotCount()), Integer::sum);
+            }
+            countsBySendJobId.put(job.getId(), countsByDocumentSrl.getOrDefault(documentSrl, 0));
+        }
+        return countsBySendJobId;
+    }
+
+    private LocalDateTime historyActivityAt(AdminMailSendJob job) {
+        if (job.getSentAt() != null) {
+            return job.getSentAt();
+        }
+        if (job.getScheduledAt() != null) {
+            return job.getScheduledAt();
+        }
+        return job.getCreatedAt();
+    }
+
+    private int nullToZero(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private List<String> recipientAddressesForHistory(AdminMailSendJob job, List<AdminMailSendTarget> targets) {
@@ -188,11 +233,13 @@ public class MailingService {
 
     @Transactional("adminTransactionManager")
     public Long schedule(MailScheduleForm form, AdminPrincipal principal, HttpServletRequest request) {
-        validateScheduledAt(form.getScheduledAt());
+        LocalDateTime scheduledAt = resolveScheduleAt(form);
+        validateScheduledAt(scheduledAt);
         String duplicateKey = buildScheduledDuplicateKey(form);
         assertNoDuplicate(duplicateKey);
 
-        Snapshot snapshot = loadSnapshot(form.getDocumentSrl());
+        boolean dailyRepeat = Boolean.TRUE.equals(form.getDailyRepeat());
+        Snapshot snapshot = dailyRepeat ? new Snapshot(List.of(), 0) : loadSnapshot(form.getDocumentSrl());
         RecipientSelection recipients = parseRecipients(form.getDocumentSrl());
         MailContent mailContent = resolveMailContent(form.getTemplateId(), form.getDirectMailSubject(), form.getDirectMailBody());
 
@@ -203,19 +250,23 @@ public class MailingService {
                 mailContent.body(),
                 MailAttachmentType.fromValue(form.getAttachmentType()),
                 "SCHEDULED",
-                "SCHEDULED",
+                dailyRepeat ? "SCHEDULED_DAILY" : "SCHEDULED",
                 recipients,
                 snapshot,
                 null,
                 duplicateKey,
                 principal.getId()
         );
-        sendJob.setSendStatus(snapshot.applicationIds().isEmpty() ? "NO_TARGETS" : "SCHEDULED");
-        sendJob.setScheduledAt(form.getScheduledAt());
+        sendJob.setSendStatus(!dailyRepeat && snapshot.applicationIds().isEmpty() ? "NO_TARGETS" : "SCHEDULED");
+        sendJob.setScheduledAt(scheduledAt);
+        sendJob.setRepeatYn(dailyRepeat ? "Y" : "N");
+        sendJob.setRepeatUnit(dailyRepeat ? "DAILY" : null);
         adminMailSendJobMapper.insert(sendJob);
 
-        insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, "PENDING", null, null);
-        if (!snapshot.applicationIds().isEmpty()) {
+        if (!dailyRepeat) {
+            insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, "PENDING", null, null);
+        }
+        if (!dailyRepeat && !snapshot.applicationIds().isEmpty()) {
             updateApplicationDelivery(snapshot.applicationIds(), sendJob.getId(), "SCHEDULED", null);
         }
 
@@ -224,7 +275,7 @@ public class MailingService {
                 "MAIL_SEND_SCHEDULE",
                 "JOB",
                 String.valueOf(form.getDocumentSrl()),
-                "예약 메일 발송 작업 #" + sendJob.getId() + " 등록",
+                "예약 메일 발송 작업 #" + sendJob.getId() + " 등록" + (dailyRepeat ? " (매일 반복)" : ""),
                 request
         );
         return sendJob.getId();
@@ -318,11 +369,15 @@ public class MailingService {
         }
 
         adminMailSendTargetMapper.updateResultBySendJobId(sendJobId, "CANCELLED", "관리자가 예약 발송을 취소했습니다.", null);
-        List<Long> applicationIds = adminMailSendTargetMapper.findBySendJobId(sendJobId).stream()
-                .map(AdminMailSendTarget::getApplicationId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
+        boolean dailyRepeat = isDailyRepeat(sendJob);
+        Snapshot dailySnapshot = dailyRepeat ? loadDailyScheduledSnapshot(sendJob.getDocumentSrl()) : null;
+        List<Long> applicationIds = dailyRepeat
+                ? dailySnapshot.applicationIds()
+                : adminMailSendTargetMapper.findBySendJobId(sendJobId).stream()
+                        .map(AdminMailSendTarget::getApplicationId)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList();
         updateApplicationDelivery(applicationIds, null, "READY", null);
         safeLog(
                 principal.getId(),
@@ -340,15 +395,21 @@ public class MailingService {
             return false;
         }
 
-        List<Long> applicationIds = adminMailSendTargetMapper.findBySendJobId(sendJobId).stream()
-                .map(AdminMailSendTarget::getApplicationId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
+        boolean dailyRepeat = isDailyRepeat(sendJob);
+        List<Long> applicationIds = dailyRepeat
+                ? loadDailyScheduledSnapshot(sendJob.getDocumentSrl()).applicationIds()
+                : adminMailSendTargetMapper.findBySendJobId(sendJobId).stream()
+                        .map(AdminMailSendTarget::getApplicationId)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList();
 
         if (applicationIds.isEmpty()) {
             sendJob.setSendStatus("NO_TARGETS");
             adminMailSendJobMapper.updateStatus(sendJob);
+            if (dailyRepeat) {
+                scheduleNextDailySend(sendJob);
+            }
             safeLog(
                     null,
                     "MAIL_SEND_SCHEDULED_EXECUTE",
@@ -371,9 +432,10 @@ public class MailingService {
         String targetResult;
         String failReason = null;
         LocalDateTime sentAt = null;
+        RecipientSelection recipients = null;
 
         try {
-            RecipientSelection recipients = parseRecipients(sendJob.getDocumentSrl());
+            recipients = parseRecipients(sendJob.getDocumentSrl());
             if (recipients.recipients().isEmpty()) {
                 throw new IllegalStateException("등록된 거래처 수신 이메일이 없습니다.");
             }
@@ -391,7 +453,7 @@ public class MailingService {
                     mailContent,
                     attachment,
                     attachmentType,
-                    "SCHEDULED",
+                    dailyRepeat ? "SCHEDULED_DAILY" : "SCHEDULED",
                     applicationIds.size()
             ));
             sendStatus = "SENT";
@@ -406,7 +468,12 @@ public class MailingService {
         sendJob.setSendStatus(sendStatus);
         sendJob.setSentAt(sentAt);
         adminMailSendJobMapper.updateStatus(sendJob);
-        adminMailSendTargetMapper.updateResultBySendJobId(sendJobId, targetResult, failReason, sentAt);
+        if (dailyRepeat) {
+            insertTargets(sendJobId, applicationIds, recipients == null ? new RecipientSelection(List.of(), 0, "Client") : recipients, targetResult, failReason, sentAt);
+            scheduleNextDailySend(sendJob);
+        } else {
+            adminMailSendTargetMapper.updateResultBySendJobId(sendJobId, targetResult, failReason, sentAt);
+        }
         updateApplicationDelivery(applicationIds, sendJobId, "SENT".equals(sendStatus) ? "SENT" : "FAILED", sentAt);
         safeLog(
                 null,
@@ -629,6 +696,7 @@ public class MailingService {
         sendJob.setThresholdSnapshot(thresholdSnapshot);
         sendJob.setTargetSnapshotCount(snapshot.applicationIds().size());
         sendJob.setDuplicatePreventKey(duplicatePreventKey);
+        sendJob.setRepeatYn("N");
         sendJob.setCreatedBy(createdBy);
         return sendJob;
     }
@@ -639,6 +707,10 @@ public class MailingService {
 
     private Snapshot loadThresholdSnapshot(Long documentSrl) {
         return loadSnapshot(documentSrl, adminMailSendJobMapper.findLastSuccessfulThresholdSentAt(documentSrl));
+    }
+
+    private Snapshot loadDailyScheduledSnapshot(Long documentSrl) {
+        return loadSnapshot(documentSrl, adminMailSendJobMapper.findLastSuccessfulDailyScheduledSentAt(documentSrl));
     }
 
     private Snapshot loadSnapshot(Long documentSrl, LocalDateTime appliedAfter) {
@@ -862,7 +934,9 @@ public class MailingService {
     }
 
     private String buildScheduledDuplicateKey(MailScheduleForm form) {
-        return "SCHEDULED:" + form.getDocumentSrl() + ":" + form.getScheduledAt().withNano(0);
+        LocalDateTime scheduledAt = resolveScheduleAt(form);
+        String prefix = Boolean.TRUE.equals(form.getDailyRepeat()) ? "SCHEDULED_DAILY" : "SCHEDULED";
+        return prefix + ":" + form.getDocumentSrl() + ":" + scheduledAt.withNano(0);
     }
 
     private String buildThresholdDuplicateKey(Long documentSrl, int threshold, int applicationCount) {
@@ -881,6 +955,55 @@ public class MailingService {
         if (scheduledAt == null || scheduledAt.isBefore(minimumScheduledAt)) {
             throw new IllegalArgumentException("예약 발송 시각은 현재 시각보다 최소 1분 이후여야 합니다.");
         }
+    }
+
+    private LocalDateTime resolveScheduleAt(MailScheduleForm form) {
+        if (!Boolean.TRUE.equals(form.getDailyRepeat())) {
+            return form.getScheduledAt();
+        }
+        LocalTime sendTime = form.getDailySendTime();
+        if (sendTime == null) {
+            sendTime = form.getScheduledAt() == null ? null : form.getScheduledAt().toLocalTime();
+        }
+        if (sendTime == null) {
+            throw new IllegalArgumentException("매일 반복 발송 시각을 입력해 주세요.");
+        }
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+        LocalDateTime scheduledAt = now.toLocalDate().atTime(sendTime).truncatedTo(ChronoUnit.MINUTES);
+        return scheduledAt.isAfter(now) ? scheduledAt : scheduledAt.plusDays(1);
+    }
+
+    private boolean isDailyRepeat(AdminMailSendJob sendJob) {
+        return "Y".equals(sendJob.getRepeatYn()) && "DAILY".equals(sendJob.getRepeatUnit());
+    }
+
+    private void scheduleNextDailySend(AdminMailSendJob completedJob) {
+        LocalDateTime base = completedJob.getScheduledAt() == null ? LocalDateTime.now() : completedJob.getScheduledAt();
+        LocalDateTime nextScheduledAt = base.plusDays(1);
+        String duplicateKey = "SCHEDULED_DAILY:" + completedJob.getDocumentSrl() + ":" + nextScheduledAt.withNano(0);
+        if (adminMailSendJobMapper.findByDuplicatePreventKey(duplicateKey) != null) {
+            return;
+        }
+        RecipientSelection recipients = parseRecipients(completedJob.getDocumentSrl());
+        AdminMailSendJob nextJob = baseJob(
+                completedJob.getDocumentSrl(),
+                completedJob.getTemplateId(),
+                completedJob.getMailSubjectSnapshot(),
+                completedJob.getMailBodySnapshot(),
+                MailAttachmentType.fromValue(completedJob.getAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : completedJob.getAttachmentType()),
+                "SCHEDULED",
+                "SCHEDULED_DAILY",
+                recipients,
+                new Snapshot(List.of(), 0),
+                null,
+                duplicateKey,
+                completedJob.getCreatedBy()
+        );
+        nextJob.setSendStatus("SCHEDULED");
+        nextJob.setScheduledAt(nextScheduledAt);
+        nextJob.setRepeatYn("Y");
+        nextJob.setRepeatUnit("DAILY");
+        adminMailSendJobMapper.insert(nextJob);
     }
 
     private void safeLog(

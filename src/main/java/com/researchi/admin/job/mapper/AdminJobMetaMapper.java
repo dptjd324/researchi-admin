@@ -20,9 +20,20 @@ public interface AdminJobMetaMapper {
 
     List<AdminJobMeta> findEnabledRecruitingJobs();
 
+    List<AdminJobMeta> findDeletedReadyForPermanentDelete(@Param("now") LocalDateTime now);
+
     void insert(AdminJobMeta adminJobMeta);
 
     void update(AdminJobMeta adminJobMeta);
+
+    int deleteByDocumentSrl(@Param("documentSrl") Long documentSrl);
+
+    int markDeleted(
+            @Param("documentSrl") Long documentSrl,
+            @Param("deleteReason") String deleteReason,
+            @Param("deletedAt") LocalDateTime deletedAt,
+            @Param("permanentDeleteAfter") LocalDateTime permanentDeleteAfter
+    );
 
     int updateClientLink(
             @Param("documentSrl") Long documentSrl,

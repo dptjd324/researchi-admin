@@ -34,6 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -103,6 +104,47 @@ class MailingServiceTest {
         assertThat(history).hasSize(1);
         assertThat(history.get(0).recipientAddresses()).containsExactly("dptjd324@naver.com");
         assertThat(history.get(0).recipientAddressesSummary()).isEqualTo("dptjd324@naver.com");
+    }
+
+    @Test
+    void historyShowsCumulativeSentCountPerDocument() {
+        AdminMailSendJob firstSent = historyJob(77L, 9L, "SENT", 4);
+        firstSent.setSentAt(LocalDateTime.of(2026, 4, 28, 12, 30));
+        AdminMailSendJob secondSent = historyJob(78L, 9L, "SENT", 3);
+        secondSent.setSentAt(LocalDateTime.of(2026, 4, 30, 2, 8));
+        AdminMailSendJob failed = historyJob(79L, 9L, "FAILED", 2);
+        failed.setCreatedAt(LocalDateTime.of(2026, 5, 1, 9, 0));
+        when(adminMailSendJobMapper.findByDocumentSrl(9L)).thenReturn(List.of(failed, secondSent, firstSent));
+        when(jobService.getJobsByDocumentSrls(List.of(9L, 9L, 9L))).thenReturn(List.of(
+                new JobListItem(9L, "Survey Job", "", "PUBLIC", null, null, null, "newjob")
+        ));
+        when(adminMailSendTargetMapper.findBySendJobIds(List.of(79L, 78L, 77L))).thenReturn(List.of());
+
+        List<com.researchi.admin.mailing.domain.MailingHistoryItem> history = mailingService.getHistory(9L);
+
+        assertThat(history).hasSize(3);
+        assertThat(history).extracting(com.researchi.admin.mailing.domain.MailingHistoryItem::cumulativeSentCount)
+                .containsExactly(7, 7, 4);
+    }
+
+    @Test
+    void historySeparatesCumulativeSentCountByDocumentSrlNotTitle() {
+        AdminMailSendJob firstDocument = historyJob(81L, 9L, "SENT", 4);
+        firstDocument.setSentAt(LocalDateTime.of(2026, 4, 28, 12, 30));
+        AdminMailSendJob sameTitleOtherDocument = historyJob(82L, 10L, "SENT", 3);
+        sameTitleOtherDocument.setSentAt(LocalDateTime.of(2026, 4, 29, 12, 30));
+        when(adminMailSendJobMapper.findAll()).thenReturn(List.of(sameTitleOtherDocument, firstDocument));
+        when(jobService.getJobsByDocumentSrls(List.of(10L, 9L))).thenReturn(List.of(
+                new JobListItem(9L, "Survey Job", "", "PUBLIC", null, null, null, "newjob"),
+                new JobListItem(10L, "Survey Job", "", "PUBLIC", null, null, null, "newjob")
+        ));
+        when(adminMailSendTargetMapper.findBySendJobIds(List.of(82L, 81L))).thenReturn(List.of());
+
+        List<com.researchi.admin.mailing.domain.MailingHistoryItem> history = mailingService.getHistory(null);
+
+        assertThat(history).hasSize(2);
+        assertThat(history).extracting(com.researchi.admin.mailing.domain.MailingHistoryItem::cumulativeSentCount)
+                .containsExactly(3, 4);
     }
 
     @Test
@@ -464,6 +506,69 @@ class MailingServiceTest {
 
         verify(adminMailSendJobMapper, times(0)).insert(any(AdminMailSendJob.class));
         verify(mailDispatchGateway, times(0)).dispatch(any());
+    }
+
+    @Test
+    void scheduleDailyRepeatCreatesDailyJobWithoutSnapshotTargets() throws Exception {
+        PublicFormProperties properties = new PublicFormProperties();
+        properties.setEncryptionKey("test-encryption-key");
+        properties.setCaptchaEnabled(false);
+        PublicFormProtectionService protectionService = new PublicFormProtectionService(properties);
+        mailingService = new MailingService(
+                adminMailTemplateMapper,
+                adminMailSendJobMapper,
+                adminMailSendTargetMapper,
+                adminMailingApplicationMapper,
+                adminJobMetaMapper,
+                adminExportQueryMapper,
+                exportService,
+                jobService,
+                clientService,
+                protectionService,
+                mailDispatchGateway,
+                adminActionLogService
+        );
+
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        jobMeta.setClientName("Client A");
+        jobMeta.setClientEmail("client@example.com");
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+        when(adminMailSendJobMapper.findByDuplicatePreventKey(any())).thenReturn(null);
+        doAnswer(invocation -> {
+            AdminMailSendJob sendJob = invocation.getArgument(0);
+            sendJob.setId(93L);
+            return null;
+        }).when(adminMailSendJobMapper).insert(any(AdminMailSendJob.class));
+
+        LocalTime sendTime = LocalTime.now().plusHours(2).truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
+        var form = new com.researchi.admin.mailing.web.MailScheduleForm();
+        form.setDocumentSrl(9L);
+        form.setAttachmentType("XLSX");
+        form.setDirectMailSubject("Daily subject");
+        form.setDirectMailBody("Daily body");
+        form.setDailyRepeat(true);
+        form.setDailySendTime(sendTime);
+
+        Long sendJobId = mailingService.schedule(
+                form,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        assertThat(sendJobId).isEqualTo(93L);
+        ArgumentCaptor<AdminMailSendJob> sendJobCaptor = ArgumentCaptor.forClass(AdminMailSendJob.class);
+        verify(adminMailSendJobMapper).insert(sendJobCaptor.capture());
+        AdminMailSendJob scheduledJob = sendJobCaptor.getValue();
+        assertThat(scheduledJob.getTriggerType()).isEqualTo("SCHEDULED_DAILY");
+        assertThat(scheduledJob.getSendStatus()).isEqualTo("SCHEDULED");
+        assertThat(scheduledJob.getRepeatYn()).isEqualTo("Y");
+        assertThat(scheduledJob.getRepeatUnit()).isEqualTo("DAILY");
+        assertThat(scheduledJob.getTargetSnapshotCount()).isZero();
+        assertThat(scheduledJob.getScheduledAt().toLocalTime()).isEqualTo(sendTime);
+        verify(adminMailSendTargetMapper, never()).insert(any());
+        verify(adminMailingApplicationMapper, never()).updateDeliveryStatus(any(), any(), any(), any());
+        verify(mailDispatchGateway, never()).dispatch(any());
     }
 
     @Test
@@ -965,6 +1070,81 @@ class MailingServiceTest {
     }
 
     @Test
+    void executeDailyScheduledSendUsesApplicationsAfterLastSuccessfulDailySendAndQueuesNextRun() throws Exception {
+        PublicFormProperties properties = new PublicFormProperties();
+        properties.setEncryptionKey("test-encryption-key");
+        properties.setCaptchaEnabled(false);
+        PublicFormProtectionService protectionService = new PublicFormProtectionService(properties);
+        mailingService = new MailingService(
+                adminMailTemplateMapper,
+                adminMailSendJobMapper,
+                adminMailSendTargetMapper,
+                adminMailingApplicationMapper,
+                adminJobMetaMapper,
+                adminExportQueryMapper,
+                exportService,
+                jobService,
+                clientService,
+                protectionService,
+                mailDispatchGateway,
+                adminActionLogService
+        );
+
+        LocalDateTime lastDailySentAt = LocalDateTime.of(2026, 4, 29, 18, 0);
+        AdminMailSendJob sendJob = new AdminMailSendJob();
+        sendJob.setId(94L);
+        sendJob.setDocumentSrl(9L);
+        sendJob.setAttachmentType("XLSX");
+        sendJob.setMailSubjectSnapshot("Daily subject");
+        sendJob.setMailBodySnapshot("Daily body");
+        sendJob.setSendStatus("SCHEDULED");
+        sendJob.setScheduledAt(LocalDateTime.of(2026, 4, 30, 18, 0));
+        sendJob.setTriggerType("SCHEDULED_DAILY");
+        sendJob.setRepeatYn("Y");
+        sendJob.setRepeatUnit("DAILY");
+        sendJob.setCreatedBy(1L);
+        when(adminMailSendJobMapper.findById(94L)).thenReturn(sendJob);
+        when(adminMailSendJobMapper.updateStatusIfCurrent(94L, "RUNNING", null, "SCHEDULED")).thenReturn(1);
+        when(adminMailSendJobMapper.findLastSuccessfulDailyScheduledSentAt(9L)).thenReturn(lastDailySentAt);
+        when(adminMailSendJobMapper.findByDuplicatePreventKey(any())).thenReturn(null);
+
+        AdminJobMeta jobMeta = new AdminJobMeta();
+        jobMeta.setDocumentSrl(9L);
+        jobMeta.setClientName("Client A");
+        jobMeta.setClientEmail("client@example.com");
+        when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
+        when(adminExportQueryMapper.findApplicationsByDocumentSrl(9L)).thenReturn(List.of(
+                exportApplication(101L, "Y", "N", lastDailySentAt.minusMinutes(1)),
+                exportApplication(102L, "Y", "N", lastDailySentAt.plusMinutes(1)),
+                exportApplication(103L, "Y", "Y", lastDailySentAt.plusMinutes(2))
+        ));
+        when(exportService.prepareXlsx(eq(9L), eq(List.of(102L))))
+                .thenReturn(new ExportPayload("job-9.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1, 2}, 1));
+        when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
+
+        boolean executed = mailingService.executeScheduledSend(94L);
+
+        assertThat(executed).isTrue();
+        verify(mailDispatchGateway).dispatch(any());
+        verify(exportService).prepareXlsx(9L, List.of(102L));
+        verify(adminMailSendTargetMapper).insert(argThat(target ->
+                target.getSendJobId().equals(94L)
+                        && target.getApplicationId().equals(102L)
+                        && "SENT".equals(target.getSendResult())));
+        verify(adminMailingApplicationMapper, never()).updateDeliveryStatus(eq(101L), any(), any(), any());
+        verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(102L), eq("SENT"), eq(94L), any());
+
+        ArgumentCaptor<AdminMailSendJob> insertCaptor = ArgumentCaptor.forClass(AdminMailSendJob.class);
+        verify(adminMailSendJobMapper, times(1)).insert(insertCaptor.capture());
+        AdminMailSendJob nextJob = insertCaptor.getValue();
+        assertThat(nextJob.getTriggerType()).isEqualTo("SCHEDULED_DAILY");
+        assertThat(nextJob.getSendStatus()).isEqualTo("SCHEDULED");
+        assertThat(nextJob.getScheduledAt()).isEqualTo(LocalDateTime.of(2026, 5, 1, 18, 0));
+        assertThat(nextJob.getRepeatYn()).isEqualTo("Y");
+        assertThat(nextJob.getRepeatUnit()).isEqualTo("DAILY");
+    }
+
+    @Test
     void cancelSendJobCancelsScheduledJobAndResetsApplications() {
         PublicFormProperties properties = new PublicFormProperties();
         properties.setEncryptionKey("test-encryption-key");
@@ -1193,6 +1373,15 @@ class MailingServiceTest {
         assertThat(sendJobId).isEqualTo(66L);
         verify(jobService, org.mockito.Mockito.atLeastOnce()).ensureJobMeta(9L);
         verify(mailDispatchGateway).dispatch(any());
+    }
+
+    private AdminMailSendJob historyJob(Long id, Long documentSrl, String sendStatus, Integer targetSnapshotCount) {
+        AdminMailSendJob sendJob = new AdminMailSendJob();
+        sendJob.setId(id);
+        sendJob.setDocumentSrl(documentSrl);
+        sendJob.setSendStatus(sendStatus);
+        sendJob.setTargetSnapshotCount(targetSnapshotCount);
+        return sendJob;
     }
 
     private com.researchi.admin.export.domain.ExportApplicationSource exportApplication(Long id, String provideYn, String blacklisted) {

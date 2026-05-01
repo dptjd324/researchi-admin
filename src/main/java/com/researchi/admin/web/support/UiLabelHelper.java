@@ -10,6 +10,8 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component("uiLabels")
 public class UiLabelHelper {
@@ -19,6 +21,10 @@ public class UiLabelHelper {
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("HH시 mm분");
     private static final DateTimeFormatter XE_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DISPLAY_XE_DATE_TIME = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
+    private static final Pattern SCRIPT_OR_STYLE_BLOCK = Pattern.compile("(?is)<(script|style)[^>]*>.*?</\\1>");
+    private static final Pattern BLOCK_BREAK_TAG = Pattern.compile("(?i)<\\s*(br|/p|/div|/li|/tr|/h[1-6])\\b[^>]*>");
+    private static final Pattern HTML_TAG = Pattern.compile("(?is)<[^>]+>");
+    private static final Pattern NUMERIC_ENTITY = Pattern.compile("&#(x?[0-9A-Fa-f]+);");
 
     public String applicationStatus(String value) {
         return switch (normalize(value)) {
@@ -126,6 +132,7 @@ public class UiLabelHelper {
             case "MANUAL" -> "수동발송";
             case "THRESHOLD" -> "임계치발송";
             case "SCHEDULED" -> "예약발송";
+            case "SCHEDULED_DAILY" -> "매일 예약발송";
             case "" -> "-";
             default -> value;
         };
@@ -154,6 +161,7 @@ public class UiLabelHelper {
             case "PASSWORD_CHANGE" -> "비밀번호 변경";
             case "JOB_CREATE" -> "공고 등록";
             case "JOB_UPDATE" -> "공고 수정";
+            case "JOB_DELETE" -> "공고 삭제";
             case "JOB_STATUS_UPDATE" -> "공고 상태 변경";
             case "APPLICATION_STATUS_UPDATE" -> "지원서 상태 변경";
             case "APPLICATION_BLACKLIST_REGISTER" -> "지원자 블랙리스트 등록";
@@ -178,6 +186,13 @@ public class UiLabelHelper {
             case "MAIL_TEMPLATE_UPDATE" -> "메일 템플릿 수정";
             case "" -> "-";
             default -> value;
+        };
+    }
+
+    public String actionTypeToneClass(String value) {
+        return switch (normalize(value)) {
+            case "JOB_CREATE", "JOB_UPDATE", "JOB_DELETE" -> "action-type-badge--job-change";
+            default -> "";
         };
     }
 
@@ -261,6 +276,46 @@ public class UiLabelHelper {
                 .replace("timeout", "시간 초과");
     }
 
+    public String htmlToText(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String text = SCRIPT_OR_STYLE_BLOCK.matcher(value).replaceAll(" ");
+        text = BLOCK_BREAK_TAG.matcher(text).replaceAll("\n");
+        text = HTML_TAG.matcher(text).replaceAll(" ");
+        text = decodeHtmlEntities(text).replace('\u00A0', ' ');
+        text = text.replaceAll("[ \\t\\x0B\\f\\r]+", " ");
+        text = text.replaceAll(" *\\n+ *", "\n").trim();
+        return text.isBlank() ? "-" : text;
+    }
+
+    private String decodeHtmlEntities(String value) {
+        String text = value
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'");
+        Matcher matcher = NUMERIC_ENTITY.matcher(text);
+        StringBuilder builder = new StringBuilder();
+        while (matcher.find()) {
+            matcher.appendReplacement(builder, Matcher.quoteReplacement(decodeNumericEntity(matcher.group(1))));
+        }
+        matcher.appendTail(builder);
+        return builder.toString();
+    }
+
+    private String decodeNumericEntity(String value) {
+        try {
+            int radix = value.startsWith("x") || value.startsWith("X") ? 16 : 10;
+            String digits = radix == 16 ? value.substring(1) : value;
+            return new String(Character.toChars(Integer.parseInt(digits, radix)));
+        } catch (IllegalArgumentException ex) {
+            return "&#" + value + ";";
+        }
+    }
+
     public String searchCondition(String value) {
         if (value == null || value.isBlank()) {
             return "-";
@@ -333,6 +388,7 @@ public class UiLabelHelper {
             case "MANUAL" -> "trigger-badge--manual";
             case "THRESHOLD" -> "trigger-badge--threshold";
             case "SCHEDULED" -> "trigger-badge--scheduled";
+            case "SCHEDULED_DAILY" -> "trigger-badge--scheduled";
             default -> "trigger-badge--default";
         };
     }

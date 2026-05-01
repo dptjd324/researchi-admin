@@ -118,6 +118,7 @@ class OperationsBatchServiceTest {
     @Test
     void cleanupBatchAggregatesDeletedRows() {
         when(schedulerProperties.getRetentionMonths()).thenReturn(6);
+        when(jobService.permanentlyDeleteExpiredDeletedJobs(any())).thenReturn(10);
         when(operationsCleanupMapper.deleteDuplicateLogsBefore(any())).thenReturn(1);
         when(operationsCleanupMapper.deleteBlacklistMatchLogsForExpiredApplications(any())).thenReturn(2);
         when(operationsCleanupMapper.deletePrivacyConsentsForExpiredApplications(any())).thenReturn(3);
@@ -130,7 +131,8 @@ class OperationsBatchServiceTest {
 
         int deleted = operationsBatchService.runSixMonthCleanupBatch();
 
-        assertThat(deleted).isEqualTo(45);
+        assertThat(deleted).isEqualTo(55);
+        verify(jobService).permanentlyDeleteExpiredDeletedJobs(any());
     }
 
     @Test

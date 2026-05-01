@@ -22,6 +22,8 @@
         <result property="thresholdSnapshot" column="threshold_snapshot"/>
         <result property="targetSnapshotCount" column="target_snapshot_count"/>
         <result property="duplicatePreventKey" column="duplicate_prevent_key"/>
+        <result property="repeatYn" column="repeat_yn"/>
+        <result property="repeatUnit" column="repeat_unit"/>
         <result property="createdBy" column="created_by"/>
         <result property="createdAt" column="created_at"/>
         <result property="templateName" column="template_name"/>
@@ -45,6 +47,8 @@
             threshold_snapshot,
             target_snapshot_count,
             duplicate_prevent_key,
+            repeat_yn,
+            repeat_unit,
             created_by,
             created_at
         ) VALUES (
@@ -64,6 +68,8 @@
             #{thresholdSnapshot},
             #{targetSnapshotCount},
             #{duplicatePreventKey},
+            #{repeatYn},
+            #{repeatUnit},
             #{createdBy},
             CURRENT_TIMESTAMP
         )
@@ -141,6 +147,15 @@
         FROM admin_mail_send_job
         WHERE document_srl = #{documentSrl}
           AND trigger_type = 'THRESHOLD'
+          AND send_status = 'SENT'
+          AND sent_at IS NOT NULL
+    </select>
+
+    <select id="findLastSuccessfulDailyScheduledSentAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(sent_at)
+        FROM admin_mail_send_job
+        WHERE document_srl = #{documentSrl}
+          AND trigger_type = 'SCHEDULED_DAILY'
           AND send_status = 'SENT'
           AND sent_at IS NOT NULL
     </select>

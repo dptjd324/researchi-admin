@@ -28,6 +28,8 @@ public interface AdminMailSendJobMapper {
 
     LocalDateTime findLastSuccessfulThresholdSentAt(@Param("documentSrl") Long documentSrl);
 
+    LocalDateTime findLastSuccessfulDailyScheduledSentAt(@Param("documentSrl") Long documentSrl);
+
     List<AdminMailSendJob> findByDocumentSrl(@Param("documentSrl") Long documentSrl);
 
     List<AdminMailSendJob> findDueScheduled(@Param("scheduledAt") LocalDateTime scheduledAt);

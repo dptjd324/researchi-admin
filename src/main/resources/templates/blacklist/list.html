@@ -157,6 +157,8 @@
                         </div>
                     </section>
                     <div class="pagination-bar" th:if="${paginationEnabled}">
+                        <a th:if="${firstPageUrl != null}" th:href="${firstPageUrl}" class="pagination-bar__nav" aria-label="첫 페이지">처음</a>
+                        <span th:if="${firstPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">처음</span>
                         <a th:if="${previousPageUrl != null}" th:href="${previousPageUrl}" class="pagination-bar__nav" aria-label="이전 페이지">‹</a>
                         <span th:if="${previousPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">‹</span>
                         <a th:each="pageLink : ${pageLinks}"
@@ -166,6 +168,8 @@
                            class="pagination-bar__page">1</a>
                         <a th:if="${nextPageUrl != null}" th:href="${nextPageUrl}" class="pagination-bar__nav" aria-label="다음 페이지">›</a>
                         <span th:if="${nextPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">›</span>
+                        <a th:if="${lastPageUrl != null}" th:href="${lastPageUrl}" class="pagination-bar__nav" aria-label="마지막 페이지">마지막</a>
+                        <span th:if="${lastPageUrl == null}" class="pagination-bar__nav pagination-bar__nav--disabled" aria-hidden="true">마지막</span>
                     </div>
                 </div>
             </div>

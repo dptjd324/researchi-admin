@@ -2,6 +2,7 @@ package com.researchi.admin.job.web;
 
 import com.researchi.admin.client.service.ClientService;
 import com.researchi.admin.job.domain.AdminJobMeta;
+import com.researchi.admin.job.domain.BoardConfig;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.service.JobService;
@@ -148,7 +149,7 @@ class JobControllerTest {
         request.setServerName("localhost");
         request.setServerPort(8082);
 
-        String viewName = jobController.jobDetail(9L, model, request);
+        String viewName = jobController.jobDetail(9L, model, request, null);
 
         assertThat(viewName).isEqualTo("jobs/detail");
         assertThat(model.get("jobDetail")).isNotNull();
@@ -157,6 +158,58 @@ class JobControllerTest {
         assertThat(model.get("publicApplyAvailable")).isEqualTo(true);
         assertThat(model.get("publicApplyMessage")).isEqualTo("Apply now");
         assertThat(model.get("applicationFormNoticeItems")).isEqualTo(List.of("Marriage", "Medication", "Allergy"));
+    }
+
+    @Test
+    void newJobAlwaysShowsAllApplicationBoardTypes() {
+        ExtendedModelMap model = new ExtendedModelMap();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/jobs/new");
+
+        String viewName = jobController.newJob(model, request, null);
+
+        assertThat(viewName).isEqualTo("jobs/form");
+        JobForm form = (JobForm) model.get("jobForm");
+        assertThat(form.getJobType()).isEqualTo("NEW");
+        assertThat(model.get("jobTypes")).isEqualTo(BoardConfig.applicationBoards());
+    }
+
+    @Test
+    void createJobReportsMissingXeBoardWithoutHidingAnnouncementTypes() {
+        when(jobService.hasBoardModule("FAST")).thenReturn(false);
+
+        ExtendedModelMap model = new ExtendedModelMap();
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/jobs");
+        JobForm form = validJobForm();
+        form.setJobType("FAST");
+        org.springframework.validation.BeanPropertyBindingResult bindingResult =
+                new org.springframework.validation.BeanPropertyBindingResult(form, "jobForm");
+
+        String viewName = jobController.createJob(null, form, bindingResult, request, model);
+
+        assertThat(viewName).isEqualTo("jobs/form");
+        assertThat(bindingResult.hasFieldErrors("jobType")).isTrue();
+        assertThat(bindingResult.getFieldError("jobType").getDefaultMessage()).contains("mid=fast");
+        assertThat(model.get("jobTypes")).isEqualTo(BoardConfig.applicationBoards());
+        assertThat(model.get("jobForm")).isSameAs(form);
+    }
+
+    @Test
+    void deleteJobDelegatesAndRedirectsToList() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/jobs/9/delete");
+
+        String viewName = jobController.deleteJob(9L, null, "중복 공고", request);
+
+        assertThat(viewName).isEqualTo("redirect:/jobs?deleteScheduled");
+        verify(jobService).deleteContentJob(9L, null, request, "중복 공고");
+    }
+
+    @Test
+    void deleteJobRequiresReason() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/jobs/9/delete");
+
+        String viewName = jobController.deleteJob(9L, null, " ", request);
+
+        assertThat(viewName).isEqualTo("redirect:/jobs/9/edit?deleteReasonRequired");
     }
 
     private JobDetail jobDetail(Long documentSrl) {
@@ -176,5 +229,18 @@ class JobControllerTest {
         AdminJobMeta meta = new AdminJobMeta();
         meta.setJobType(jobType);
         return new JobListItem(documentSrl, title, "content", "PUBLIC", "20260424120000", "20260424120000", meta, "NEW".equals(jobType) ? "newjob" : "additional");
+    }
+
+    private JobForm validJobForm() {
+        JobForm form = new JobForm();
+        form.setJobType("NEW");
+        form.setTitle("공고");
+        form.setContent("본문");
+        form.setRecruitStatus("RECRUITING");
+        form.setApplicationEnabled(true);
+        form.setAutoSendEnabled(false);
+        form.setAutoSendRepeatYn("N");
+        form.setAutoSendAttachmentType("XLSX");
+        return form;
     }
 }

@@ -129,6 +129,18 @@
                                 <span>예약 시각</span>
                                 <input type="datetime-local" th:field="*{scheduledAt}">
                             </label>
+                            <label>
+                                <span>매일 반복</span>
+                                <select th:field="*{dailyRepeat}">
+                                    <option th:value="false">사용 안 함</option>
+                                    <option th:value="true">매일 발송</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>매일 발송 시각</span>
+                                <input type="time" th:field="*{dailySendTime}">
+                                <small class="field-help">예: 18:00. 반복 사용 시 예약일 대신 다음 도래 시각부터 매일 발송합니다.</small>
+                            </label>
                         </div>
                         <div class="mail-compose-fields">
                             <label>
@@ -278,7 +290,11 @@
                                 <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'SCHEDULED' and item.sendJob.createdAt != null}" th:text="${@uiLabels.dateTime(item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
                                 <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'MANUAL' and (item.sendJob.sentAt != null or item.sendJob.createdAt != null)}" th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
                                 <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'THRESHOLD' and (item.sendJob.sentAt != null or item.sendJob.createdAt != null)}" th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
-                                <h4 class="h5 mb-2" th:text="${item.sendJob.jobTitle}">공고명</h4>
+                                <h4 class="h5 mb-2 mail-history-title">
+                                    <span th:text="${item.sendJob.jobTitle}">공고명</span>
+                                    <span class="mail-history-title__count"
+                                          th:text="${item.cumulativeSentCount() + '건'}">0건</span>
+                                </h4>
                                 <p class="summary mb-0" th:text="${(item.sendJob.templateName != null ? item.sendJob.templateName : '직접 작성') + ' · ' + (item.sendJob.attachmentType != null ? item.sendJob.attachmentType : '-') }">템플릿 · 첨부 형식</p>
                             </div>
                             <div class="actions">
@@ -354,6 +370,28 @@
                     margin: 0 0 0.35rem;
                     font-size: 1rem;
                     font-weight: 700;
+                }
+
+                .mail-history-title {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 0.55rem;
+                }
+
+                .mail-history-title__count {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 2.5rem;
+                    min-height: 1.7rem;
+                    padding: 0.1rem 0.65rem;
+                    border-radius: 999px;
+                    background: #eef2ff;
+                    color: #3730a3;
+                    font-size: 0.9rem;
+                    font-weight: 800;
+                    white-space: nowrap;
                 }
 
                 .mail-compose-fields {

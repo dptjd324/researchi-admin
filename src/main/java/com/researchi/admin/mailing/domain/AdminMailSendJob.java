@@ -27,6 +27,8 @@ public class AdminMailSendJob {
     private Integer thresholdSnapshot;
     private Integer targetSnapshotCount;
     private String duplicatePreventKey;
+    private String repeatYn;
+    private String repeatUnit;
     private Long createdBy;
     private LocalDateTime createdAt;
     private String templateName;

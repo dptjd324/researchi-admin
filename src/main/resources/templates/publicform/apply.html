@@ -30,7 +30,7 @@
     <section class="public-card public-card--info">
         <div class="public-card__title">공고 안내</div>
         <div class="public-card__body">
-            <p class="public-description" th:text="${jobDetail.document.content}">공고 본문</p>
+            <p class="public-description" th:text="${@uiLabels.htmlToText(jobDetail.document.content)}">공고 본문</p>
         </div>
     </section>
 

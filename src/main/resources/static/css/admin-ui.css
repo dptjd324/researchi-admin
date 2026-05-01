@@ -162,10 +162,26 @@ body.admin-body {
 .eyebrow {
     margin-bottom: 0.65rem;
     color: var(--admin-primary);
-    font-size: 0.78rem;
+    font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+}
+
+.action-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+}
+
+.action-type-badge--job-change {
+    min-width: 4.25rem;
+    min-height: 2rem;
+    padding: 0.25rem 0.8rem;
+    border: 3px solid #ef1f1f;
+    border-radius: 999px;
+    color: #b91c1c;
 }
 
 .admin-page-title {
@@ -339,6 +355,30 @@ button,
     color: #991b1b;
 }
 
+.applicant-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.applicant-type-badge--new {
+    border: 1px solid rgba(22, 163, 74, 0.24);
+    background: #dcfce7;
+    color: #166534;
+}
+
+.applicant-type-badge--existing {
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
 button:hover,
 button:focus,
 .secondary-link:hover,
@@ -352,6 +392,12 @@ button:focus,
     background: #fff;
     color: var(--admin-primary);
     border-color: rgba(15, 118, 110, 0.24);
+}
+
+.secondary-link.danger-button {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
 }
 
 .notice,
@@ -497,6 +543,7 @@ button:focus,
     border-color: rgba(15, 118, 110, 0.32);
     background: var(--admin-primary-soft);
     color: var(--admin-primary);
+
 }
 
 .job-form,

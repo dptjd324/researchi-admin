@@ -78,6 +78,21 @@ class PeriodSearchServiceTest {
     }
 
     @Test
+    void searchApplicationsDefaultDatePresetIncludesOlderApplications() {
+        ApplicationRecord older = application(21L, 9L, "Park", "RECEIVED", LocalDateTime.now().minusDays(3));
+        when(applicationService.getApplications(null, null)).thenReturn(List.of(older));
+
+        PeriodSearchForm form = new PeriodSearchForm();
+        form.setScope("APPLICATION");
+
+        PeriodSearchResult result = periodSearchService.search(form);
+
+        assertThat(result.applications()).containsExactly(older);
+        assertThat(result.resultCount()).isEqualTo(1);
+        verify(adminSearchLogMapper).insert(any(AdminSearchLog.class));
+    }
+
+    @Test
     void searchMailUsesSendWindowAndSingleJobSendTarget() {
         AdminMailSendJob matched = mailJob(41L, 9L, "SENT", "Survey Mail", LocalDateTime.now());
         AdminMailSendJob otherJob = mailJob(42L, 10L, "SENT", "Other", LocalDateTime.now());

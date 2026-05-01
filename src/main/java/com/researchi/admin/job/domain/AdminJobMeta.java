@@ -42,6 +42,10 @@ public class AdminJobMeta {
     private String autoSendAttachmentType;
     private LocalDateTime lastAutoSentAt;
     private LocalDateTime nextAutoSendAt;
+    private String deletedYn;
+    private String deleteReason;
+    private LocalDateTime deletedAt;
+    private LocalDateTime permanentDeleteAfter;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -35,6 +35,10 @@
         <result property="autoSendAttachmentType" column="auto_send_attachment_type"/>
         <result property="lastAutoSentAt" column="last_auto_sent_at"/>
         <result property="nextAutoSendAt" column="next_auto_send_at"/>
+        <result property="deletedYn" column="deleted_yn"/>
+        <result property="deleteReason" column="delete_reason"/>
+        <result property="deletedAt" column="deleted_at"/>
+        <result property="permanentDeleteAfter" column="permanent_delete_after"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -42,6 +46,7 @@
     <select id="findAll" resultMap="adminJobMetaResultMap">
         SELECT *
         FROM admin_job_meta
+        WHERE COALESCE(deleted_yn, 'N') = 'N'
         ORDER BY document_srl DESC
     </select>
 
@@ -58,6 +63,7 @@
         <foreach collection="documentSrls" item="documentSrl" open="(" separator="," close=")">
             #{documentSrl}
         </foreach>
+          AND COALESCE(deleted_yn, 'N') = 'N'
         ORDER BY document_srl DESC
     </select>
 
@@ -65,6 +71,7 @@
         SELECT *
         FROM admin_job_meta
         WHERE client_id = #{clientId}
+          AND COALESCE(deleted_yn, 'N') = 'N'
         ORDER BY document_srl DESC
     </select>
 
@@ -73,7 +80,17 @@
         FROM admin_job_meta
         WHERE application_enabled = 'Y'
           AND recruit_status = 'RECRUITING'
+          AND COALESCE(deleted_yn, 'N') = 'N'
         ORDER BY document_srl DESC
+    </select>
+
+    <select id="findDeletedReadyForPermanentDelete" resultMap="adminJobMetaResultMap">
+        SELECT *
+        FROM admin_job_meta
+        WHERE deleted_yn = 'Y'
+          AND permanent_delete_after IS NOT NULL
+          AND permanent_delete_after &lt;= #{now}
+        ORDER BY permanent_delete_after ASC, document_srl ASC
     </select>
 
     <insert id="insert" parameterType="com.researchi.admin.job.domain.AdminJobMeta" useGeneratedKeys="true" keyProperty="id">
@@ -169,6 +186,24 @@
             auto_send_repeat_unit = #{autoSendRepeatUnit},
             auto_send_template_id = #{autoSendTemplateId},
             auto_send_attachment_type = #{autoSendAttachmentType},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE document_srl = #{documentSrl}
+    </update>
+
+    <delete id="deleteByDocumentSrl">
+        DELETE FROM admin_job_meta
+        WHERE document_srl = #{documentSrl}
+    </delete>
+
+    <update id="markDeleted">
+        UPDATE admin_job_meta
+        SET
+            deleted_yn = 'Y',
+            delete_reason = #{deleteReason},
+            deleted_at = #{deletedAt},
+            permanent_delete_after = #{permanentDeleteAfter},
+            application_enabled = 'N',
+            auto_send_enabled = 'N',
             updated_at = CURRENT_TIMESTAMP
         WHERE document_srl = #{documentSrl}
     </update>

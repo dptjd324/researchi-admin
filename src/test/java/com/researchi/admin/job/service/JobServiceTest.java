@@ -8,8 +8,11 @@ import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.web.JobForm;
+import com.researchi.admin.keyword.mapper.AdminJobKeywordMapper;
 import com.researchi.admin.keyword.service.KeywordExtractionService;
+import com.researchi.admin.scheduler.config.SchedulerProperties;
 import com.researchi.admin.xe.domain.XeJobDocument;
+import com.researchi.admin.xe.domain.XeModule;
 import com.researchi.admin.xe.service.XeJobService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -46,6 +49,9 @@ class JobServiceTest {
     private AdminJobMetaMapper adminJobMetaMapper;
 
     @Mock
+    private AdminJobKeywordMapper adminJobKeywordMapper;
+
+    @Mock
     private AdminActionLogService adminActionLogService;
 
     @Mock
@@ -53,6 +59,9 @@ class JobServiceTest {
 
     @Mock
     private ClientService clientService;
+
+    @Mock
+    private SchedulerProperties schedulerProperties;
 
     @InjectMocks
     private JobService jobService;
@@ -92,6 +101,23 @@ class JobServiceTest {
     }
 
     @Test
+    void getAvailableApplicationBoardConfigsKeepsOnlyExistingXeModules() {
+        when(xeJobService.getJobModules()).thenReturn(List.of(module("additional"), module("notice")));
+
+        List<com.researchi.admin.job.domain.BoardConfig> boards = jobService.getAvailableApplicationBoardConfigs();
+
+        assertThat(boards).extracting(com.researchi.admin.job.domain.BoardConfig::name).containsExactly("ADDITIONAL");
+    }
+
+    @Test
+    void hasBoardModuleChecksSelectedJobTypeAgainstXeModules() {
+        when(xeJobService.getJobModules()).thenReturn(List.of(module("additional")));
+
+        assertThat(jobService.hasBoardModule("ADDITIONAL")).isTrue();
+        assertThat(jobService.hasBoardModule("NEW")).isFalse();
+    }
+
+    @Test
     void createJobKeepsAdminMetaWhenBestEffortTasksFail() {
         JobForm form = baseForm();
         form.setClientId(null);
@@ -108,6 +134,30 @@ class JobServiceTest {
         verify(adminJobMetaMapper).insert(any(AdminJobMeta.class));
         verify(keywordExtractionService).syncJobKeywords(321L);
         verify(adminActionLogService).log(eq(1L), eq("JOB_CREATE"), eq("JOB"), eq("321"), any(), any(HttpServletRequest.class));
+    }
+
+    @Test
+    void createJobSavesDirectClientEmailsWhenClientIsNotSelected() {
+        JobForm form = baseForm();
+        form.setClientId(null);
+        form.setClientName("Direct Partner");
+        form.setClientEmail("primary@example.com");
+        form.setClientEmails("second@example.com, third@example.com\nsecond@example.com");
+        AdminPrincipal principal = new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1));
+        when(xeJobService.createJobDocument(eq("newjob"), anyString(), anyString(), eq("PUBLIC"), anyString())).thenReturn(321L);
+        AdminJobMeta savedMeta = new AdminJobMeta();
+        savedMeta.setDocumentSrl(321L);
+        when(adminJobMetaMapper.findByDocumentSrl(321L)).thenReturn(null, savedMeta);
+
+        jobService.createJob(form, principal, mockRequest());
+
+        ArgumentCaptor<AdminJobMeta> captor = ArgumentCaptor.forClass(AdminJobMeta.class);
+        verify(adminJobMetaMapper).insert(captor.capture());
+        assertThat(captor.getValue().getClientId()).isNull();
+        assertThat(captor.getValue().getClientName()).isEqualTo("Direct Partner");
+        assertThat(captor.getValue().getClientEmail()).isEqualTo("primary@example.com");
+        assertThat(captor.getValue().getClientEmails()).isEqualTo("second@example.com\nthird@example.com");
+        verify(clientService, never()).getClientSummary(any());
     }
 
     @Test
@@ -385,6 +435,72 @@ class JobServiceTest {
         verify(adminJobMetaMapper).insert(any(AdminJobMeta.class));
     }
 
+    @Test
+    void deleteContentJobMarksAdminMetaAndXeDocumentDeleted() {
+        AdminPrincipal principal = new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1));
+        XeJobDocument document = new XeJobDocument();
+        document.setDocumentSrl(33L);
+        document.setMid("notice");
+        document.setTitle("공지");
+        document.setStatus("PUBLIC");
+        AdminJobMeta meta = new AdminJobMeta();
+        meta.setDocumentSrl(33L);
+        when(xeJobService.getJobDocument(33L)).thenReturn(document);
+        when(adminJobMetaMapper.findByDocumentSrl(33L)).thenReturn(meta);
+        when(schedulerProperties.getRetentionMonths()).thenReturn(6);
+
+        jobService.deleteContentJob(33L, principal, mockRequest(), "중복 공고");
+
+        verify(xeJobService).updateJobStatus(33L, "DELETED");
+        verify(adminJobMetaMapper).markDeleted(eq(33L), eq("중복 공고"), any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(adminActionLogService).log(
+                eq(1L),
+                eq("JOB_DELETE"),
+                eq("JOB"),
+                eq("33"),
+                argThat(detail -> detail.contains("documentSrl=33") && detail.contains("reason=중복 공고") && detail.contains("permanentDeleteAfter=")),
+                any(HttpServletRequest.class)
+        );
+    }
+
+    @Test
+    void permanentlyDeleteExpiredDeletedJobsRemovesXeAndAdminRows() {
+        AdminJobMeta meta = new AdminJobMeta();
+        meta.setDocumentSrl(33L);
+        meta.setDeleteReason("중복 공고");
+        meta.setDeletedAt(LocalDateTime.now().minusMonths(7));
+        meta.setPermanentDeleteAfter(LocalDateTime.now().minusMonths(1));
+        when(adminJobMetaMapper.findDeletedReadyForPermanentDelete(any())).thenReturn(List.of(meta));
+        when(xeJobService.deleteJobDocumentIfPresent(33L)).thenReturn(true);
+        when(adminJobMetaMapper.deleteByDocumentSrl(33L)).thenReturn(1);
+
+        int deleted = jobService.permanentlyDeleteExpiredDeletedJobs(LocalDateTime.now());
+
+        assertThat(deleted).isEqualTo(1);
+        verify(xeJobService).deleteJobDocumentIfPresent(33L);
+        verify(adminJobKeywordMapper).deleteByDocumentSrl(33L);
+        verify(adminJobMetaMapper).deleteByDocumentSrl(33L);
+        verify(adminActionLogService).log(
+                eq(null),
+                eq("JOB_PERMANENT_DELETE"),
+                eq("JOB"),
+                eq("33"),
+                argThat(detail -> detail.contains("documentSrl=33") && detail.contains("reason=중복 공고")),
+                eq(null)
+        );
+    }
+
+    @Test
+    void deleteContentJobRequiresReason() {
+        AdminPrincipal principal = new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1));
+
+        assertThatThrownBy(() -> jobService.deleteContentJob(33L, principal, mockRequest(), " "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("삭제 사유를 입력해 주세요.");
+
+        verify(xeJobService, never()).updateJobStatus(any(), any());
+    }
+
     private JobForm baseForm() {
         JobForm form = new JobForm();
         form.setJobType("NEW");
@@ -403,5 +519,12 @@ class JobServiceTest {
 
     private HttpServletRequest mockRequest() {
         return new org.springframework.mock.web.MockHttpServletRequest();
+    }
+
+    private XeModule module(String mid) {
+        XeModule module = new XeModule();
+        module.setMid(mid);
+        module.setModuleSrl(1L);
+        return module;
     }
 }

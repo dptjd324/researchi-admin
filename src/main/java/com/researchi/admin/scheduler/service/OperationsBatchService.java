@@ -86,8 +86,10 @@ public class OperationsBatchService {
 
     @Transactional("adminTransactionManager")
     public int runSixMonthCleanupBatch() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMonths(schedulerProperties.getRetentionMonths());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cutoff = now.minusMonths(schedulerProperties.getRetentionMonths());
         int deleted = 0;
+        deleted += jobService.permanentlyDeleteExpiredDeletedJobs(now);
         deleted += operationsCleanupMapper.deleteDuplicateLogsBefore(cutoff);
         deleted += operationsCleanupMapper.deleteBlacklistMatchLogsForExpiredApplications(cutoff);
         deleted += operationsCleanupMapper.deletePrivacyConsentsForExpiredApplications(cutoff);

@@ -129,6 +129,19 @@ public class XeJobService {
         }
     }
 
+    @Transactional("xeTransactionManager")
+    public void deleteJobDocument(Long documentSrl) {
+        int deleted = xeJobMapper.deleteJobDocument(documentSrl, BoardConfig.managedMids());
+        if (deleted == 0) {
+            throw new IllegalArgumentException("공고 게시판을 찾을 수 없습니다.");
+        }
+    }
+
+    @Transactional("xeTransactionManager")
+    public boolean deleteJobDocumentIfPresent(Long documentSrl) {
+        return xeJobMapper.deleteJobDocument(documentSrl, BoardConfig.managedMids()) > 0;
+    }
+
     private Long nextDocumentSrl() {
         Long nextDocumentSrl = xeJobMapper.findNextDocumentSrl();
         return nextDocumentSrl == null ? 1L : nextDocumentSrl;
