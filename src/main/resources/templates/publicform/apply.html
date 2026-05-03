@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${pageTitle}">Researchi 지원서</title>
-    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/dist/css/bootstrap.min.css}">
+    <title th:text="${pageTitle}">리서치아이 지원서</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css">
     <link rel="stylesheet" th:href="@{/css/public-ui.css}">
@@ -12,7 +12,7 @@
 <body class="public-body public-body--naver">
 <div class="public-page">
     <section class="public-header">
-        <div class="public-header__eyebrow">Researchi Application</div>
+        <div class="public-header__eyebrow">리서치아이 지원서</div>
         <h1 class="public-header__title" th:text="${jobDetail.document.title}">공고 제목</h1>
         <div class="public-period" th:if="${publicStartText != null or publicDeadlineText != null}">
             <div class="public-period__item" th:if="${publicStartText != null}">

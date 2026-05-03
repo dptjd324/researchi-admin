@@ -12,11 +12,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 @RequestMapping("/blacklist")
@@ -47,7 +43,7 @@ public class BlacklistController {
 
     @PostMapping
     public String save(
-            @Valid BlacklistForm form,
+            @Valid @ModelAttribute("form") BlacklistForm form,
             BindingResult bindingResult,
             @AuthenticationPrincipal AdminPrincipal principal,
             HttpServletRequest request,
@@ -76,6 +72,16 @@ public class BlacklistController {
     ) {
         blacklistService.updateActiveStatus(id, activeYn, principal, request);
         return "redirect:/blacklist?id=" + id + "&statusUpdated";
+    }
+
+    @PostMapping("/{id}/delete")
+    public String delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        blacklistService.remove(id, principal, request);
+        return "redirect:/blacklist?deleted";
     }
 
     private void populateModel(

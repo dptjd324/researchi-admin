@@ -287,7 +287,9 @@
                         <div class="job-item-head">
                             <div>
                                 <p class="eyebrow trigger-badge" th:classappend="${@uiLabels.triggerToneClass(item.sendJob.triggerType)}" th:text="${@uiLabels.triggerType(item.sendJob.triggerType)}">수동발송</p>
-                                <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'SCHEDULED' and item.sendJob.createdAt != null}" th:text="${@uiLabels.dateTime(item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
+                                <span class="scheduled-at-note"
+                                      th:if="${(item.sendJob.triggerType == 'SCHEDULED' or item.sendJob.triggerType == 'SCHEDULED_DAILY') and item.sendJob.createdAt != null}"
+                                      th:text="${'예약 등록 시각 ' + @uiLabels.dateTime(item.sendJob.createdAt)}">예약 등록 시각 2026-04-26 - 01:00</span>
                                 <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'MANUAL' and (item.sendJob.sentAt != null or item.sendJob.createdAt != null)}" th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
                                 <span class="scheduled-at-note" th:if="${item.sendJob.triggerType == 'THRESHOLD' and (item.sendJob.sentAt != null or item.sendJob.createdAt != null)}" th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : item.sendJob.createdAt)}">2026-04-26 - 01:00</span>
                                 <h4 class="h5 mb-2 mail-history-title">
@@ -312,7 +314,10 @@
 
                         <div class="job-meta-grid">
                             <span><strong>발송 유형</strong><span th:text="${@uiLabels.triggerType(item.sendJob.triggerType)}">수동발송</span></span>
-                            <span><strong>발송 시각</strong><span th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : (item.sendJob.scheduledAt != null ? item.sendJob.scheduledAt : item.sendJob.createdAt))}">2026-04-26 - 01:00</span></span>
+                            <span>
+                                <strong th:text="${item.sendJob.sendStatus == 'SCHEDULED' and item.sendJob.scheduledAt != null ? '예약 시각' : '발송 시각'}">발송 시각</strong>
+                                <span th:text="${@uiLabels.dateTime(item.sendJob.sentAt != null ? item.sendJob.sentAt : (item.sendJob.scheduledAt != null ? item.sendJob.scheduledAt : item.sendJob.createdAt))}">2026-04-26 - 01:00</span>
+                            </span>
                             <span><strong>수신 이메일 수</strong><span th:text="${(item.sendJob.recipientCount != null ? item.sendJob.recipientCount : 0) + '명'}">0명</span></span>
                             <span><strong>발송 지원서 수</strong><span th:text="${(item.sendJob.targetSnapshotCount != null ? item.sendJob.targetSnapshotCount : 0) + '건'}">0건</span></span>
                             <span><strong>블랙리스트 제외</strong><span th:text="${(item.sendJob.blacklistExcludedCount != null ? item.sendJob.blacklistExcludedCount : 0) + '건'}">0건</span></span>

@@ -37,6 +37,8 @@ public interface AdminBlacklistAdminMapper {
             @Param("updatedAt") LocalDateTime updatedAt
     );
 
+    int deleteById(@Param("id") Long id);
+
     List<BlacklistEntry> findExpiredActiveEntries(@Param("expiresAt") LocalDateTime expiresAt);
 
     List<BlacklistMatchLogItem> findRecentMatchLogs(@Param("blacklistId") Long blacklistId);

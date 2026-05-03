@@ -18,6 +18,8 @@ import com.researchi.admin.publicform.service.PublicFormService;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Controller;
@@ -41,6 +43,8 @@ import java.util.Map;
 @Controller
 @RequestMapping("/jobs")
 public class JobController {
+
+    private static final Logger log = LoggerFactory.getLogger(JobController.class);
 
     private final JobService jobService;
     private final MailTemplateService mailTemplateService;
@@ -246,12 +250,7 @@ public class JobController {
     ) {
         jobService.updateRecruitStatus(documentSrl, recruitStatus, principal, request);
         if ("RECRUITING".equals(recruitStatus)) {
-            JobDetail jobDetail = jobService.getJob(documentSrl);
-            if (jobDetail.getMeta() != null && "Y".equals(jobDetail.getMeta().getApplicationEnabled())) {
-                Long matchJobId = matchingService.run(documentSrl, principal, request);
-                notificationService.sendEmailNotifications(documentSrl, matchJobId, principal, request);
-                notificationService.sendSmsNotifications(documentSrl, matchJobId, principal, request);
-            }
+            runRecruitingNotificationsIfEligible(documentSrl, principal, request);
         }
         return "redirect:/jobs?statusUpdated";
     }
@@ -267,9 +266,36 @@ public class JobController {
                 || !"RECRUITING".equals(form.getRecruitStatus())) {
             return;
         }
-        Long matchJobId = matchingService.run(documentSrl, principal, request);
-        notificationService.sendEmailNotifications(documentSrl, matchJobId, principal, request);
-        notificationService.sendSmsNotifications(documentSrl, matchJobId, principal, request);
+        runAutomaticKeywordNotifications(documentSrl, principal, request);
+    }
+
+    private void runRecruitingNotificationsIfEligible(
+            Long documentSrl,
+            AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        try {
+            JobDetail jobDetail = jobService.getJob(documentSrl);
+            if (jobDetail.getMeta() != null && "Y".equals(jobDetail.getMeta().getApplicationEnabled())) {
+                runAutomaticKeywordNotifications(documentSrl, principal, request);
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Failed to run automatic notifications after recruiting status update. documentSrl={}", documentSrl, ex);
+        }
+    }
+
+    private void runAutomaticKeywordNotifications(
+            Long documentSrl,
+            AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        try {
+            Long matchJobId = matchingService.run(documentSrl, principal, request);
+            notificationService.sendEmailNotifications(documentSrl, matchJobId, principal, request);
+            notificationService.sendSmsNotifications(documentSrl, matchJobId, principal, request);
+        } catch (RuntimeException ex) {
+            log.warn("Failed to run automatic keyword notifications after job save. documentSrl={}", documentSrl, ex);
+        }
     }
 
     private void populateFormModel(Model model, String pageTitle, JobForm form, Long documentSrl, CsrfToken csrfToken, HttpServletRequest request) {

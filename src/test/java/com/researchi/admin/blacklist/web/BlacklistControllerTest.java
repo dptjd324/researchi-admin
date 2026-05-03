@@ -73,6 +73,20 @@ class BlacklistControllerTest {
     }
 
     @Test
+    void deleteRedirectsToBlacklistPageAfterRemovingEntry() {
+        doNothing().when(blacklistService).remove(any(), any(), any());
+
+        String viewName = blacklistController.delete(
+                8L,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        assertThat(viewName).isEqualTo("redirect:/blacklist?deleted");
+        verify(blacklistService).remove(any(), any(), any());
+    }
+
+    @Test
     void saveRedirectsToBlankFormAfterCreatingNewEntry() {
         BlacklistForm form = new BlacklistForm();
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(form, "form");

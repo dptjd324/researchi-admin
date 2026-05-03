@@ -24,6 +24,7 @@ import org.springframework.ui.ExtendedModelMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -210,6 +211,33 @@ class JobControllerTest {
         String viewName = jobController.deleteJob(9L, null, " ", request);
 
         assertThat(viewName).isEqualTo("redirect:/jobs/9/edit?deleteReasonRequired");
+    }
+
+    @Test
+    void updateJobRedirectsEvenWhenAutomaticNotificationCannotFindJob() {
+        JobForm form = validJobForm();
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/jobs/9");
+        org.springframework.validation.BeanPropertyBindingResult bindingResult =
+                new org.springframework.validation.BeanPropertyBindingResult(form, "jobForm");
+        when(jobService.hasBoardModule("NEW")).thenReturn(true);
+        doThrow(new IllegalArgumentException("공고를 찾을 수 없습니다."))
+                .when(matchingService).run(9L, null, request);
+
+        String viewName = jobController.updateJob(9L, null, form, bindingResult, request, new ExtendedModelMap());
+
+        assertThat(viewName).isEqualTo("redirect:/jobs/9/edit?updated");
+        verify(jobService).updateJob(9L, form, null, request);
+    }
+
+    @Test
+    void updateStatusRedirectsEvenWhenFollowUpJobLookupFails() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/jobs/9/status");
+        when(jobService.getJob(9L)).thenThrow(new IllegalArgumentException("공고를 찾을 수 없습니다."));
+
+        String viewName = jobController.updateStatus(9L, "RECRUITING", null, request);
+
+        assertThat(viewName).isEqualTo("redirect:/jobs?statusUpdated");
+        verify(jobService).updateRecruitStatus(9L, "RECRUITING", null, request);
     }
 
     private JobDetail jobDetail(Long documentSrl) {

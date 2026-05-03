@@ -86,7 +86,7 @@
                                 <a th:href="@{/jobs/{documentSrl}(documentSrl=${applicationItem.documentSrl})}"
                                    th:text="${applicationItem.jobTitle}"
                                    class="job-title-link">공고명</a>
-                                <span th:text="${' | #' + applicationItem.id}">#1</span>
+                                <span th:text="${' | #' + (applicationItem.applicationNumber != null ? applicationItem.applicationNumber : applicationItem.id)}">#1</span>
                             </p>
                         </div>
                         <div class="actions">

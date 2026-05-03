@@ -24,6 +24,7 @@ import java.util.Locale;
 public class BlacklistService {
 
     private static final int LOG_LIMIT = 30;
+    private static final String RESTORED_APPLICATION_STATUS = "RECEIVED";
 
     private final AdminBlacklistAdminMapper adminBlacklistAdminMapper;
     private final AdminApplicationQueryMapper adminApplicationQueryMapper;
@@ -76,21 +77,24 @@ public class BlacklistService {
             errors.rejectValue("blackMode", "blackMode.invalid", "지원하는 블랙리스트 모드를 선택해 주세요.");
         }
 
+        BlacklistEntry existing = form.getId() == null ? null : adminBlacklistAdminMapper.findById(form.getId());
         String normalizedPhone = protectionService.normalizePhone(form.getMobilePhone());
         String blackName = trimToNull(form.getBlackName());
         boolean hasBirthDate = form.getBlackBirthDate() != null;
+        boolean hasPhoneRule = normalizedPhone != null || (existing != null && existing.hasPhoneRule());
+        boolean hasPersonalRule = blackName != null && hasBirthDate;
 
-        if (normalizedPhone == null && (blackName == null || !hasBirthDate)) {
+        if (!hasPhoneRule && !hasPersonalRule) {
             errors.reject("criteria.required", "휴대전화를 입력하거나 이름과 생년월일을 함께 입력해 주세요.");
         }
-        if ((blackName == null) != !hasBirthDate) {
+        if (!hasPhoneRule && (blackName == null) != !hasBirthDate) {
             errors.reject("criteria.partial", "Name and birth date must be entered together when using personal matching.");
         }
         if (BlacklistModePolicy.TEMPORARY_BLOCK.equals(mode)) {
             if (form.getExpiresAt() == null) {
-                errors.rejectValue("expiresAt", "expiresAt.required", "임시 차단은 만료 일시가 필요합니다.");
+                errors.rejectValue("expiresAt", "expiresAt.required", "기간 차단 날짜를 선택해 주세요.");
             } else if (!form.getExpiresAt().isAfter(LocalDateTime.now())) {
-                errors.rejectValue("expiresAt", "expiresAt.future", "Temporary block expiry must be in the future.");
+                errors.rejectValue("expiresAt", "expiresAt.future", "기간 차단 날짜는 현재 시각 이후로 선택해 주세요.");
             }
         }
     }
@@ -186,6 +190,24 @@ public class BlacklistService {
                 "BLACKLIST",
                 String.valueOf(existing.getId()),
                 "블랙리스트 상태 변경: " + ("Y".equals(normalizedActiveYn) ? "활성" : "비활성"),
+                request
+        );
+    }
+
+    @Transactional("adminTransactionManager")
+    public void remove(Long id, AdminPrincipal principal, HttpServletRequest request) {
+        BlacklistEntry existing = requireEntry(id);
+        int restoredApplications = adminApplicationQueryMapper.restoreBlacklistApplications(id, RESTORED_APPLICATION_STATUS);
+        int deleted = adminBlacklistAdminMapper.deleteById(id);
+        if (deleted != 1) {
+            throw new IllegalStateException("블랙리스트 항목을 삭제하지 못했습니다.");
+        }
+        adminActionLogService.log(
+                principal.getId(),
+                "BLACKLIST_DELETE",
+                "BLACKLIST",
+                String.valueOf(existing.getId()),
+                "블랙리스트 삭제 및 지원자 복구: " + restoredApplications + "건",
                 request
         );
     }

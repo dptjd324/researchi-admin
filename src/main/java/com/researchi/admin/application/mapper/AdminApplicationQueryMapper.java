@@ -50,4 +50,9 @@ public interface AdminApplicationQueryMapper {
             @Param("applicationStatus") String applicationStatus,
             @Param("blackModeApplied") String blackModeApplied
     );
+
+    int restoreBlacklistApplications(
+            @Param("blacklistId") Long blacklistId,
+            @Param("applicationStatus") String applicationStatus
+    );
 }

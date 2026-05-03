@@ -43,6 +43,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -102,26 +103,33 @@ public class MailingService {
             return List.of();
         }
 
+        List<AdminMailSendJob> displayJobs = jobs.stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator
+                        .comparing(this::historyActivityAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(AdminMailSendJob::getId, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+
         Map<Long, String> titlesByDocumentSrl = new LinkedHashMap<>();
-        List<Long> documentSrls = jobs.stream()
+        List<Long> documentSrls = displayJobs.stream()
                 .map(AdminMailSendJob::getDocumentSrl)
                 .toList();
         for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
             titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
         }
-        for (AdminMailSendJob job : jobs) {
+        for (AdminMailSendJob job : displayJobs) {
             job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl()));
         }
 
         Map<Long, List<AdminMailSendTarget>> targetsBySendJobId = new LinkedHashMap<>();
-        List<Long> sendJobIds = jobs.stream().map(AdminMailSendJob::getId).toList();
+        List<Long> sendJobIds = displayJobs.stream().map(AdminMailSendJob::getId).toList();
         for (AdminMailSendTarget target : adminMailSendTargetMapper.findBySendJobIds(sendJobIds)) {
             targetsBySendJobId.computeIfAbsent(target.getSendJobId(), ignored -> new ArrayList<>()).add(target);
         }
 
-        Map<Long, Integer> cumulativeSentCountsBySendJobId = cumulativeSentCountsBySendJobId(jobs);
+        Map<Long, Integer> cumulativeSentCountsBySendJobId = cumulativeSentCountsBySendJobId(displayJobs);
         List<MailingHistoryItem> historyItems = new ArrayList<>();
-        for (AdminMailSendJob job : jobs) {
+        for (AdminMailSendJob job : displayJobs) {
             List<AdminMailSendTarget> targets = targetsBySendJobId.getOrDefault(job.getId(), List.of());
             historyItems.add(new MailingHistoryItem(
                     job,

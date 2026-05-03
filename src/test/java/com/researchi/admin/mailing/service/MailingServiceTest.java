@@ -128,6 +128,28 @@ class MailingServiceTest {
     }
 
     @Test
+    void historyDisplaysNewestActivityFirstEvenWhenMapperReturnsOlderRowsFirst() {
+        AdminMailSendJob firstSent = historyJob(77L, 9L, "SENT", 4);
+        firstSent.setSentAt(LocalDateTime.of(2026, 4, 28, 12, 30));
+        AdminMailSendJob secondSent = historyJob(78L, 9L, "SENT", 3);
+        secondSent.setSentAt(LocalDateTime.of(2026, 4, 30, 2, 8));
+        AdminMailSendJob scheduled = historyJob(79L, 9L, "SCHEDULED", 0);
+        scheduled.setScheduledAt(LocalDateTime.of(2026, 5, 2, 10, 0));
+        when(adminMailSendJobMapper.findByDocumentSrl(9L)).thenReturn(List.of(firstSent, secondSent, scheduled));
+        when(jobService.getJobsByDocumentSrls(List.of(9L, 9L, 9L))).thenReturn(List.of(
+                new JobListItem(9L, "Survey Job", "", "PUBLIC", null, null, null, "newjob")
+        ));
+        when(adminMailSendTargetMapper.findBySendJobIds(List.of(79L, 78L, 77L))).thenReturn(List.of());
+
+        List<com.researchi.admin.mailing.domain.MailingHistoryItem> history = mailingService.getHistory(9L);
+
+        assertThat(history).extracting(item -> item.sendJob().getId())
+                .containsExactly(79L, 78L, 77L);
+        assertThat(history).extracting(com.researchi.admin.mailing.domain.MailingHistoryItem::cumulativeSentCount)
+                .containsExactly(7, 7, 4);
+    }
+
+    @Test
     void historySeparatesCumulativeSentCountByDocumentSrlNotTitle() {
         AdminMailSendJob firstDocument = historyJob(81L, 9L, "SENT", 4);
         firstDocument.setSentAt(LocalDateTime.of(2026, 4, 28, 12, 30));

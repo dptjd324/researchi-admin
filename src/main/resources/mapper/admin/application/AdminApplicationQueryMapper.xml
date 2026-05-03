@@ -6,6 +6,7 @@
 
     <resultMap id="applicationRecordResultMap" type="com.researchi.admin.application.domain.ApplicationRecord">
         <id property="id" column="id"/>
+        <result property="applicationNumber" column="application_number"/>
         <result property="documentSrl" column="document_srl"/>
         <result property="applicantName" column="applicant_name"/>
         <result property="genderCode" column="gender_code"/>
@@ -55,61 +56,73 @@
     </resultMap>
 
     <sql id="applicationColumns">
-        id,
-        document_srl,
-        applicant_name,
-        gender_code,
-        birth_date,
-        age_text,
-        job_text,
-        organization_text,
-        mobile_phone_enc,
-        mobile_phone_masked,
-        tel_phone_enc,
-        tel_phone_masked,
-        region_text,
-        address_enc,
-        address_masked,
-        extra_comment,
-        prior_research_text,
-        email_address_enc,
-        email_address_masked,
-        notify_email_yn,
-        notify_sms_yn,
-        notify_keyword_yn,
-        application_status,
-        is_new_applicant,
-        is_blacklisted,
-        black_mode_applied,
-        provide_yn,
-        delivery_status,
-        delivered_at,
-        delivery_job_id,
-        applied_at,
-        updated_at
+        application.id,
+        (
+            SELECT COUNT(*)
+            FROM admin_job_application sequence_application
+            WHERE sequence_application.document_srl = application.document_srl
+              AND (
+                    sequence_application.applied_at &lt; application.applied_at
+                    OR (
+                        sequence_application.applied_at = application.applied_at
+                        AND sequence_application.id &lt;= application.id
+                    )
+              )
+        ) AS application_number,
+        application.document_srl,
+        application.applicant_name,
+        application.gender_code,
+        application.birth_date,
+        application.age_text,
+        application.job_text,
+        application.organization_text,
+        application.mobile_phone_enc,
+        application.mobile_phone_masked,
+        application.tel_phone_enc,
+        application.tel_phone_masked,
+        application.region_text,
+        application.address_enc,
+        application.address_masked,
+        application.extra_comment,
+        application.prior_research_text,
+        application.email_address_enc,
+        application.email_address_masked,
+        application.notify_email_yn,
+        application.notify_sms_yn,
+        application.notify_keyword_yn,
+        application.application_status,
+        application.is_new_applicant,
+        application.is_blacklisted,
+        application.black_mode_applied,
+        application.provide_yn,
+        application.delivery_status,
+        application.delivered_at,
+        application.delivery_job_id,
+        application.applied_at,
+        application.updated_at
     </sql>
 
     <sql id="applicationSearchWhere">
         <where>
             <if test="documentSrl != null">
-                document_srl = #{documentSrl}
+                application.document_srl = #{documentSrl}
             </if>
             <if test="keyword != null and keyword != ''">
                 <if test="documentSrl != null">
                     AND
                 </if>
                 (
-                    LOWER(applicant_name) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(mobile_phone_masked) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(tel_phone_masked) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(email_address_masked) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(region_text) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(job_text) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(organization_text) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(application_status) LIKE CONCAT('%', #{keyword}, '%')
-                    OR LOWER(delivery_status) LIKE CONCAT('%', #{keyword}, '%')
+                    LOWER(application.applicant_name) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.mobile_phone_masked) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.tel_phone_masked) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.email_address_masked) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.region_text) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.job_text) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.organization_text) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.application_status) LIKE CONCAT('%', #{keyword}, '%')
+                    OR LOWER(application.delivery_status) LIKE CONCAT('%', #{keyword}, '%')
                     <if test="jobDocumentSrls != null and jobDocumentSrls.size() > 0">
-                        OR document_srl IN
+                        OR application.document_srl IN
                         <foreach collection="jobDocumentSrls" item="jobDocumentSrl" open="(" separator="," close=")">
                             #{jobDocumentSrl}
                         </foreach>
@@ -122,28 +135,28 @@
     <select id="findAll" resultMap="applicationRecordResultMap">
         SELECT
         <include refid="applicationColumns"/>
-        FROM admin_job_application
-        ORDER BY applied_at DESC, id DESC
+        FROM admin_job_application application
+        ORDER BY application.applied_at DESC, application.id DESC
     </select>
 
     <select id="findByDocumentSrl" resultMap="applicationRecordResultMap">
         SELECT
         <include refid="applicationColumns"/>
-        FROM admin_job_application
-        WHERE document_srl = #{documentSrl}
-        ORDER BY applied_at DESC, id DESC
+        FROM admin_job_application application
+        WHERE application.document_srl = #{documentSrl}
+        ORDER BY application.applied_at DESC, application.id DESC
     </select>
 
     <select id="findPage" resultMap="applicationRecordResultMap">
         SELECT
         <include refid="applicationColumns"/>
-        FROM admin_job_application
+        FROM admin_job_application application
         <where>
             <if test="documentSrl != null">
-                document_srl = #{documentSrl}
+                application.document_srl = #{documentSrl}
             </if>
         </where>
-        ORDER BY applied_at DESC, id DESC
+        ORDER BY application.applied_at DESC, application.id DESC
         LIMIT #{limit}
         OFFSET #{offset}
     </select>
@@ -151,9 +164,9 @@
     <select id="findSearchPage" resultMap="applicationRecordResultMap">
         SELECT
         <include refid="applicationColumns"/>
-        FROM admin_job_application
+        FROM admin_job_application application
         <include refid="applicationSearchWhere"/>
-        ORDER BY applied_at DESC, id DESC
+        ORDER BY application.applied_at DESC, application.id DESC
         LIMIT #{limit}
         OFFSET #{offset}
     </select>
@@ -186,8 +199,8 @@
     <select id="findById" resultMap="applicationRecordResultMap">
         SELECT
         <include refid="applicationColumns"/>
-        FROM admin_job_application
-        WHERE id = #{id}
+        FROM admin_job_application application
+        WHERE application.id = #{id}
     </select>
 
     <select id="findAnswersByApplicationId" resultMap="applicationAnswerItemResultMap">
@@ -221,5 +234,30 @@
             black_mode_applied = #{blackModeApplied},
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
+    </update>
+
+    <update id="restoreBlacklistApplications">
+        UPDATE admin_job_application application
+        SET
+            application_status = #{applicationStatus},
+            is_blacklisted = 'N',
+            black_mode_applied = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE application.is_blacklisted = 'Y'
+          AND EXISTS (
+              SELECT 1
+              FROM admin_blacklist_match_log match_log
+              WHERE match_log.application_id = application.id
+                AND match_log.blacklist_id = #{blacklistId}
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM admin_blacklist_match_log other_match_log
+              INNER JOIN admin_blacklist other_blacklist ON other_blacklist.id = other_match_log.blacklist_id
+              WHERE other_match_log.application_id = application.id
+                AND other_match_log.blacklist_id &lt;&gt; #{blacklistId}
+                AND other_blacklist.active_yn = 'Y'
+                AND (other_blacklist.expires_at IS NULL OR other_blacklist.expires_at &gt; CURRENT_TIMESTAMP)
+          )
     </update>
 </mapper>

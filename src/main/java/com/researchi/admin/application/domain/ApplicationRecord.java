@@ -12,6 +12,7 @@ import lombok.Setter;
 public class ApplicationRecord {
 
     private Long id;
+    private Long applicationNumber;
     private Long documentSrl;
     private String applicantName;
     private String genderCode;

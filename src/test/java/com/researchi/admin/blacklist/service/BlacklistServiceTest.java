@@ -66,6 +66,25 @@ class BlacklistServiceTest {
         blacklistService.validate(form, errors);
 
         assertThat(errors.hasFieldErrors("expiresAt")).isTrue();
+        assertThat(errors.getFieldError("expiresAt").getDefaultMessage()).isEqualTo("기간 차단 날짜를 선택해 주세요.");
+    }
+
+    @Test
+    void validateAllowsTemporaryBlockUpdateWhenExistingEntryHasPhoneHash() {
+        BlacklistForm form = new BlacklistForm();
+        form.setId(21L);
+        form.setBlackMode(BlacklistModePolicy.TEMPORARY_BLOCK);
+        form.setExpiresAt(LocalDateTime.now().plusDays(1));
+
+        BlacklistEntry existing = new BlacklistEntry();
+        existing.setId(21L);
+        existing.setBlackMobilePhoneHash("existing-hash");
+        when(adminBlacklistAdminMapper.findById(21L)).thenReturn(existing);
+
+        BeanPropertyBindingResult errors = new BeanPropertyBindingResult(form, "form");
+        blacklistService.validate(form, errors);
+
+        assertThat(errors.hasErrors()).isFalse();
     }
 
     @Test
@@ -178,6 +197,25 @@ class BlacklistServiceTest {
 
         verify(adminBlacklistAdminMapper).updateActiveStatus(eq(7L), eq("N"), any());
         verify(adminActionLogService).log(eq(2L), eq("BLACKLIST_STATUS_UPDATE"), eq("BLACKLIST"), eq("7"), eq("블랙리스트 상태 변경: 비활성"), any());
+    }
+
+    @Test
+    void removeDeletesBlacklistEntryAndRestoresMatchedApplications() {
+        BlacklistEntry entry = new BlacklistEntry();
+        entry.setId(7L);
+        when(adminBlacklistAdminMapper.findById(7L)).thenReturn(entry);
+        when(adminApplicationQueryMapper.restoreBlacklistApplications(7L, "RECEIVED")).thenReturn(2);
+        when(adminBlacklistAdminMapper.deleteById(7L)).thenReturn(1);
+
+        blacklistService.remove(
+                7L,
+                new AdminPrincipal(2L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        verify(adminApplicationQueryMapper).restoreBlacklistApplications(7L, "RECEIVED");
+        verify(adminBlacklistAdminMapper).deleteById(7L);
+        verify(adminActionLogService).log(eq(2L), eq("BLACKLIST_DELETE"), eq("BLACKLIST"), eq("7"), eq("블랙리스트 삭제 및 지원자 복구: 2건"), any());
     }
 
     @Test

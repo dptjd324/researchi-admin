@@ -240,6 +240,11 @@
         WHERE id = #{id}
     </update>
 
+    <delete id="deleteById">
+        DELETE FROM admin_blacklist
+        WHERE id = #{id}
+    </delete>
+
     <select id="findExpiredActiveEntries" resultMap="blacklistEntryResultMap">
         SELECT
             blacklist.id,
