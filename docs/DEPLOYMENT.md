@@ -1,5 +1,48 @@
 # DEPLOYMENT.md
 
+## Old Admin DB Deployment Notes
+
+The copied old admin database is the primary operational database for postings, applicants, and blacklist data. In local verification, `admin_copy` contained:
+
+- `TB_RESEARCH_MST`
+- `TB_RESEARCH_APP`
+- `TB_BLACKLIST_MST`
+
+Use a clearly named old-admin datasource configuration when the transition begins. Avoid treating the public XE datasource as the source of truth for manager data.
+
+Recommended environment variable direction:
+
+- `OLD_ADMIN_DB_URL`
+- `OLD_ADMIN_DB_USERNAME`
+- `OLD_ADMIN_DB_PASSWORD`
+- `ADMIN_DB_URL` for supplemental admin tables
+- `XE_DB_URL` only for future/manual public website references
+
+Spring property direction:
+
+- `spring.datasource.old-admin.jdbc-url`
+- `spring.datasource.old-admin.username`
+- `spring.datasource.old-admin.password`
+
+Old-admin mappers and services are activated only when the old-admin datasource
+JDBC URL is configured.
+
+Before deployment or schema-sensitive work, verify charset, collation, table engine, and columns in the target environment:
+
+```sql
+SHOW CREATE TABLE TB_RESEARCH_MST;
+SHOW CREATE TABLE TB_RESEARCH_APP;
+SHOW CREATE TABLE TB_BLACKLIST_MST;
+SHOW VARIABLES LIKE 'character_set%';
+SHOW FULL COLUMNS FROM TB_RESEARCH_MST;
+SHOW FULL COLUMNS FROM TB_RESEARCH_APP;
+SHOW FULL COLUMNS FROM TB_BLACKLIST_MST;
+```
+
+If the old tables are MyISAM, do not rely on transaction rollback. Enable database backup and supplemental revision logs before any update path writes to old admin tables.
+
+Current phase deployment must not enable XE auto-publishing. Publishing support should generate copy-ready content from `TB_RESEARCH_MST` and record the manual publish result separately.
+
 ## Recommended Environment
 - Ubuntu 22.04
 - Java 17

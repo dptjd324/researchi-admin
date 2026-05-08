@@ -1,5 +1,35 @@
 # TASKS.md
 
+## Old Admin DB First Transition
+- [x] Verify copied old admin tables exist in `admin_copy`: `TB_RESEARCH_MST`, `TB_RESEARCH_APP`, `TB_BLACKLIST_MST`
+- [x] Verify local sample table engine/collation: MyISAM, `utf8mb4_general_ci`
+- [x] Confirm local character set variables: client/connection/database/server `utf8mb4`, filesystem `binary`, system `utf8mb3`
+- [x] Confirm `PROVIDE_YN` business meaning: admin-managed trader/client deposit status
+- [x] Confirm `APP_CNT` and `APP_NEW_CNT` display meaning: total applicants and unverified new applicants
+- [ ] Confirm `ADD_COMMENT` parsing rules before deriving structured fields from old free text
+- [x] Define first-pass `BLACK_YN` handling: `Y` active, `N` inactive, blanks handled by initial migration rule and revisited later
+- [x] Add first read-only legacy domain/mapper/service for `TB_RESEARCH_MST`
+- [x] Add first read-only `/research` screen backed by `TB_RESEARCH_MST`
+- [x] Add read-only `/research/{researchNo}` detail screen backed by `TB_RESEARCH_MST`
+- [x] Convert `/research/{researchNo}` to an edit screen with pre-update revision backup
+- [x] Add first read-only legacy domain/mapper/service for `TB_RESEARCH_APP`
+- [x] Add read-only `/research/{researchNo}/applications` screen backed by `TB_RESEARCH_APP`
+- [x] Add read-only `/research/{researchNo}/applications/{researchAppSeq}` detail screen backed by `TB_RESEARCH_APP`
+- [x] Add per-announcement applicant search filters for core `TB_RESEARCH_APP` fields
+- [x] Add `PROVIDE_YN` update on applicant detail with pre-update revision backup
+- [x] Add first legacy blacklist domain/mapper/service for `TB_BLACKLIST_MST`
+- [x] Add `/legacy-blacklist` old DB blacklist list/create/update/status screen
+- [ ] Add legacy domain naming around old tables: `ResearchMaster`, `ResearchApplication`, `Blacklist`
+- [x] Add MyBatis mappers for `TB_RESEARCH_MST`, `TB_RESEARCH_APP`, and `TB_BLACKLIST_MST`
+- [ ] Migrate posting list/detail/create/update to `TB_RESEARCH_MST` first; keep no-delete policy
+- [ ] Migrate applicant management to `TB_RESEARCH_APP` with `RESEARCH_NO` search, pagination, and existing filters
+- [x] Migrate blacklist management to `TB_BLACKLIST_MST` with active-status updates and no hard delete
+- [x] Add pre-update revision backup logs before modifying old tables because rollback cannot be assumed
+- [ ] Add manual homepage publish view that generates copy-ready title/body from `TB_RESEARCH_MST`
+- [ ] Add manual publish log in supplemental admin tables, with optional public `document_srl` recording
+- [ ] Reconnect mail/send/export flows to old-admin keys while preserving existing send logs and snapshots
+- [ ] Keep XE auto-publishing out of the current phase
+
 ## Board Scope Correction
 - [x] Include managed XE board mids: `notice`, `newjob`, `additional`, `fast`, `recruit`, `sharing`, `question`
 - [x] Keep applicant/application features limited to: `newjob`, `additional`, `fast`, `recruit`

@@ -1,5 +1,44 @@
 # PRD.md
 
+## Old Admin DB First Direction
+
+The primary source of truth is the copied old admin database, currently connected
+as `admin_copy`.
+
+Core old admin tables:
+- `TB_RESEARCH_MST`: posting/research master data
+- `TB_RESEARCH_APP`: applicant data
+- `TB_BLACKLIST_MST`: blacklist data
+
+The current manager program must preserve its existing feature set while moving
+the source of truth from the newly designed `admin_job_*` / `admin_blacklist`
+tables to the old admin tables above.
+
+Current `admin_*` tables are supplemental only. They may continue to store:
+- audit logs
+- send logs and send target snapshots
+- send rules and templates
+- dynamic form fields
+- revision backups
+- manual publish logs
+- optional public homepage `document_srl` references
+
+Do not assume `TB_RESEARCH_MST.RESEARCH_NO` equals `xe_documents.document_srl`.
+The existing workflow was manual: admins registered postings in the old admin
+program, then copied/pasted content to the public Researchi website. Therefore,
+XE auto-publishing is a future phase and must not be implemented in the current
+phase.
+
+Current phase publishing goal:
+- generate copy-ready homepage posting title/body from `TB_RESEARCH_MST`
+- let the admin copy/paste into the public homepage manually
+- record manual publish status in supplemental admin tables
+- optionally record a public homepage `document_srl` later
+
+Preservation rule:
+Do not remove current manager features during the transition. If features need to
+be retired, retire them later in a separate, sequential cleanup phase.
+
 ## Board Scope Update
 
 Managed XE board mids:

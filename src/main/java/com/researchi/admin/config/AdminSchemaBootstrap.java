@@ -38,6 +38,7 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminJobMetaColumns(connection);
             ensureAdminMailSendJobColumns(connection);
             ensureAdminJobApplicationExtraAnswerTable(connection);
+            ensureAdminLegacyRevisionLogTable(connection);
             ensureAdminPerformanceIndexes(connection);
         }
     }
@@ -203,6 +204,24 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     question_label VARCHAR(255) NOT NULL,
                     answer_text TEXT NOT NULL,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+    }
+
+    private void ensureAdminLegacyRevisionLogTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_revision_log",
+                """
+                CREATE TABLE admin_legacy_revision_log (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    legacy_table_name VARCHAR(100) NOT NULL,
+                    legacy_key VARCHAR(100) NOT NULL,
+                    before_json LONGTEXT NOT NULL,
+                    action_type VARCHAR(50) NOT NULL,
+                    changed_by BIGINT NULL,
+                    changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
         );

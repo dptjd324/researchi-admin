@@ -190,6 +190,35 @@ public class ApplicationService {
         );
     }
 
+    @Transactional("adminTransactionManager")
+    public void clearBlacklist(
+            Long id,
+            AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        ApplicationRecord application = adminApplicationQueryMapper.findById(id);
+        if (application == null) {
+            throw new IllegalArgumentException("지원서를 찾을 수 없습니다.");
+        }
+        if (!"Y".equals(application.getIsBlacklisted())) {
+            return;
+        }
+
+        int updated = adminApplicationQueryMapper.clearBlacklistState(id);
+        if (updated != 1) {
+            throw new IllegalStateException("지원서 블랙리스트 상태를 해제하지 못했습니다.");
+        }
+
+        adminActionLogService.log(
+                principal.getId(),
+                "APPLICATION_BLACKLIST_CLEAR",
+                "APPLICATION",
+                String.valueOf(id),
+                "지원서 블랙리스트 해제",
+                request
+        );
+    }
+
     private Map<Long, JobListItem> jobsByDocumentSrl(List<ApplicationRecord> applications) {
         return jobsByDocumentSrlFromDocumentSrls(
                 applications.stream()

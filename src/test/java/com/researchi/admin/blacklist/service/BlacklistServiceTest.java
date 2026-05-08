@@ -7,6 +7,8 @@ import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.blacklist.domain.BlacklistEntry;
 import com.researchi.admin.blacklist.mapper.AdminBlacklistAdminMapper;
 import com.researchi.admin.blacklist.web.BlacklistForm;
+import com.researchi.admin.publicform.domain.AdminBlacklistMatchLog;
+import com.researchi.admin.publicform.mapper.AdminBlacklistMatchLogMapper;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import com.researchi.admin.publicform.config.PublicFormProperties;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +43,9 @@ class BlacklistServiceTest {
     @Mock
     private AdminActionLogService adminActionLogService;
 
+    @Mock
+    private AdminBlacklistMatchLogMapper adminBlacklistMatchLogMapper;
+
     private BlacklistService blacklistService;
 
     @BeforeEach
@@ -51,6 +56,7 @@ class BlacklistServiceTest {
                 adminBlacklistAdminMapper,
                 adminApplicationQueryMapper,
                 adminActionLogService,
+                adminBlacklistMatchLogMapper,
                 new PublicFormProtectionService(properties)
         );
     }
@@ -175,6 +181,11 @@ class BlacklistServiceTest {
 
         assertThat(blacklistId).isEqualTo(91L);
         verify(adminApplicationQueryMapper).updateBlacklistState(90L, "BLOCKED", BlacklistModePolicy.PERMANENT_BLOCK);
+        ArgumentCaptor<AdminBlacklistMatchLog> matchLogCaptor = ArgumentCaptor.forClass(AdminBlacklistMatchLog.class);
+        verify(adminBlacklistMatchLogMapper).insert(matchLogCaptor.capture());
+        assertThat(matchLogCaptor.getValue().getApplicationId()).isEqualTo(90L);
+        assertThat(matchLogCaptor.getValue().getBlacklistId()).isEqualTo(91L);
+        assertThat(matchLogCaptor.getValue().getMatchType()).isEqualTo("ADMIN_REGISTER");
         ArgumentCaptor<BlacklistEntry> captor = ArgumentCaptor.forClass(BlacklistEntry.class);
         verify(adminBlacklistAdminMapper).insert(captor.capture());
         assertThat(captor.getValue().getBlackMode()).isEqualTo(BlacklistModePolicy.PERMANENT_BLOCK);
@@ -203,8 +214,12 @@ class BlacklistServiceTest {
     void removeDeletesBlacklistEntryAndRestoresMatchedApplications() {
         BlacklistEntry entry = new BlacklistEntry();
         entry.setId(7L);
+        entry.setBlackName("Kim");
+        entry.setBlackBirthDate(LocalDate.of(1990, 5, 1));
+        entry.setBlackMode(BlacklistModePolicy.PERMANENT_BLOCK);
         when(adminBlacklistAdminMapper.findById(7L)).thenReturn(entry);
         when(adminApplicationQueryMapper.restoreBlacklistApplications(7L, "RECEIVED")).thenReturn(2);
+        when(adminApplicationQueryMapper.restoreBlacklistApplicationsByProfile(7L, "Kim", LocalDate.of(1990, 5, 1), BlacklistModePolicy.PERMANENT_BLOCK, "RECEIVED")).thenReturn(1);
         when(adminBlacklistAdminMapper.deleteById(7L)).thenReturn(1);
 
         blacklistService.remove(
@@ -214,8 +229,9 @@ class BlacklistServiceTest {
         );
 
         verify(adminApplicationQueryMapper).restoreBlacklistApplications(7L, "RECEIVED");
+        verify(adminApplicationQueryMapper).restoreBlacklistApplicationsByProfile(7L, "Kim", LocalDate.of(1990, 5, 1), BlacklistModePolicy.PERMANENT_BLOCK, "RECEIVED");
         verify(adminBlacklistAdminMapper).deleteById(7L);
-        verify(adminActionLogService).log(eq(2L), eq("BLACKLIST_DELETE"), eq("BLACKLIST"), eq("7"), eq("블랙리스트 삭제 및 지원자 복구: 2건"), any());
+        verify(adminActionLogService).log(eq(2L), eq("BLACKLIST_DELETE"), eq("BLACKLIST"), eq("7"), eq("블랙리스트 삭제 및 지원자 복구: 3건"), any());
     }
 
     @Test

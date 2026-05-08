@@ -6,6 +6,7 @@ import com.researchi.admin.application.domain.ApplicationRecord;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
@@ -51,8 +52,18 @@ public interface AdminApplicationQueryMapper {
             @Param("blackModeApplied") String blackModeApplied
     );
 
+    int clearBlacklistState(@Param("id") Long id);
+
     int restoreBlacklistApplications(
             @Param("blacklistId") Long blacklistId,
+            @Param("applicationStatus") String applicationStatus
+    );
+
+    int restoreBlacklistApplicationsByProfile(
+            @Param("blacklistId") Long blacklistId,
+            @Param("blackName") String blackName,
+            @Param("blackBirthDate") LocalDate blackBirthDate,
+            @Param("blackModeApplied") String blackModeApplied,
             @Param("applicationStatus") String applicationStatus
     );
 }

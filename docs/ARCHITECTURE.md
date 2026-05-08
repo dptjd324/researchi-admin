@@ -1,5 +1,84 @@
 # ARCHITECTURE.md
 
+## Architecture Correction: Old Admin DB Is Primary
+
+Verified local `admin_copy` sample data shows the old admin database must be the
+primary source of truth.
+
+Primary old admin tables:
+- `TB_RESEARCH_MST` (`tb_research_mst`): posting/research master data
+- `TB_RESEARCH_APP` (`tb_research_app`): applicant data
+- `TB_BLACKLIST_MST` (`tb_blacklist_mst`): blacklist data
+
+Verified facts from `admin_copy`:
+- `TB_RESEARCH_MST`: MyISAM, `utf8mb4_general_ci`, about 46k rows
+- `TB_RESEARCH_APP`: MyISAM, `utf8mb4_general_ci`, about 4.12M rows
+- `TB_BLACKLIST_MST`: MyISAM, `utf8mb4_general_ci`, about 353 rows
+
+Because the old tables are MyISAM, application code must not rely on transaction
+rollback for old-table writes. Before each old-table update, write a supplemental
+revision backup row.
+
+Target source-of-truth model:
+
+```text
+old admin DB / admin_copy
+  TB_RESEARCH_MST       -> ResearchMaster
+  TB_RESEARCH_APP       -> ResearchApplication
+  TB_BLACKLIST_MST      -> Blacklist
+
+new admin supplemental DB/tables
+  audit logs
+  mail send jobs and send target snapshots
+  mail templates and send rules
+  dynamic form fields
+  revision backups
+  manual publish logs
+  optional public homepage document_srl reference
+
+public XE DB
+  future publishing target only
+  no direct join assumption with old admin DB
+```
+
+Important identity rule:
+- Use `RESEARCH_NO` as the posting/research key.
+- Use `RESEARCH_NO + RESEARCH_APP_SEQ` as the applicant key.
+- Use `BLACKLIST_NO` as the blacklist key.
+- Treat `document_srl` as optional supplemental metadata only.
+
+Current architecture gap:
+The existing implementation still uses `xe_documents`, `admin_job_meta`,
+`admin_job_application`, and `admin_blacklist` as operational sources in many
+flows. These should be migrated gradually, without removing current features, so
+that the old admin tables become the read/write source of truth.
+
+Transition principle:
+Add old-admin-table-backed mappers/services beside the existing implementation,
+move screens and workflows one by one, and only remove legacy-new-admin paths in
+a later cleanup phase.
+
+First transition slice:
+- `oldAdminDataSource` reads the copied old admin DB.
+- `ResearchMasterMapper` reads `TB_RESEARCH_MST`.
+- `/research` provides a read-only list for validating old posting data before
+  replacing the existing `/jobs` workflow.
+- `/research/{researchNo}` provides an edit view for old posting fields.
+- `POST /research/{researchNo}` writes a supplemental `admin_legacy_revision_log`
+  row before updating `TB_RESEARCH_MST`.
+- `/research/{researchNo}/applications` reads applicants from `TB_RESEARCH_APP`
+  by `RESEARCH_NO` without relying on `document_srl`.
+- Applicant search for `/research/{researchNo}/applications` filters old fields
+  directly, including name, sex, birth, age, job, company/school, phones,
+  address, additional comment, attendance, and provide status.
+- `/research/{researchNo}/applications/{researchAppSeq}` reads a single old
+  applicant row by `RESEARCH_NO + RESEARCH_APP_SEQ`.
+- `POST /research/{researchNo}/applications/{researchAppSeq}/provide` updates
+  only `PROVIDE_YN` after writing a revision backup for the old applicant row.
+- `/legacy-blacklist` reads and writes `TB_BLACKLIST_MST` without hard delete.
+- `POST /legacy-blacklist/{blacklistNo}/status` updates only `BLACK_YN` after
+  writing a revision backup for the old blacklist row.
+
 ## Board Classification
 
 The admin app classifies managed XE mids before choosing available features.

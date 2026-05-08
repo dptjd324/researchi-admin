@@ -1,5 +1,187 @@
 # DB-SCHEMA.md
 
+## Primary Old Admin DB Schema
+
+The copied old admin DB (`admin_copy`) is the source of truth for current-phase
+manager data.
+
+### TB_RESEARCH_MST
+
+Purpose: posting/research master data.
+
+Verified table:
+- physical name: `tb_research_mst`
+- engine: MyISAM
+- collation: `utf8mb4_general_ci`
+- row count observed locally: about 46,260
+- local character set variables:
+  - `character_set_client`: `utf8mb4`
+  - `character_set_connection`: `utf8mb4`
+  - `character_set_database`: `utf8mb4`
+  - `character_set_filesystem`: `binary`
+  - `character_set_results`: blank
+  - `character_set_server`: `utf8mb4`
+  - `character_set_system`: `utf8mb3`
+
+Key columns:
+- `RESEARCH_NO`
+- `RESEARCH_TITLE`
+- `RESEARCH_CONTENTS`
+- `ADD_COMMENT`
+- `APP_CNT`
+- `APP_NEW_CNT`
+- `COMPANY_NAME`
+- `SERVER_NAME`
+- `CONTACT_NO`
+- `BROKERAGE_AMT`
+- `CALCULATE_YN`
+- `REMARK`
+- `REGIST_DT`
+- `MODIFY_DT`
+- `CLOSE_DATE`
+
+Current observed index:
+- `KEY RESEARCH_NO (RESEARCH_NO)`
+
+Observed value note:
+- `BROKERAGE_AMT` may contain comma-formatted strings such as `10,000`, so map
+  it as text unless the old DB column shape and all historical values are
+  normalized later.
+
+### TB_RESEARCH_APP
+
+Purpose: applicant data.
+
+Verified table:
+- physical name: `tb_research_app`
+- engine: MyISAM
+- collation: `utf8mb4_general_ci`
+- row count observed locally: about 4,120,280
+
+Key columns:
+- `RESEARCH_NO`
+- `RESEARCH_APP_SEQ`
+- `APP_NAME`
+- `APP_SEX`
+- `APP_BIRTH`
+- `APP_AGE`
+- `APP_JOB`
+- `APP_COMPANY`
+- `APP_HPHONE`
+- `APP_TELE`
+- `APP_ADDR`
+- `ADD_COMMENT`
+- `ATTEND_RESEARCH`
+- `PROVIDE_YN`
+- `REGIST_DT`
+- `MODIFY_DT`
+
+Current observed index:
+- `KEY RESEARCH_NO (RESEARCH_NO, RESEARCH_APP_SEQ)`
+
+Current implementation:
+- `ResearchApplication` maps `TB_RESEARCH_APP` values mostly as text to preserve
+  old DB values.
+- `/research/{researchNo}/applications` reads applicants by `RESEARCH_NO` with
+  keyword search and pagination.
+
+Observed `PROVIDE_YN` distribution:
+- `Y`: about 4,106,840
+- `N`: about 13,440
+
+Business meaning:
+- `PROVIDE_YN` is manually changed by an administrator.
+- It indicates whether the trader/client has deposited the money.
+- Mail/export filtering must not treat this as a generic delivery status.
+
+### TB_BLACKLIST_MST
+
+Purpose: blacklist master data.
+
+Verified table:
+- physical name: `tb_blacklist_mst`
+- engine: MyISAM
+- collation: `utf8mb4_general_ci`
+- row count observed locally: about 353
+
+Key columns:
+- `BLACKLIST_NO`
+- `BLACK_USER_BIRTH`
+- `BLACK_USER_NAME`
+- `BLACK_USER_CONTACT`
+- `BLACK_USER_COMMENT`
+- `BLACK_YN`
+- `REGIST_DT`
+- `MODIFY_DT`
+
+Current observed index:
+- `KEY BLACKLIST_NO (BLACKLIST_NO)`
+
+Observed `BLACK_YN` distribution:
+- `Y`: about 335
+- `N`: about 16
+- blank: about 2
+
+Handling rule:
+- `Y` means active blacklist.
+- `N` means lifted/inactive blacklist.
+- Blank values will use the first defined handling rule during migration and can
+  be adjusted later after operational review.
+
+Current implementation:
+- `Blacklist` maps `TB_BLACKLIST_MST`.
+- `/legacy-blacklist` supports list/search/create/update/status changes.
+- No hard delete is implemented for `TB_BLACKLIST_MST`.
+
+## Supplemental Admin Tables
+
+The existing newly designed `admin_*` tables are supplemental only. They should
+not replace old admin source data.
+
+Keep supplemental tables for:
+- audit logs
+- mail send jobs
+- mail target snapshots
+- mail templates and send rules
+- dynamic form fields
+- export logs
+- search logs
+- keyword/matching results
+- revision backups before old-table updates
+- manual publish logs and optional public `document_srl` references
+
+Recommended new supplemental tables for transition:
+
+```text
+admin_legacy_revision_log
+  id
+  legacy_table_name
+  legacy_key
+  before_json
+  action_type
+  changed_by
+  changed_at
+
+Current implementation creates and uses `admin_legacy_revision_log` before
+`TB_RESEARCH_MST` update operations.
+
+admin_manual_publish_log
+  id
+  research_no
+  generated_title
+  generated_body
+  publish_status
+  public_document_srl
+  published_by
+  published_at
+  created_at
+  updated_at
+```
+
+Do not treat `admin_job_application`, `admin_blacklist`, or `admin_job_meta` as
+primary data once the old-admin transition begins. Keep them only as migration
+compatibility or supplemental storage until they are retired later.
+
 ## Board Configuration
 
 `admin_board_config` is a lightweight admin-side table for board classification.

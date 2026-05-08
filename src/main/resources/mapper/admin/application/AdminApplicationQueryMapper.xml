@@ -236,6 +236,16 @@
         WHERE id = #{id}
     </update>
 
+    <update id="clearBlacklistState">
+        UPDATE admin_job_application
+        SET
+            is_blacklisted = 'N',
+            black_mode_applied = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND is_blacklisted = 'Y'
+    </update>
+
     <update id="restoreBlacklistApplications">
         UPDATE admin_job_application application
         SET
@@ -258,6 +268,28 @@
                 AND other_match_log.blacklist_id &lt;&gt; #{blacklistId}
                 AND other_blacklist.active_yn = 'Y'
                 AND (other_blacklist.expires_at IS NULL OR other_blacklist.expires_at &gt; CURRENT_TIMESTAMP)
+          )
+    </update>
+
+    <update id="restoreBlacklistApplicationsByProfile">
+        UPDATE admin_job_application application
+        SET
+            application_status = #{applicationStatus},
+            is_blacklisted = 'N',
+            black_mode_applied = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE application.is_blacklisted = 'Y'
+          AND application.black_mode_applied = #{blackModeApplied}
+          AND application.applicant_name = #{blackName}
+          AND application.birth_date = #{blackBirthDate}
+          AND NOT EXISTS (
+              SELECT 1
+              FROM admin_blacklist other_blacklist
+              WHERE other_blacklist.id &lt;&gt; #{blacklistId}
+                AND other_blacklist.active_yn = 'Y'
+                AND (other_blacklist.expires_at IS NULL OR other_blacklist.expires_at &gt; CURRENT_TIMESTAMP)
+                AND other_blacklist.black_name = application.applicant_name
+                AND other_blacklist.black_birth_date = application.birth_date
           )
     </update>
 </mapper>

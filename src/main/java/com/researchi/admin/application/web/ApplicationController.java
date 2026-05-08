@@ -119,6 +119,22 @@ public class ApplicationController {
         return "redirect:" + sanitizeReturnTo(returnTo, id, flag);
     }
 
+    @PostMapping("/applications/{id}/blacklist/clear")
+    public String clearBlacklist(
+            @PathVariable Long id,
+            @RequestParam(name = "returnTo", required = false) String returnTo,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        String flag = "blacklistCleared";
+        try {
+            applicationService.clearBlacklist(id, principal, request);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            flag = "blacklistClearFailed";
+        }
+        return "redirect:" + sanitizeReturnTo(returnTo, id, flag);
+    }
+
     private void populateListModel(
             Model model,
             Long documentSrl,

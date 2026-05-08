@@ -9,6 +9,8 @@ import com.researchi.admin.blacklist.domain.BlacklistEntry;
 import com.researchi.admin.blacklist.domain.BlacklistMatchLogItem;
 import com.researchi.admin.blacklist.domain.BlacklistPageData;
 import com.researchi.admin.blacklist.mapper.AdminBlacklistAdminMapper;
+import com.researchi.admin.publicform.domain.AdminBlacklistMatchLog;
+import com.researchi.admin.publicform.mapper.AdminBlacklistMatchLogMapper;
 import com.researchi.admin.blacklist.web.BlacklistForm;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,17 +31,20 @@ public class BlacklistService {
     private final AdminBlacklistAdminMapper adminBlacklistAdminMapper;
     private final AdminApplicationQueryMapper adminApplicationQueryMapper;
     private final AdminActionLogService adminActionLogService;
+    private final AdminBlacklistMatchLogMapper adminBlacklistMatchLogMapper;
     private final PublicFormProtectionService protectionService;
 
     public BlacklistService(
             AdminBlacklistAdminMapper adminBlacklistAdminMapper,
             AdminApplicationQueryMapper adminApplicationQueryMapper,
             AdminActionLogService adminActionLogService,
+            AdminBlacklistMatchLogMapper adminBlacklistMatchLogMapper,
             PublicFormProtectionService protectionService
     ) {
         this.adminBlacklistAdminMapper = adminBlacklistAdminMapper;
         this.adminApplicationQueryMapper = adminApplicationQueryMapper;
         this.adminActionLogService = adminActionLogService;
+        this.adminBlacklistMatchLogMapper = adminBlacklistMatchLogMapper;
         this.protectionService = protectionService;
     }
 
@@ -153,6 +158,7 @@ public class BlacklistService {
         Long blacklistId = existing == null
                 ? createApplicationBlacklist(application, mobilePhoneHash, applicantName, principal, request)
                 : existing.getId();
+        linkApplicationToBlacklist(applicationId, blacklistId);
 
         int updated = adminApplicationQueryMapper.updateBlacklistState(
                 applicationId,
@@ -198,6 +204,7 @@ public class BlacklistService {
     public void remove(Long id, AdminPrincipal principal, HttpServletRequest request) {
         BlacklistEntry existing = requireEntry(id);
         int restoredApplications = adminApplicationQueryMapper.restoreBlacklistApplications(id, RESTORED_APPLICATION_STATUS);
+        restoredApplications += restoreUnlinkedApplications(existing);
         int deleted = adminBlacklistAdminMapper.deleteById(id);
         if (deleted != 1) {
             throw new IllegalStateException("블랙리스트 항목을 삭제하지 못했습니다.");
@@ -209,6 +216,20 @@ public class BlacklistService {
                 String.valueOf(existing.getId()),
                 "블랙리스트 삭제 및 지원자 복구: " + restoredApplications + "건",
                 request
+        );
+    }
+
+    private int restoreUnlinkedApplications(BlacklistEntry entry) {
+        String blackName = trimToNull(entry.getBlackName());
+        if (blackName == null || entry.getBlackBirthDate() == null) {
+            return 0;
+        }
+        return adminApplicationQueryMapper.restoreBlacklistApplicationsByProfile(
+                entry.getId(),
+                blackName,
+                entry.getBlackBirthDate(),
+                entry.getBlackMode(),
+                RESTORED_APPLICATION_STATUS
         );
     }
 
@@ -276,6 +297,15 @@ public class BlacklistService {
                 request
         );
         return entry.getId();
+    }
+
+    private void linkApplicationToBlacklist(Long applicationId, Long blacklistId) {
+        AdminBlacklistMatchLog matchLog = new AdminBlacklistMatchLog();
+        matchLog.setApplicationId(applicationId);
+        matchLog.setBlacklistId(blacklistId);
+        matchLog.setMatchType("ADMIN_REGISTER");
+        matchLog.setActionTaken(BlacklistModePolicy.actionTaken(BlacklistModePolicy.PERMANENT_BLOCK));
+        adminBlacklistMatchLogMapper.insert(matchLog);
     }
 
     private BlacklistEntry findExistingActiveEntry(List<String> mobilePhoneHashes, String applicantName, java.time.LocalDate birthDate) {

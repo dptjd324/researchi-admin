@@ -316,6 +316,29 @@ class ApplicationServiceTest {
         verify(adminActionLogService, never()).log(any(), any(), any(), any(), any(), any());
     }
 
+    @Test
+    void clearBlacklistClearsOnlyBlacklistFlags() {
+        ApplicationRecord application = new ApplicationRecord();
+        application.setId(11L);
+        application.setDocumentSrl(9L);
+        application.setApplicationStatus("APPROVED");
+        application.setIsBlacklisted("Y");
+        application.setBlackModeApplied("PERMANENT_BLOCK");
+
+        when(adminApplicationQueryMapper.findById(11L)).thenReturn(application);
+        when(adminApplicationQueryMapper.clearBlacklistState(11L)).thenReturn(1);
+
+        applicationService.clearBlacklist(
+                11L,
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new org.springframework.mock.web.MockHttpServletRequest()
+        );
+
+        verify(adminApplicationQueryMapper).clearBlacklistState(11L);
+        verify(adminApplicationQueryMapper, never()).updateStatus(any(), any());
+        verify(adminActionLogService).log(eq(1L), eq("APPLICATION_BLACKLIST_CLEAR"), eq("APPLICATION"), eq("11"), eq("지원서 블랙리스트 해제"), any(HttpServletRequest.class));
+    }
+
     private JobDetail jobDetail(Long documentSrl, String title) {
         XeJobDocument document = new XeJobDocument();
         document.setDocumentSrl(documentSrl);

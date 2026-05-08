@@ -161,6 +161,19 @@ class ApplicationControllerTest {
         verify(applicationService).updateStatus(eq(11L), eq("REVIEWING"), any(AdminPrincipal.class), any(HttpServletRequest.class));
     }
 
+    @Test
+    void clearBlacklistRedirectsBackToList() {
+        String viewName = applicationController.clearBlacklist(
+                11L,
+                "/applications",
+                new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
+                new MockHttpServletRequest()
+        );
+
+        assertThat(viewName).isEqualTo("redirect:/applications?blacklistCleared");
+        verify(applicationService).clearBlacklist(eq(11L), any(AdminPrincipal.class), any(HttpServletRequest.class));
+    }
+
     private ApplicationRecord applicationRecord(Long id, Long documentSrl) {
         ApplicationRecord application = new ApplicationRecord();
         application.setId(id);

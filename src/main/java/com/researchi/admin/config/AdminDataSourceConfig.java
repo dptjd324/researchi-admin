@@ -30,6 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
                 "com.researchi.admin.form.mapper",
                 "com.researchi.admin.keyword.mapper",
                 "com.researchi.admin.log.mapper",
+                "com.researchi.admin.legacy.revision.mapper",
                 "com.researchi.admin.mailing.mapper",
                 "com.researchi.admin.matching.mapper",
                 "com.researchi.admin.notification.mapper",

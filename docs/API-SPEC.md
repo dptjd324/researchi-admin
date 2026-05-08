@@ -1,5 +1,51 @@
 # API-SPEC.md
 
+## Old Admin DB First API Direction
+
+The transition target is old-admin-DB-first. Existing routes may stay during migration for compatibility, but new or refactored behavior must use old admin keys:
+
+- Posting key: `RESEARCH_NO` from `TB_RESEARCH_MST`
+- Applicant key: `RESEARCH_NO` + `RESEARCH_APP_SEQ` from `TB_RESEARCH_APP`
+- Blacklist key: `BLACKLIST_NO` from `TB_BLACKLIST_MST`
+- Public XE key: optional `document_srl` only for manually recorded homepage links
+
+Do not assume `RESEARCH_NO` equals `xe_documents.document_srl`.
+
+Suggested transition routes:
+
+- GET /research
+- GET /research/new
+- POST /research
+- GET /research/{researchNo}/edit
+- POST /research/{researchNo}
+- POST /research/{researchNo}/status
+- GET /research/{researchNo}/applications
+- GET /research/{researchNo}/applications/{researchAppSeq}
+- GET /research/{researchNo}/publish-copy
+- POST /research/{researchNo}/manual-publish-log
+- GET /blacklist
+- POST /blacklist
+- POST /blacklist/{blacklistNo}/toggle
+
+Implemented transition route:
+
+- GET /research: read-only `TB_RESEARCH_MST` list with keyword search and pagination
+- GET /research/{researchNo}: `TB_RESEARCH_MST` edit screen
+- POST /research/{researchNo}: update `TB_RESEARCH_MST` after writing `admin_legacy_revision_log`
+- GET /research/{researchNo}/applications: read-only `TB_RESEARCH_APP` list with per-field search and pagination
+- GET /research/{researchNo}/applications/{researchAppSeq}: read-only `TB_RESEARCH_APP` detail
+- POST /research/{researchNo}/applications/{researchAppSeq}/provide: update `TB_RESEARCH_APP.PROVIDE_YN` after writing `admin_legacy_revision_log`
+- GET /legacy-blacklist: old DB `TB_BLACKLIST_MST` list/search/edit screen
+- POST /legacy-blacklist: create or update `TB_BLACKLIST_MST` row
+- POST /legacy-blacklist/{blacklistNo}/status: update `TB_BLACKLIST_MST.BLACK_YN`
+
+Current phase manual publishing only:
+
+- Generate copy-ready homepage title/body from `TB_RESEARCH_MST`.
+- Record manual publish status in a supplemental admin table.
+- Allow optional `document_srl` input after an admin manually creates a public website post.
+- Do not implement XE auto-insert or XE auto-update endpoints in this phase.
+
 ## Board Scope
 
 `GET /jobs` manages these XE mids:
