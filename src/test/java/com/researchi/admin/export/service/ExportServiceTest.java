@@ -12,6 +12,8 @@ import com.researchi.admin.form.domain.FormFieldOption;
 import com.researchi.admin.form.service.FormFieldService;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
+import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.publicform.config.PublicFormProperties;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import com.researchi.admin.xe.domain.XeJobDocument;
@@ -49,6 +51,10 @@ class ExportServiceTest {
     @Mock
     private AdminExportLogMapper adminExportLogMapper;
     @Mock
+    private ResearchApplicationMapper researchApplicationMapper;
+    @Mock
+    private ResearchMasterService researchMasterService;
+    @Mock
     private AdminActionLogService adminActionLogService;
 
     private ExportService exportService;
@@ -60,6 +66,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -103,6 +111,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -140,6 +150,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -182,6 +194,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -214,6 +228,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -239,6 +255,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -273,6 +291,8 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
+                researchApplicationMapper,
+                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );

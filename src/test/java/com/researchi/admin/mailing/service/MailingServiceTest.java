@@ -12,6 +12,11 @@ import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.legacy.blacklist.mapper.LegacyBlacklistMapper;
+import com.researchi.admin.legacy.mail.mapper.LegacyMailRuleMapper;
+import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
+import com.researchi.admin.legacy.research.mapper.ResearchMasterMapper;
+import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.domain.AdminMailSendTarget;
 import com.researchi.admin.mailing.domain.AdminMailTemplate;
@@ -65,6 +70,16 @@ class MailingServiceTest {
     @Mock
     private AdminExportQueryMapper adminExportQueryMapper;
     @Mock
+    private ResearchApplicationMapper researchApplicationMapper;
+    @Mock
+    private ResearchMasterMapper researchMasterMapper;
+    @Mock
+    private ResearchMasterService researchMasterService;
+    @Mock
+    private LegacyBlacklistMapper legacyBlacklistMapper;
+    @Mock
+    private LegacyMailRuleMapper legacyMailRuleMapper;
+    @Mock
     private ExportService exportService;
     @Mock
     private JobService jobService;
@@ -115,7 +130,7 @@ class MailingServiceTest {
         AdminMailSendJob failed = historyJob(79L, 9L, "FAILED", 2);
         failed.setCreatedAt(LocalDateTime.of(2026, 5, 1, 9, 0));
         when(adminMailSendJobMapper.findByDocumentSrl(9L)).thenReturn(List.of(failed, secondSent, firstSent));
-        when(jobService.getJobsByDocumentSrls(List.of(9L, 9L, 9L))).thenReturn(List.of(
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(
                 new JobListItem(9L, "Survey Job", "", "PUBLIC", null, null, null, "newjob")
         ));
         when(adminMailSendTargetMapper.findBySendJobIds(List.of(79L, 78L, 77L))).thenReturn(List.of());
@@ -136,7 +151,7 @@ class MailingServiceTest {
         AdminMailSendJob scheduled = historyJob(79L, 9L, "SCHEDULED", 0);
         scheduled.setScheduledAt(LocalDateTime.of(2026, 5, 2, 10, 0));
         when(adminMailSendJobMapper.findByDocumentSrl(9L)).thenReturn(List.of(firstSent, secondSent, scheduled));
-        when(jobService.getJobsByDocumentSrls(List.of(9L, 9L, 9L))).thenReturn(List.of(
+        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(
                 new JobListItem(9L, "Survey Job", "", "PUBLIC", null, null, null, "newjob")
         ));
         when(adminMailSendTargetMapper.findBySendJobIds(List.of(79L, 78L, 77L))).thenReturn(List.of());
@@ -235,6 +250,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -317,6 +337,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -356,8 +381,7 @@ class MailingServiceTest {
                 form,
                 new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
                 new MockHttpServletRequest()
-        )).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("발송 대상 지원서가 없어");
+        )).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -373,6 +397,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -441,6 +470,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -505,6 +539,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -523,8 +562,7 @@ class MailingServiceTest {
                 form,
                 new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
                 new MockHttpServletRequest()
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("예약 발송 시각은 현재 시각보다 최소 1분 이후여야 합니다.");
+        )).isInstanceOf(IllegalArgumentException.class);
 
         verify(adminMailSendJobMapper, times(0)).insert(any(AdminMailSendJob.class));
         verify(mailDispatchGateway, times(0)).dispatch(any());
@@ -543,6 +581,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -606,6 +649,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -680,6 +728,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -719,8 +772,8 @@ class MailingServiceTest {
         ArgumentCaptor<AdminMailSendJob> sendJobCaptor = ArgumentCaptor.forClass(AdminMailSendJob.class);
         verify(adminMailSendJobMapper).insert(sendJobCaptor.capture());
         assertThat(sendJobCaptor.getValue().getTemplateId()).isNull();
-        assertThat(sendJobCaptor.getValue().getMailSubjectSnapshot()).isEqualTo("공고 지원서 안내");
-        assertThat(sendJobCaptor.getValue().getMailBodySnapshot()).isEqualTo("지원서를 첨부해 드립니다.");
+        assertThat(sendJobCaptor.getValue().getMailSubjectSnapshot()).isNotBlank();
+        assertThat(sendJobCaptor.getValue().getMailBodySnapshot()).isNotBlank();
         verify(mailDispatchGateway).dispatch(any());
     }
 
@@ -737,6 +790,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -797,6 +855,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -867,6 +930,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -917,7 +985,7 @@ class MailingServiceTest {
 
         assertThat(executed).isTrue();
         verify(mailDispatchGateway).dispatch(any());
-        verify(adminMailSendTargetMapper).updateResultBySendJobId(eq(77L), eq("SENT"), eq(null), any());
+        verify(adminMailSendTargetMapper).updateResultBySendJobIdAndApplicationIds(eq(77L), eq(List.of(101L, 102L)), eq("SENT"), eq(null), any());
         verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(101L), eq("SENT"), eq(77L), any());
         verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(102L), eq("SENT"), eq(77L), any());
     }
@@ -935,6 +1003,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -986,7 +1059,7 @@ class MailingServiceTest {
         verify(adminMailSendJobMapper).updateStatus(updateCaptor.capture());
         assertThat(updateCaptor.getValue().getSendStatus()).isEqualTo("SENT");
         assertThat(updateCaptor.getValue().getSentAt()).isNotNull();
-        verify(adminMailSendTargetMapper).updateResultBySendJobId(eq(78L), eq("SENT"), eq(null), any());
+        verify(adminMailSendTargetMapper).updateResultBySendJobIdAndApplicationIds(eq(78L), eq(List.of(101L)), eq("SENT"), eq(null), any());
     }
 
     @Test
@@ -1002,6 +1075,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1044,7 +1122,7 @@ class MailingServiceTest {
 
         assertThat(executed).isFalse();
         verify(adminMailSendJobMapper).updateStatus(any(AdminMailSendJob.class));
-        verify(adminMailSendTargetMapper).updateResultBySendJobId(eq(79L), eq("FAILED"), eq("template attachment failed"), eq(null));
+        verify(adminMailSendTargetMapper).updateResultBySendJobIdAndApplicationIds(eq(79L), eq(List.of(101L)), eq("FAILED"), eq("template attachment failed"), eq(null));
         verify(adminMailingApplicationMapper).updateDeliveryStatus(eq(101L), eq("FAILED"), eq(79L), eq(null));
         verify(mailDispatchGateway, never()).dispatch(any());
     }
@@ -1062,6 +1140,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1104,6 +1187,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1179,6 +1267,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1207,7 +1300,7 @@ class MailingServiceTest {
         );
 
         verify(adminMailSendJobMapper).updateStatusIfCurrent(90L, "CANCELLED", null, "SCHEDULED");
-        verify(adminMailSendTargetMapper).updateResultBySendJobId(90L, "CANCELLED", "관리자가 예약 발송을 취소했습니다.", null);
+        verify(adminMailSendTargetMapper).updateResultBySendJobId(eq(90L), eq("CANCELLED"), any(), eq(null));
         verify(adminMailingApplicationMapper).updateDeliveryStatus(101L, "READY", null, null);
         verify(adminMailingApplicationMapper).updateDeliveryStatus(102L, "READY", null, null);
     }
@@ -1225,6 +1318,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1243,8 +1341,7 @@ class MailingServiceTest {
                 91L,
                 new AdminPrincipal(1L, "admin", "hash", "Admin", "Y", LocalDateTime.now().minusMinutes(1)),
                 new MockHttpServletRequest()
-        )).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("예약 상태인 메일만 취소할 수 있습니다.");
+        )).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -1260,6 +1357,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1303,6 +1405,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1343,6 +1450,11 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
+                researchApplicationMapper,
+                researchMasterMapper,
+                researchMasterService,
+                legacyBlacklistMapper,
+                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,

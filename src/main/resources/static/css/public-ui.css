@@ -67,6 +67,7 @@ body.public-body {
     line-height: 1.18;
     font-weight: 800;
     letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
 }
 
 .public-header__copy {
@@ -139,6 +140,7 @@ body.public-body {
     color: var(--public-muted);
     white-space: pre-line;
     line-height: 1.75;
+    overflow-wrap: anywhere;
 }
 
 .public-inline-note {
@@ -370,6 +372,7 @@ body.public-body {
 
 .public-extra-item__text {
     color: #dfe9ec;
+    overflow-wrap: anywhere;
 }
 
 .public-choice {
@@ -555,5 +558,117 @@ body.public-body {
 @media (max-width: 640px) {
     .public-date-selectors {
         grid-template-columns: 1fr;
+    }
+
+    .public-page {
+        padding: 22px 12px 40px;
+    }
+
+    .public-header {
+        margin-bottom: 14px;
+    }
+
+    .public-header__eyebrow {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+    }
+
+    .public-header__title {
+        margin-top: 12px;
+        font-size: 24px;
+        line-height: 1.26;
+    }
+
+    .public-period__item {
+        width: 100%;
+        justify-content: space-between;
+        border-radius: 12px;
+    }
+
+    .public-card {
+        margin-bottom: 12px;
+        padding: 18px 14px 16px;
+        border-radius: 14px;
+    }
+
+    .public-card__title {
+        font-size: 18px;
+    }
+
+    .public-field-grid {
+        gap: 14px;
+    }
+
+    .public-field__label {
+        font-size: 15px;
+        line-height: 1.45;
+    }
+
+    .public-input,
+    .public-choice,
+    .public-submit__button {
+        font-size: 16px;
+    }
+
+    .public-input {
+        min-height: 50px;
+        padding: 13px 14px;
+        border-radius: 12px;
+    }
+
+    .public-choice-list {
+        gap: 8px;
+    }
+
+    .public-choice--block {
+        min-height: 50px;
+        padding: 13px 14px;
+        border-radius: 12px;
+    }
+
+    .public-extra-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 13px 14px;
+        border-radius: 12px;
+    }
+
+    .public-extra-item__index {
+        line-height: 1;
+    }
+
+    .public-consent-box {
+        padding: 13px 14px;
+        border-radius: 12px;
+    }
+
+    .public-submit {
+        margin-top: 16px;
+    }
+
+    .public-submit__button {
+        min-height: 54px;
+        border-radius: 14px;
+    }
+
+    .public-result-page {
+        padding: 18px 12px;
+    }
+
+    .public-result-card {
+        padding: 34px 18px;
+        border-radius: 20px;
+    }
+
+    .public-result-card__mark {
+        width: 64px;
+        height: 64px;
+        font-size: 30px;
+    }
+
+    .flatpickr-calendar.open {
+        max-width: calc(100vw - 24px);
     }
 }

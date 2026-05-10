@@ -130,9 +130,13 @@ public class UiLabelHelper {
     public String triggerType(String value) {
         return switch (normalize(value)) {
             case "MANUAL" -> "수동발송";
+            case "LEGACY_MANUAL" -> "좌담회 수동발송";
             case "THRESHOLD" -> "임계치발송";
+            case "LEGACY_THRESHOLD" -> "좌담회 임계치발송";
             case "SCHEDULED" -> "예약발송";
             case "SCHEDULED_DAILY" -> "매일 예약발송";
+            case "LEGACY_SCHEDULED" -> "좌담회 예약발송";
+            case "LEGACY_SCHEDULED_DAILY" -> "좌담회 매일 예약발송";
             case "" -> "-";
             default -> value;
         };
@@ -178,9 +182,13 @@ public class UiLabelHelper {
             case "KEYWORD_NOTIFICATION_EMAIL" -> "이메일 추천 알림";
             case "KEYWORD_NOTIFICATION_SMS" -> "문자 추천 알림";
             case "MAIL_SEND_MANUAL" -> "수동 메일 발송";
+            case "MAIL_SEND_LEGACY_MANUAL" -> "좌담회 수동 메일 발송";
             case "MAIL_SEND_SCHEDULE" -> "메일 예약 등록";
+            case "MAIL_SEND_LEGACY_SCHEDULE" -> "좌담회 메일 예약 등록";
             case "MAIL_SEND_SCHEDULED_EXECUTE" -> "예약 메일 실행";
+            case "MAIL_SEND_LEGACY_SCHEDULED_EXECUTE" -> "좌담회 예약 메일 실행";
             case "MAIL_SEND_THRESHOLD" -> "임계치 메일 발송";
+            case "MAIL_SEND_LEGACY_THRESHOLD" -> "좌담회 임계치 메일 발송";
             case "MAIL_SEND_CANCEL" -> "메일 예약 취소";
             case "MAIL_TEMPLATE_CREATE" -> "메일 템플릿 등록";
             case "MAIL_TEMPLATE_UPDATE" -> "메일 템플릿 수정";
@@ -386,9 +394,13 @@ public class UiLabelHelper {
     public String triggerToneClass(String value) {
         return switch (normalize(value)) {
             case "MANUAL" -> "trigger-badge--manual";
+            case "LEGACY_MANUAL" -> "trigger-badge--manual";
             case "THRESHOLD" -> "trigger-badge--threshold";
+            case "LEGACY_THRESHOLD" -> "trigger-badge--threshold";
             case "SCHEDULED" -> "trigger-badge--scheduled";
             case "SCHEDULED_DAILY" -> "trigger-badge--scheduled";
+            case "LEGACY_SCHEDULED" -> "trigger-badge--scheduled";
+            case "LEGACY_SCHEDULED_DAILY" -> "trigger-badge--scheduled";
             default -> "trigger-badge--default";
         };
     }

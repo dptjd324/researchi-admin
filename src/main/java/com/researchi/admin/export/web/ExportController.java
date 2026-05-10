@@ -54,6 +54,32 @@ public class ExportController {
         );
     }
 
+    @PostMapping("/research/{researchNo}/export/xlsx")
+    public ResponseEntity<StreamingResponseBody> exportLegacyResearchXlsx(
+            @PathVariable Long researchNo,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        ExportFileDescriptor descriptor = exportService.describeLegacyResearchXlsx(researchNo);
+        return toResponse(
+                descriptor,
+                outputStream -> exportService.streamLegacyResearchXlsx(researchNo, descriptor.fileName(), principal, request, outputStream)
+        );
+    }
+
+    @PostMapping("/research/{researchNo}/export/txt")
+    public ResponseEntity<StreamingResponseBody> exportLegacyResearchTxt(
+            @PathVariable Long researchNo,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        ExportFileDescriptor descriptor = exportService.describeLegacyResearchTxt(researchNo);
+        return toResponse(
+                descriptor,
+                outputStream -> exportService.streamLegacyResearchTxt(researchNo, descriptor.fileName(), principal, request, outputStream)
+        );
+    }
+
     private ResponseEntity<StreamingResponseBody> toResponse(ExportFileDescriptor descriptor, StreamingResponseBody body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename(descriptor.fileName()).build());

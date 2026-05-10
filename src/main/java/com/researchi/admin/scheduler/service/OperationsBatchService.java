@@ -81,6 +81,15 @@ public class OperationsBatchService {
                 // Keep later threshold jobs from being blocked by one broken job.
             }
         }
+        for (Long researchNo : mailingService.getEnabledLegacyThresholdResearchNos()) {
+            try {
+                if (mailingService.triggerLegacyThresholdAutomatically(researchNo)) {
+                    executed++;
+                }
+            } catch (RuntimeException ignored) {
+                // Keep legacy threshold jobs from blocking the existing threshold batch.
+            }
+        }
         return executed;
     }
 

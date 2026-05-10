@@ -47,6 +47,9 @@ Observed value note:
 - `BROKERAGE_AMT` may contain comma-formatted strings such as `10,000`, so map
   it as text unless the old DB column shape and all historical values are
   normalized later.
+- `ADD_COMMENT` is free text. Local sampling showed many rows use slash-separated
+  question labels, but other rows contain notices or multi-line instructions.
+  Do not parse this into structured fields in the first pass.
 
 ### TB_RESEARCH_APP
 
@@ -84,6 +87,10 @@ Current implementation:
   old DB values.
 - `/research/{researchNo}/applications` reads applicants by `RESEARCH_NO` with
   keyword search and pagination.
+- `ADD_COMMENT` is treated as the applicant's raw answer/comment text. It often
+  aligns with slash-separated `TB_RESEARCH_MST.ADD_COMMENT` prompts, but answers
+  may use slashes, newlines, commas, partial answers, or prose. Preserve it as
+  raw text unless a later data-quality pass defines per-row parsing rules.
 
 Observed `PROVIDE_YN` distribution:
 - `Y`: about 4,106,840
@@ -93,6 +100,29 @@ Business meaning:
 - `PROVIDE_YN` is manually changed by an administrator.
 - It indicates whether the trader/client has deposited the money.
 - Mail/export filtering must not treat this as a generic delivery status.
+
+### Observed ADD_COMMENT Pattern
+
+Local `admin_copy` sampling on 2026-05-09 showed:
+
+- `TB_RESEARCH_MST`: about 46,261 rows total, about 43,015 with non-empty
+  `ADD_COMMENT`.
+- `TB_RESEARCH_APP`: about 4,120,280 rows total, about 3,838,883 with non-empty
+  `ADD_COMMENT`.
+- Slash-separated master prompts are common, for example:
+  `question A / question B / question C`.
+- Applicant answers often follow the same slash order, for example:
+  `answer A / answer B / answer C`.
+- The pattern is not reliable enough for automatic structured parsing because
+  answers also contain free slashes, newlines, missing items, combined prose, and
+  master `ADD_COMMENT` sometimes stores notices instead of questions.
+
+First-pass handling rule:
+- Display `TB_RESEARCH_MST.ADD_COMMENT` as the additional-information prompt.
+- Display `TB_RESEARCH_APP.ADD_COMMENT` as the applicant's raw answer/comment.
+- Do not split or map answers to individual questions automatically yet.
+- If structured parsing is needed later, make it opt-in and preserve the original
+  raw text beside any parsed result.
 
 ### TB_BLACKLIST_MST
 

@@ -594,6 +594,121 @@ button:focus,
     margin-bottom: 1.25rem;
 }
 
+.admin-data-page {
+    padding: 1.35rem;
+}
+
+.admin-data-search {
+    display: grid;
+    gap: 0.55rem;
+    align-items: end;
+    border-top: 2px solid #9fd1ec;
+    border-bottom: 2px solid #9fd1ec;
+    padding: 0.65rem 0;
+}
+
+.admin-data-search label {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    min-width: 0;
+}
+
+.admin-data-search span {
+    color: #1490be;
+    font-weight: 700;
+}
+
+.admin-data-search input,
+.admin-data-search select {
+    min-height: 38px;
+    border: 1px solid #c8d8ea;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.admin-data-count {
+    margin: 0.55rem 0 0.35rem;
+    color: #1f3345;
+}
+
+.admin-data-count strong {
+    color: #d23b4d;
+}
+
+.admin-data-table {
+    font-size: 0.92rem;
+}
+
+.admin-data-table th {
+    color: #1490be;
+    text-align: center;
+    white-space: nowrap;
+    border-top: 2px solid #9fd1ec;
+    border-bottom: 1px solid #cfdfeb;
+    background: #fbfdff;
+}
+
+.admin-data-table td {
+    border-bottom: 1px solid #d9e3ec;
+    vertical-align: middle;
+}
+
+.research-edit-form {
+    display: grid;
+    gap: 1rem;
+    border-top: 2px solid #9fd1ec;
+    padding-top: 0.9rem;
+}
+
+.research-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.research-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.research-meta-grid div {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #c8d8ea;
+    border-radius: 8px;
+    background: #fbfdff;
+}
+
+.research-meta-grid strong,
+.research-edit-form span {
+    color: #1490be;
+    font-weight: 700;
+}
+
+.research-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.research-edit-grid label,
+.research-edit-block {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+}
+
+.research-edit-grid__wide {
+    grid-column: span 2;
+}
+
+.research-edit-form small {
+    color: #d23b4d;
+}
+
 input[type="text"],
 input[type="password"],
 input[type="email"],
@@ -770,6 +885,15 @@ textarea {
     .form-grid,
     .form-grid.triple {
         grid-template-columns: 1fr;
+    }
+
+    .research-meta-grid,
+    .research-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .research-edit-grid__wide {
+        grid-column: auto;
     }
 
     .admin-nav-list {

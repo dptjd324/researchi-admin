@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/assets/**").permitAll()
                         .requestMatchers("/css/**", "/webjars/**").permitAll()
                         .requestMatchers("/apply/**").permitAll()
+                        .requestMatchers("/research/*/apply", "/research/*/apply/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form

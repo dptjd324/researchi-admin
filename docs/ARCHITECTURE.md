@@ -73,6 +73,10 @@ First transition slice:
   address, additional comment, attendance, and provide status.
 - `/research/{researchNo}/applications/{researchAppSeq}` reads a single old
   applicant row by `RESEARCH_NO + RESEARCH_APP_SEQ`.
+- `ADD_COMMENT` is preserved as raw old-admin free text. The master row's
+  `ADD_COMMENT` is shown as the additional-information prompt and the applicant
+  row's `ADD_COMMENT` is shown as the raw answer/comment; no automatic structured
+  question-answer parsing is assumed in the current phase.
 - `POST /research/{researchNo}/applications/{researchAppSeq}/provide` updates
   only `PROVIDE_YN` after writing a revision backup for the old applicant row.
 - `/legacy-blacklist` reads and writes `TB_BLACKLIST_MST` without hard delete.

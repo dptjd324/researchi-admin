@@ -13,6 +13,10 @@ import com.researchi.admin.form.domain.FormFieldDetail;
 import com.researchi.admin.form.service.FormFieldService;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.legacy.research.domain.ResearchApplication;
+import com.researchi.admin.legacy.research.domain.ResearchMaster;
+import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
+import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.Row;
@@ -81,6 +85,8 @@ public class ExportService {
     private final FormFieldService formFieldService;
     private final AdminExportQueryMapper adminExportQueryMapper;
     private final AdminExportLogMapper adminExportLogMapper;
+    private final ResearchApplicationMapper researchApplicationMapper;
+    private final ResearchMasterService researchMasterService;
     private final PublicFormProtectionService protectionService;
     private final AdminActionLogService adminActionLogService;
 
@@ -89,6 +95,8 @@ public class ExportService {
             FormFieldService formFieldService,
             AdminExportQueryMapper adminExportQueryMapper,
             AdminExportLogMapper adminExportLogMapper,
+            ResearchApplicationMapper researchApplicationMapper,
+            ResearchMasterService researchMasterService,
             PublicFormProtectionService protectionService,
             AdminActionLogService adminActionLogService
     ) {
@@ -96,6 +104,8 @@ public class ExportService {
         this.formFieldService = formFieldService;
         this.adminExportQueryMapper = adminExportQueryMapper;
         this.adminExportLogMapper = adminExportLogMapper;
+        this.researchApplicationMapper = researchApplicationMapper;
+        this.researchMasterService = researchMasterService;
         this.protectionService = protectionService;
         this.adminActionLogService = adminActionLogService;
     }
@@ -133,12 +143,34 @@ public class ExportService {
         return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, context.rows().size());
     }
 
+    public ExportPayload prepareLegacyResearchXlsx(Long researchNo, List<Long> researchAppSeqs) {
+        ExportContext context = buildLegacyResearchContext(researchNo, researchAppSeqs);
+        byte[] content = buildXlsx(context);
+        String fileName = buildLegacyFileName(researchNo, "xlsx");
+        return new ExportPayload(fileName, XLSX_CONTENT_TYPE, content, context.rows().size());
+    }
+
+    public ExportPayload prepareLegacyResearchTxt(Long researchNo, List<Long> researchAppSeqs) {
+        ExportContext context = buildLegacyResearchContext(researchNo, researchAppSeqs);
+        byte[] content = buildTxt(context);
+        String fileName = buildLegacyFileName(researchNo, "txt");
+        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, context.rows().size());
+    }
+
     public ExportFileDescriptor describeXlsx(Long documentSrl) {
         return new ExportFileDescriptor(buildFileName(documentSrl, "xlsx"), XLSX_CONTENT_TYPE);
     }
 
     public ExportFileDescriptor describeTxt(Long documentSrl) {
         return new ExportFileDescriptor(buildFileName(documentSrl, "txt"), TXT_CONTENT_TYPE);
+    }
+
+    public ExportFileDescriptor describeLegacyResearchXlsx(Long researchNo) {
+        return new ExportFileDescriptor(buildLegacyFileName(researchNo, "xlsx"), XLSX_CONTENT_TYPE);
+    }
+
+    public ExportFileDescriptor describeLegacyResearchTxt(Long researchNo) {
+        return new ExportFileDescriptor(buildLegacyFileName(researchNo, "txt"), TXT_CONTENT_TYPE);
     }
 
     @Transactional("adminTransactionManager")
@@ -163,6 +195,32 @@ public class ExportService {
     ) {
         int exportedCount = writeTxtStreaming(documentSrl, outputStream);
         writeLogs(documentSrl, "TXT", fileName, exportedCount, principal, request);
+    }
+
+    @Transactional("adminTransactionManager")
+    public void streamLegacyResearchXlsx(
+            Long researchNo,
+            String fileName,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            OutputStream outputStream
+    ) {
+        ExportPayload payload = prepareLegacyResearchXlsx(researchNo, null);
+        writePayload(outputStream, payload);
+        writeLogs(researchNo, "LEGACY_RESEARCH_XLSX", fileName, payload.exportedCount(), principal, request);
+    }
+
+    @Transactional("adminTransactionManager")
+    public void streamLegacyResearchTxt(
+            Long researchNo,
+            String fileName,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            OutputStream outputStream
+    ) {
+        ExportPayload payload = prepareLegacyResearchTxt(researchNo, null);
+        writePayload(outputStream, payload);
+        writeLogs(researchNo, "LEGACY_RESEARCH_TXT", fileName, payload.exportedCount(), principal, request);
     }
 
     private ExportContext buildContext(Long documentSrl, List<Long> applicationIds) {
@@ -198,6 +256,18 @@ public class ExportService {
             columns.add(new ColumnDefinition(field.fieldLabel(), row -> row.dynamicAnswers().getOrDefault(field.id(), "")));
         }
         return new ExportContext(jobDetail.getDocument().getTitle(), columns, rows);
+    }
+
+    private ExportContext buildLegacyResearchContext(Long researchNo, List<Long> researchAppSeqs) {
+        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
+        List<ResearchApplication> applications = researchAppSeqs == null || researchAppSeqs.isEmpty()
+                ? researchApplicationMapper.findAllByResearchNo(researchNo)
+                : researchApplicationMapper.findByResearchNoAndSeqs(researchNo, researchAppSeqs);
+        List<ExportRow> rows = new ArrayList<>();
+        for (int index = 0; index < applications.size(); index++) {
+            rows.add(toLegacyRow(index + 1, applications.get(index)));
+        }
+        return new ExportContext(researchMaster.getResearchTitle(), COMMON_COLUMNS, rows);
     }
 
     private ExportLayout buildLayout(Long documentSrl) {
@@ -254,6 +324,36 @@ public class ExportService {
                     .put(answer.getFieldId(), toDisplayAnswer(answer.getAnswerText(), answer.getAnswerJson()));
         }
         return answersByApplicationId;
+    }
+
+    private ExportRow toLegacyRow(int sequence, ResearchApplication application) {
+        return new ExportRow(
+                sequence,
+                application.getAppName(),
+                legacySexLabel(application.getAppSex()),
+                application.getAppBirth(),
+                application.getAppAge(),
+                application.getAppJob(),
+                application.getAppCompany(),
+                application.getAppHphone(),
+                application.getAppTele(),
+                "",
+                application.getAppAddr(),
+                application.getAddComment(),
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                application.getProvideYn(),
+                "",
+                legacyDateTimeLabel(application.getRegistDt()),
+                Map.of()
+        );
     }
 
     private ExportRow toRow(
@@ -352,7 +452,7 @@ public class ExportService {
             workbook.dispose();
             return counter.value();
         } catch (IOException ex) {
-            throw new IllegalStateException("XLSX ?뚯씪???앹꽦?섏? 紐삵뻽?듬땲??", ex);
+            throw new IllegalStateException("XLSX 파일을 생성하지 못했습니다.", ex);
         }
     }
 
@@ -369,7 +469,7 @@ public class ExportService {
             writer.flush();
             return counter.value();
         } catch (IOException ex) {
-            throw new IllegalStateException("TXT ?뚯씪???앹꽦?섏? 紐삵뻽?듬땲??", ex);
+            throw new IllegalStateException("TXT 파일을 생성하지 못했습니다.", ex);
         }
     }
 
@@ -426,18 +526,32 @@ public class ExportService {
         exportLog.setExportedCount(exportedCount);
         adminExportLogMapper.insert(exportLog);
 
+        boolean legacyResearchExport = exportType != null && exportType.startsWith("LEGACY_RESEARCH");
         adminActionLogService.log(
                 principal.getId(),
                 "APPLICATION_EXPORT",
-                "JOB",
+                legacyResearchExport ? "RESEARCH" : "JOB",
                 String.valueOf(documentSrl),
                 "Exported " + exportType + " applications (" + exportedCount + " rows)",
                 request
         );
     }
 
+    private void writePayload(OutputStream outputStream, ExportPayload payload) {
+        try {
+            outputStream.write(payload.content());
+            outputStream.flush();
+        } catch (IOException ex) {
+            throw new IllegalStateException("Export file could not be written.", ex);
+        }
+    }
+
     private String buildFileName(Long documentSrl, String extension) {
         return "job-" + documentSrl + "-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
+    }
+
+    private String buildLegacyFileName(Long researchNo, String extension) {
+        return "research-" + researchNo + "-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
     }
 
     private String toDisplayAnswer(String answerText, String answerJson) {
@@ -494,6 +608,43 @@ public class ExportService {
             return localDate.format(EXPORTED_DATE);
         }
         return String.valueOf(value);
+    }
+
+    private static String legacySexLabel(String value) {
+        if ("1".equals(value)) {
+            return "\uB0A8\uC790";
+        }
+        if ("2".equals(value)) {
+            return "\uC5EC\uC790";
+        }
+        return stringValue(value);
+    }
+
+    private static LocalDateTime legacyDateTimeLabel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String digits = value.replaceAll("\\D", "");
+        if (digits.length() >= 14) {
+            return LocalDateTime.of(
+                    Integer.parseInt(digits.substring(0, 4)),
+                    Integer.parseInt(digits.substring(4, 6)),
+                    Integer.parseInt(digits.substring(6, 8)),
+                    Integer.parseInt(digits.substring(8, 10)),
+                    Integer.parseInt(digits.substring(10, 12)),
+                    Integer.parseInt(digits.substring(12, 14))
+            );
+        }
+        if (digits.length() >= 8) {
+            return LocalDateTime.of(
+                    Integer.parseInt(digits.substring(0, 4)),
+                    Integer.parseInt(digits.substring(4, 6)),
+                    Integer.parseInt(digits.substring(6, 8)),
+                    0,
+                    0
+            );
+        }
+        return null;
     }
 
     private String nullToEmpty(String value) {
@@ -583,7 +734,7 @@ public class ExportService {
             int sequence,
             String applicantName,
             String genderCode,
-            LocalDate birthDate,
+            Object birthDate,
             String ageText,
             String jobText,
             String organizationText,

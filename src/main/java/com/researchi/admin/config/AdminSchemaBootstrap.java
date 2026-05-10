@@ -39,6 +39,9 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminMailSendJobColumns(connection);
             ensureAdminJobApplicationExtraAnswerTable(connection);
             ensureAdminLegacyRevisionLogTable(connection);
+            ensureAdminLegacyApplicationExtraAnswerTable(connection);
+            ensureAdminManualPublishLogTable(connection);
+            ensureAdminLegacyMailRuleTable(connection);
             ensureAdminPerformanceIndexes(connection);
         }
     }
@@ -227,6 +230,68 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
     }
 
+    private void ensureAdminLegacyApplicationExtraAnswerTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_application_extra_answer",
+                """
+                CREATE TABLE admin_legacy_application_extra_answer (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    research_app_seq BIGINT NOT NULL,
+                    answer_order INT NOT NULL,
+                    question_label VARCHAR(500) NOT NULL,
+                    answer_text TEXT NOT NULL,
+                    raw_answer_text LONGTEXT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+    }
+
+    private void ensureAdminManualPublishLogTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_manual_publish_log",
+                """
+                CREATE TABLE admin_manual_publish_log (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    generated_title VARCHAR(500) NOT NULL,
+                    generated_body LONGTEXT NOT NULL,
+                    publish_status VARCHAR(50) NOT NULL,
+                    public_document_srl BIGINT NULL,
+                    published_by BIGINT NULL,
+                    published_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+    }
+
+    private void ensureAdminLegacyMailRuleTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_mail_rule",
+                """
+                CREATE TABLE admin_legacy_mail_rule (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    threshold_count INT NULL,
+                    template_id BIGINT NULL,
+                    direct_mail_subject VARCHAR(255) NULL,
+                    direct_mail_body TEXT NULL,
+                    attachment_type VARCHAR(20) NOT NULL DEFAULT 'XLSX',
+                    enabled_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    last_triggered_at DATETIME NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+    }
+
     private void ensureAdminPerformanceIndexes(Connection connection) throws Exception {
         createUniqueIndexIfMissingAndNoDuplicates(
                 connection,
@@ -321,10 +386,31 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
         createIndexIfMissing(
                 connection,
+                "admin_legacy_application_extra_answer",
+                "idx_admin_legacy_extra_answer_research_app",
+                List.of("research_no", "research_app_seq", "answer_order", "id"),
+                "CREATE INDEX idx_admin_legacy_extra_answer_research_app ON admin_legacy_application_extra_answer (research_no, research_app_seq, answer_order, id)"
+        );
+        createIndexIfMissing(
+                connection,
                 "admin_mail_send_job",
                 "idx_admin_mail_send_job_document_id",
                 List.of("document_srl", "id"),
                 "CREATE INDEX idx_admin_mail_send_job_document_id ON admin_mail_send_job (document_srl, id)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_manual_publish_log",
+                "idx_admin_manual_publish_log_research_created",
+                List.of("research_no", "created_at", "id"),
+                "CREATE INDEX idx_admin_manual_publish_log_research_created ON admin_manual_publish_log (research_no, created_at, id)"
+        );
+        createUniqueIndexIfMissingAndNoDuplicates(
+                connection,
+                "admin_legacy_mail_rule",
+                "uk_admin_legacy_mail_rule_research_no",
+                "research_no",
+                "CREATE UNIQUE INDEX uk_admin_legacy_mail_rule_research_no ON admin_legacy_mail_rule (research_no)"
         );
         createIndexIfMissing(
                 connection,

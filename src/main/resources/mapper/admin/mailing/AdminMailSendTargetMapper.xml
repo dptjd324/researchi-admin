@@ -52,6 +52,17 @@
         ORDER BY application_id ASC, id ASC
     </select>
 
+    <select id="findSentApplicationIdsByDocumentSrlAndTriggerPrefix" resultType="long">
+        SELECT DISTINCT target.application_id
+        FROM admin_mail_send_target target
+        INNER JOIN admin_mail_send_job job ON job.id = target.send_job_id
+        WHERE job.document_srl = #{documentSrl}
+          AND job.trigger_type LIKE CONCAT(#{triggerPrefix}, '%')
+          AND job.send_status = 'SENT'
+          AND target.send_result = 'SENT'
+          AND target.application_id IS NOT NULL
+    </select>
+
     <update id="updateResultBySendJobId">
         UPDATE admin_mail_send_target
         SET
@@ -59,5 +70,18 @@
             fail_reason = #{failReason},
             sent_at = #{sentAt}
         WHERE send_job_id = #{sendJobId}
+    </update>
+
+    <update id="updateResultBySendJobIdAndApplicationIds">
+        UPDATE admin_mail_send_target
+        SET
+            send_result = #{sendResult},
+            fail_reason = #{failReason},
+            sent_at = #{sentAt}
+        WHERE send_job_id = #{sendJobId}
+          AND application_id IN
+        <foreach collection="applicationIds" item="applicationId" open="(" separator="," close=")">
+            #{applicationId}
+        </foreach>
     </update>
 </mapper>

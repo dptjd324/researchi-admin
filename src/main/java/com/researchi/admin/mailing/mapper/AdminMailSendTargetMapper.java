@@ -15,8 +15,21 @@ public interface AdminMailSendTargetMapper {
 
     List<AdminMailSendTarget> findBySendJobId(@Param("sendJobId") Long sendJobId);
 
+    List<Long> findSentApplicationIdsByDocumentSrlAndTriggerPrefix(
+            @Param("documentSrl") Long documentSrl,
+            @Param("triggerPrefix") String triggerPrefix
+    );
+
     int updateResultBySendJobId(
             @Param("sendJobId") Long sendJobId,
+            @Param("sendResult") String sendResult,
+            @Param("failReason") String failReason,
+            @Param("sentAt") java.time.LocalDateTime sentAt
+    );
+
+    int updateResultBySendJobIdAndApplicationIds(
+            @Param("sendJobId") Long sendJobId,
+            @Param("applicationIds") List<Long> applicationIds,
             @Param("sendResult") String sendResult,
             @Param("failReason") String failReason,
             @Param("sentAt") java.time.LocalDateTime sentAt

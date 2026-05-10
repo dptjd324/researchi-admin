@@ -32,6 +32,8 @@ public interface AdminMailSendJobMapper {
 
     List<AdminMailSendJob> findByDocumentSrl(@Param("documentSrl") Long documentSrl);
 
+    List<AdminMailSendJob> findLegacyByResearchNo(@Param("researchNo") Long researchNo);
+
     List<AdminMailSendJob> findDueScheduled(@Param("scheduledAt") LocalDateTime scheduledAt);
 
     int updateStatusIfCurrent(

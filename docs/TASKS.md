@@ -6,7 +6,7 @@
 - [x] Confirm local character set variables: client/connection/database/server `utf8mb4`, filesystem `binary`, system `utf8mb3`
 - [x] Confirm `PROVIDE_YN` business meaning: admin-managed trader/client deposit status
 - [x] Confirm `APP_CNT` and `APP_NEW_CNT` display meaning: total applicants and unverified new applicants
-- [ ] Confirm `ADD_COMMENT` parsing rules before deriving structured fields from old free text
+- [x] Investigate `ADD_COMMENT` sample patterns and define first-pass handling: preserve raw question/answer text, do not derive structured fields yet
 - [x] Define first-pass `BLACK_YN` handling: `Y` active, `N` inactive, blanks handled by initial migration rule and revisited later
 - [x] Add first read-only legacy domain/mapper/service for `TB_RESEARCH_MST`
 - [x] Add first read-only `/research` screen backed by `TB_RESEARCH_MST`
@@ -19,16 +19,16 @@
 - [x] Add `PROVIDE_YN` update on applicant detail with pre-update revision backup
 - [x] Add first legacy blacklist domain/mapper/service for `TB_BLACKLIST_MST`
 - [x] Add `/legacy-blacklist` old DB blacklist list/create/update/status screen
-- [ ] Add legacy domain naming around old tables: `ResearchMaster`, `ResearchApplication`, `Blacklist`
+- [x] Add legacy domain naming around old tables: `ResearchMaster`, `ResearchApplication`, `Blacklist`
 - [x] Add MyBatis mappers for `TB_RESEARCH_MST`, `TB_RESEARCH_APP`, and `TB_BLACKLIST_MST`
-- [ ] Migrate posting list/detail/create/update to `TB_RESEARCH_MST` first; keep no-delete policy
-- [ ] Migrate applicant management to `TB_RESEARCH_APP` with `RESEARCH_NO` search, pagination, and existing filters
+- [x] Migrate posting list/detail/create/update to `TB_RESEARCH_MST` first; keep no-delete policy
+- [x] Migrate applicant management to `TB_RESEARCH_APP` with `RESEARCH_NO` search, pagination, and existing filters
 - [x] Migrate blacklist management to `TB_BLACKLIST_MST` with active-status updates and no hard delete
 - [x] Add pre-update revision backup logs before modifying old tables because rollback cannot be assumed
-- [ ] Add manual homepage publish view that generates copy-ready title/body from `TB_RESEARCH_MST`
-- [ ] Add manual publish log in supplemental admin tables, with optional public `document_srl` recording
-- [ ] Reconnect mail/send/export flows to old-admin keys while preserving existing send logs and snapshots
-- [ ] Keep XE auto-publishing out of the current phase
+- [x] Add manual homepage publish view that generates copy-ready title/body from `TB_RESEARCH_MST`
+- [x] Add manual publish log in supplemental admin tables, with optional public `document_srl` recording
+- [x] Reconnect mail/send/export flows to old-admin keys while preserving existing send logs and snapshots
+- [x] Keep XE auto-publishing out of the current phase
 
 ## Board Scope Correction
 - [x] Include managed XE board mids: `notice`, `newjob`, `additional`, `fast`, `recruit`, `sharing`, `question`

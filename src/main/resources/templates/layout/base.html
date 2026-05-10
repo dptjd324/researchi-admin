@@ -13,7 +13,7 @@
 <div class="admin-shell">
     <header class="admin-header border-bottom" th:if="${hideNavigation == null || !hideNavigation}">
         <div class="container-fluid admin-container">
-            <nav class="admin-navbar" aria-label="&#xAD00;&#xB9AC;&#xC790; &#xC0C1;&#xB2E8; &#xBA54;&#xB274;">
+            <nav class="admin-navbar" aria-label="관리자 상단 메뉴">
                 <div class="admin-header__top">
                     <div class="admin-header__hero" th:if="${hidePageHeader == null || !hidePageHeader}">
                         <div class="admin-header__title">
@@ -35,7 +35,7 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/research}">좌담회/설문</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/clients}">거래처</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/applications}">지원서</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/blacklist}">블랙리스트</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/legacy-blacklist}">블랙리스트</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/search}">통합 검색</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/mail/send/history}">메일</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/logs/actions}">로그</a></li>
@@ -54,24 +54,24 @@
         <div class="container-fluid admin-container py-3">
             <div class="admin-status-row">
                 <div class="admin-status-card">
-                    <span class="admin-status-card__label">&#xC561;&#xC158; &#xB85C;&#xADF8;</span>
+                    <span class="admin-status-card__label">액션 로그</span>
                     <strong th:text="${statusBarSummary.actionCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestActionAt != null ? @uiLabels.dateTime(statusBarSummary.latestActionAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestActionAt != null ? @uiLabels.dateTime(statusBarSummary.latestActionAt) : '기록 없음'}">기록 없음</span>
                 </div>
                 <div class="admin-status-card">
-                    <span class="admin-status-card__label">&#xBA54;&#xC77C; &#xB85C;&#xADF8;</span>
+                    <span class="admin-status-card__label">메일 로그</span>
                     <strong th:text="${statusBarSummary.mailCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestMailAt != null ? @uiLabels.dateTime(statusBarSummary.latestMailAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestMailAt != null ? @uiLabels.dateTime(statusBarSummary.latestMailAt) : '기록 없음'}">기록 없음</span>
                 </div>
                 <div class="admin-status-card">
-                    <span class="admin-status-card__label">&#xAC80;&#xC0C9; &#xB85C;&#xADF8;</span>
+                    <span class="admin-status-card__label">검색 로그</span>
                     <strong th:text="${statusBarSummary.searchCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestSearchAt != null ? @uiLabels.dateTime(statusBarSummary.latestSearchAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestSearchAt != null ? @uiLabels.dateTime(statusBarSummary.latestSearchAt) : '기록 없음'}">기록 없음</span>
                 </div>
                 <div class="admin-status-card">
-                    <span class="admin-status-card__label">&#xC54C;&#xB9BC; &#xB85C;&#xADF8;</span>
+                    <span class="admin-status-card__label">알림 로그</span>
                     <strong th:text="${statusBarSummary.notificationCount + '건'}">0건</strong>
-                    <span th:text="${statusBarSummary.latestNotificationAt != null ? @uiLabels.dateTime(statusBarSummary.latestNotificationAt) : '기록 없음'}">&#xAE30;&#xB85D; &#xC5C6;&#xC74C;</span>
+                    <span th:text="${statusBarSummary.latestNotificationAt != null ? @uiLabels.dateTime(statusBarSummary.latestNotificationAt) : '기록 없음'}">기록 없음</span>
                 </div>
             </div>
         </div>
@@ -84,15 +84,16 @@
     (function initializeFlatpickrInputs() {
         function createOptions(input) {
             const isDateTime = input.type === 'datetime-local';
+            const isCompactDate = input.classList.contains('research-date-input') || input.dataset.dateFormat === 'compact';
             return {
                 locale: (window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.ko) ? window.flatpickr.l10ns.ko : undefined,
-                allowInput: false,
+                allowInput: isCompactDate,
                 disableMobile: true,
                 altInput: true,
                 altInputClass: isDateTime
                     ? 'flatpickr-alt-input flatpickr-alt-input--datetime'
                     : 'flatpickr-alt-input flatpickr-alt-input--date',
-                dateFormat: isDateTime ? 'Y-m-d\\TH:i' : 'Y-m-d',
+                dateFormat: isCompactDate ? 'Ymd' : isDateTime ? 'Y-m-d\\TH:i' : 'Y-m-d',
                 altFormat: isDateTime ? 'Y.m.d H:i' : 'Y.m.d',
                 enableTime: isDateTime,
                 noCalendar: false,
@@ -105,7 +106,7 @@
             if (typeof window.flatpickr !== 'function') {
                 return;
             }
-            root.querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach(function (input) {
+            root.querySelectorAll('input[type="date"], input[type="datetime-local"], input.research-date-input, input[data-date-format="compact"]').forEach(function (input) {
                 if (input.dataset.flatpickrBound === 'true' || input.dataset.flatpickrIgnore === 'true') {
                     return;
                 }
