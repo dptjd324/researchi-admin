@@ -79,6 +79,8 @@ First transition slice:
   question-answer parsing is assumed in the current phase.
 - `POST /research/{researchNo}/applications/{researchAppSeq}/provide` updates
   only `PROVIDE_YN` after writing a revision backup for the old applicant row.
+  `PROVIDE_YN` means whether applicant information has been provided to the
+  trader/client by email. It is not a deposit/payment status.
 - `/legacy-blacklist` reads and writes `TB_BLACKLIST_MST` without hard delete.
 - `POST /legacy-blacklist/{blacklistNo}/status` updates only `BLACK_YN` after
   writing a revision backup for the old blacklist row.

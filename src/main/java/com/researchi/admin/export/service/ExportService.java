@@ -54,6 +54,7 @@ public class ExportService {
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter EXPORTED_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
     private static final DateTimeFormatter EXPORTED_DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
+    private static final String LEGACY_RESEARCH_TXT_COLUMNS = "성명/성별/생년월일/나이(만)/직업/회사 학교/휴대폰/유선전화/주소/추가기재사항";
     private static final List<ColumnDefinition> COMMON_COLUMNS = List.of(
             new ColumnDefinition("\uC21C\uBC88", row -> stringValue(row.sequence())),
             new ColumnDefinition("\uC131\uBA85", ExportRow::applicantName),
@@ -151,10 +152,19 @@ public class ExportService {
     }
 
     public ExportPayload prepareLegacyResearchTxt(Long researchNo, List<Long> researchAppSeqs) {
-        ExportContext context = buildLegacyResearchContext(researchNo, researchAppSeqs);
-        byte[] content = buildTxt(context);
+        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
+        List<ResearchApplication> applications = findLegacyResearchApplications(researchNo, researchAppSeqs);
+        byte[] content = buildLegacyResearchTxt(researchMaster, applications, "신청자 정보");
         String fileName = buildLegacyFileName(researchNo, "txt");
-        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, context.rows().size());
+        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, applications.size());
+    }
+
+    public ExportPayload prepareLegacyResearchProvideTxt(Long researchNo) {
+        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
+        List<ResearchApplication> applications = researchApplicationMapper.findUnprovidedByResearchNo(researchNo);
+        byte[] content = buildLegacyResearchTxt(researchMaster, applications, "정보 제공 대상");
+        String fileName = buildLegacyProvideFileName(researchNo, "txt");
+        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, applications.size());
     }
 
     public ExportFileDescriptor describeXlsx(Long documentSrl) {
@@ -171,6 +181,10 @@ public class ExportService {
 
     public ExportFileDescriptor describeLegacyResearchTxt(Long researchNo) {
         return new ExportFileDescriptor(buildLegacyFileName(researchNo, "txt"), TXT_CONTENT_TYPE);
+    }
+
+    public ExportFileDescriptor describeLegacyResearchProvideTxt(Long researchNo) {
+        return new ExportFileDescriptor(buildLegacyProvideFileName(researchNo, "txt"), TXT_CONTENT_TYPE);
     }
 
     @Transactional("adminTransactionManager")
@@ -223,6 +237,19 @@ public class ExportService {
         writeLogs(researchNo, "LEGACY_RESEARCH_TXT", fileName, payload.exportedCount(), principal, request);
     }
 
+    @Transactional("adminTransactionManager")
+    public void streamLegacyResearchProvideTxt(
+            Long researchNo,
+            String fileName,
+            AdminPrincipal principal,
+            HttpServletRequest request,
+            OutputStream outputStream
+    ) {
+        ExportPayload payload = prepareLegacyResearchProvideTxt(researchNo);
+        writePayload(outputStream, payload);
+        writeLogs(researchNo, "LEGACY_RESEARCH_PROVIDE_TXT", fileName, payload.exportedCount(), principal, request);
+    }
+
     private ExportContext buildContext(Long documentSrl, List<Long> applicationIds) {
         JobDetail jobDetail = jobService.getJob(documentSrl);
         List<FormFieldDetail> fields = formFieldService.getFields(documentSrl).stream()
@@ -260,14 +287,18 @@ public class ExportService {
 
     private ExportContext buildLegacyResearchContext(Long researchNo, List<Long> researchAppSeqs) {
         ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        List<ResearchApplication> applications = researchAppSeqs == null || researchAppSeqs.isEmpty()
-                ? researchApplicationMapper.findAllByResearchNo(researchNo)
-                : researchApplicationMapper.findByResearchNoAndSeqs(researchNo, researchAppSeqs);
+        List<ResearchApplication> applications = findLegacyResearchApplications(researchNo, researchAppSeqs);
         List<ExportRow> rows = new ArrayList<>();
         for (int index = 0; index < applications.size(); index++) {
             rows.add(toLegacyRow(index + 1, applications.get(index)));
         }
-        return new ExportContext(researchMaster.getResearchTitle(), COMMON_COLUMNS, rows);
+        return new ExportContext(researchMaster.getResearchTitle(), COMMON_COLUMNS, rows, "/");
+    }
+
+    private List<ResearchApplication> findLegacyResearchApplications(Long researchNo, List<Long> researchAppSeqs) {
+        return researchAppSeqs == null || researchAppSeqs.isEmpty()
+                ? researchApplicationMapper.findAllByResearchNo(researchNo)
+                : researchApplicationMapper.findByResearchNoAndSeqs(researchNo, researchAppSeqs);
     }
 
     private ExportLayout buildLayout(Long documentSrl) {
@@ -421,9 +452,28 @@ public class ExportService {
 
     private byte[] buildTxt(ExportContext context) {
         StringBuilder builder = new StringBuilder();
-        appendTxtLine(builder, context.columns().stream().map(ColumnDefinition::header).toList());
+        appendTxtLine(builder, context.columns().stream().map(ColumnDefinition::header).toList(), context.txtDelimiter());
         for (ExportRow row : context.rows()) {
-            appendTxtLine(builder, context.columns().stream().map(column -> column.value(row)).toList());
+            appendTxtLine(builder, context.columns().stream().map(column -> column.value(row)).toList(), context.txtDelimiter());
+        }
+        return builder.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private byte[] buildLegacyResearchTxt(ResearchMaster researchMaster, List<ResearchApplication> applications, String titleSuffix) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(sanitizeTxt(researchMaster.getResearchTitle())).append(" - ").append(titleSuffix).append(System.lineSeparator());
+        builder.append(applications.size()).append("건").append(System.lineSeparator());
+        builder.append(System.lineSeparator());
+        builder.append(LEGACY_RESEARCH_TXT_COLUMNS).append(System.lineSeparator());
+        builder.append(System.lineSeparator());
+        for (int index = 0; index < applications.size(); index++) {
+            builder.append(index + 1)
+                    .append(". ")
+                    .append(sanitizeTxt(applications.get(index).getProvidePreviewLine()))
+                    .append(System.lineSeparator());
+            if (index + 1 < applications.size()) {
+                builder.append(System.lineSeparator());
+            }
         }
         return builder.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -473,10 +523,10 @@ public class ExportService {
         }
     }
 
-    private void appendTxtLine(StringBuilder builder, List<String> values) {
+    private void appendTxtLine(StringBuilder builder, List<String> values, String delimiter) {
         for (int index = 0; index < values.size(); index++) {
             if (index > 0) {
-                builder.append('\t');
+                builder.append(delimiter);
             }
             builder.append(sanitizeSpreadsheetValue(sanitizeTxt(values.get(index))));
         }
@@ -552,6 +602,10 @@ public class ExportService {
 
     private String buildLegacyFileName(Long researchNo, String extension) {
         return "research-" + researchNo + "-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
+    }
+
+    private String buildLegacyProvideFileName(Long researchNo, String extension) {
+        return "research-" + researchNo + "-provide-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
     }
 
     private String toDisplayAnswer(String answerText, String answerJson) {
@@ -707,7 +761,10 @@ public class ExportService {
         }
     }
 
-    private record ExportContext(String jobTitle, List<ColumnDefinition> columns, List<ExportRow> rows) {
+    private record ExportContext(String jobTitle, List<ColumnDefinition> columns, List<ExportRow> rows, String txtDelimiter) {
+        private ExportContext(String jobTitle, List<ColumnDefinition> columns, List<ExportRow> rows) {
+            this(jobTitle, columns, rows, "\t");
+        }
     }
 
     private record ExportLayout(List<FormFieldDetail> fields, List<ColumnDefinition> columns) {

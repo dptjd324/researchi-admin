@@ -98,8 +98,11 @@ Observed `PROVIDE_YN` distribution:
 
 Business meaning:
 - `PROVIDE_YN` is manually changed by an administrator.
-- It indicates whether the trader/client has deposited the money.
-- Mail/export filtering must not treat this as a generic delivery status.
+- It indicates whether applicant information has already been provided to the
+  trader/client by email.
+- `Y` means provided to the trader/client.
+- `N` means not yet provided to the trader/client.
+- It must not be interpreted as a deposit/payment status.
 
 ### Observed ADD_COMMENT Pattern
 

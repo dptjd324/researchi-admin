@@ -4,7 +4,7 @@
 - [x] Verify copied old admin tables exist in `admin_copy`: `TB_RESEARCH_MST`, `TB_RESEARCH_APP`, `TB_BLACKLIST_MST`
 - [x] Verify local sample table engine/collation: MyISAM, `utf8mb4_general_ci`
 - [x] Confirm local character set variables: client/connection/database/server `utf8mb4`, filesystem `binary`, system `utf8mb3`
-- [x] Confirm `PROVIDE_YN` business meaning: admin-managed trader/client deposit status
+- [x] Confirm `PROVIDE_YN` business meaning: whether applicant information was provided to the trader/client by email
 - [x] Confirm `APP_CNT` and `APP_NEW_CNT` display meaning: total applicants and unverified new applicants
 - [x] Investigate `ADD_COMMENT` sample patterns and define first-pass handling: preserve raw question/answer text, do not derive structured fields yet
 - [x] Define first-pass `BLACK_YN` handling: `Y` active, `N` inactive, blanks handled by initial migration rule and revisited later

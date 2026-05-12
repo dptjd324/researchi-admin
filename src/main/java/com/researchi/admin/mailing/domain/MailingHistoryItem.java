@@ -75,6 +75,21 @@ public record MailingHistoryItem(
                 .collect(Collectors.joining(" / "));
     }
 
+    public int provisionCompletedCount() {
+        if (sendJob == null || sendJob.getTriggerType() == null || !sendJob.getTriggerType().startsWith("LEGACY_")) {
+            return 0;
+        }
+        if (!"SENT".equalsIgnoreCase(sendJob.getSendStatus())) {
+            return 0;
+        }
+        return (int) targets.stream()
+                .filter(target -> "SENT".equalsIgnoreCase(target.getSendResult()))
+                .map(AdminMailSendTarget::getApplicationId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .count();
+    }
+
     public boolean cancellable() {
         return sendJob != null && "SCHEDULED".equalsIgnoreCase(sendJob.getSendStatus());
     }

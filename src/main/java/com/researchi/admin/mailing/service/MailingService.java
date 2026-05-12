@@ -18,6 +18,7 @@ import com.researchi.admin.legacy.research.domain.ResearchApplication;
 import com.researchi.admin.legacy.research.domain.ResearchMaster;
 import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
 import com.researchi.admin.legacy.research.mapper.ResearchMasterMapper;
+import com.researchi.admin.legacy.research.service.ResearchApplicationService;
 import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.domain.AdminMailSendTarget;
@@ -75,6 +76,7 @@ public class MailingService {
     private final AdminExportQueryMapper adminExportQueryMapper;
     private final ResearchApplicationMapper researchApplicationMapper;
     private final ResearchMasterMapper researchMasterMapper;
+    private final ResearchApplicationService researchApplicationService;
     private final ResearchMasterService researchMasterService;
     private final LegacyBlacklistMapper legacyBlacklistMapper;
     private final LegacyMailRuleMapper legacyMailRuleMapper;
@@ -94,6 +96,7 @@ public class MailingService {
             AdminExportQueryMapper adminExportQueryMapper,
             ResearchApplicationMapper researchApplicationMapper,
             ResearchMasterMapper researchMasterMapper,
+            ResearchApplicationService researchApplicationService,
             ResearchMasterService researchMasterService,
             LegacyBlacklistMapper legacyBlacklistMapper,
             LegacyMailRuleMapper legacyMailRuleMapper,
@@ -112,6 +115,7 @@ public class MailingService {
         this.adminExportQueryMapper = adminExportQueryMapper;
         this.researchApplicationMapper = researchApplicationMapper;
         this.researchMasterMapper = researchMasterMapper;
+        this.researchApplicationService = researchApplicationService;
         this.researchMasterService = researchMasterService;
         this.legacyBlacklistMapper = legacyBlacklistMapper;
         this.legacyMailRuleMapper = legacyMailRuleMapper;
@@ -135,6 +139,22 @@ public class MailingService {
                 ? List.of()
                 : adminMailSendJobMapper.findLegacyByResearchNo(researchNo);
         return buildHistoryItems(jobs);
+    }
+
+    public int countProvisionCompletedApplications(Long sendJobId) {
+        if (sendJobId == null) {
+            return 0;
+        }
+        AdminMailSendJob sendJob = adminMailSendJobMapper.findById(sendJobId);
+        if (sendJob == null || !isLegacyMailJob(sendJob) || !"SENT".equalsIgnoreCase(sendJob.getSendStatus())) {
+            return 0;
+        }
+        return (int) adminMailSendTargetMapper.findBySendJobId(sendJobId).stream()
+                .filter(target -> "SENT".equalsIgnoreCase(target.getSendResult()))
+                .map(AdminMailSendTarget::getApplicationId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
     }
 
     private List<MailingHistoryItem> buildHistoryItems(List<AdminMailSendJob> jobs) {
@@ -435,6 +455,14 @@ public class MailingService {
         sendJob.setSentAt(sentAt);
         adminMailSendJobMapper.updateStatus(sendJob);
         insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, targetResult, failReason, sentAt);
+        if ("SENT".equals(sendStatus)) {
+            markLegacyApplicationsProvided(
+                    researchNo,
+                    snapshot.applicationIds(),
+                    principal == null ? null : principal.getId(),
+                    "legacy manual mail job #" + sendJob.getId()
+            );
+        }
         safeLog(principal == null ? null : principal.getId(), "MAIL_SEND_LEGACY_MANUAL", "RESEARCH", String.valueOf(researchNo), "Legacy mail send job #" + sendJob.getId() + " completed: " + displaySendStatus(sendStatus), request);
         return requireImmediateSendSuccess(sendJob.getId());
     }
@@ -592,6 +620,12 @@ public class MailingService {
         insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, targetResult, failReason, sentAt);
         if ("SENT".equals(sendStatus)) {
             legacyMailRuleMapper.updateLastTriggeredAt(rule.getResearchNo(), sentAt);
+            markLegacyApplicationsProvided(
+                    rule.getResearchNo(),
+                    snapshot.applicationIds(),
+                    principal == null ? null : principal.getId(),
+                    "legacy threshold mail job #" + sendJob.getId()
+            );
         }
         safeLog(principal == null ? null : principal.getId(), "MAIL_SEND_LEGACY_THRESHOLD", "RESEARCH", String.valueOf(rule.getResearchNo()), "Legacy threshold mail job #" + sendJob.getId() + " completed: " + displaySendStatus(sendStatus), request);
         return sendJob.getId();
@@ -916,6 +950,14 @@ public class MailingService {
         } else {
             markScheduledBlacklistExcludedTargets(sendJob.getId(), targetSnapshot.blacklistExcludedApplicationIds(), sentAt);
             updateScheduledTargets(sendJob.getId(), applicationIds, targetResult, failReason, sentAt);
+        }
+        if ("SENT".equals(sendStatus)) {
+            markLegacyApplicationsProvided(
+                    sendJob.getDocumentSrl(),
+                    applicationIds,
+                    sendJob.getCreatedBy(),
+                    "legacy scheduled mail job #" + sendJob.getId()
+            );
         }
         safeLog(null, "MAIL_SEND_LEGACY_SCHEDULED_EXECUTE", "MAIL_SEND_JOB", String.valueOf(sendJob.getId()), "Legacy scheduled mail job #" + sendJob.getId() + " completed: " + displaySendStatus(sendStatus), null);
         return "SENT".equals(sendStatus);
@@ -1518,6 +1560,35 @@ public class MailingService {
     ) {
         for (Long applicationId : applicationIds) {
             adminMailingApplicationMapper.updateDeliveryStatus(applicationId, deliveryStatus, deliveryJobId, deliveredAt);
+        }
+    }
+
+    private void markLegacyApplicationsProvided(
+            Long researchNo,
+            List<Long> researchAppSeqs,
+            Long changedBy,
+            String source
+    ) {
+        if (researchNo == null || researchAppSeqs == null || researchAppSeqs.isEmpty()) {
+            return;
+        }
+        for (Long researchAppSeq : researchAppSeqs.stream().filter(Objects::nonNull).distinct().toList()) {
+            try {
+                ResearchApplication application = researchApplicationMapper.findByResearchNoAndSeq(researchNo, researchAppSeq);
+                if (application == null || "Y".equalsIgnoreCase(application.getProvideYn())) {
+                    continue;
+                }
+                researchApplicationService.updateProvideYn(researchNo, researchAppSeq, "Y", changedBy);
+            } catch (RuntimeException ex) {
+                safeLog(
+                        changedBy,
+                        "LEGACY_PROVIDE_UPDATE_FAILED",
+                        "RESEARCH_APP",
+                        researchNo + ":" + researchAppSeq,
+                        "Failed to mark PROVIDE_YN=Y after " + source + ": " + trimFailureReason(ex.getMessage()),
+                        null
+                );
+            }
         }
     }
 

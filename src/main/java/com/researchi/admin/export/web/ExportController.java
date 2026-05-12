@@ -80,6 +80,19 @@ public class ExportController {
         );
     }
 
+    @PostMapping("/research/{researchNo}/export/provide-txt")
+    public ResponseEntity<StreamingResponseBody> exportLegacyResearchProvideTxt(
+            @PathVariable Long researchNo,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        ExportFileDescriptor descriptor = exportService.describeLegacyResearchProvideTxt(researchNo);
+        return toResponse(
+                descriptor,
+                outputStream -> exportService.streamLegacyResearchProvideTxt(researchNo, descriptor.fileName(), principal, request, outputStream)
+        );
+    }
+
     private ResponseEntity<StreamingResponseBody> toResponse(ExportFileDescriptor descriptor, StreamingResponseBody body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename(descriptor.fileName()).build());

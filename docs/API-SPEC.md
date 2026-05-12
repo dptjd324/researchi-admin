@@ -34,7 +34,7 @@ Implemented transition route:
 - POST /research/{researchNo}: update `TB_RESEARCH_MST` after writing `admin_legacy_revision_log`
 - GET /research/{researchNo}/applications: read-only `TB_RESEARCH_APP` list with per-field search and pagination
 - GET /research/{researchNo}/applications/{researchAppSeq}: read-only `TB_RESEARCH_APP` detail
-- POST /research/{researchNo}/applications/{researchAppSeq}/provide: update `TB_RESEARCH_APP.PROVIDE_YN` after writing `admin_legacy_revision_log`
+- POST /research/{researchNo}/applications/{researchAppSeq}/provide: update `TB_RESEARCH_APP.PROVIDE_YN` after writing `admin_legacy_revision_log`; `Y` means applicant information was provided to the trader/client by email, `N` means not yet provided
 - GET /legacy-blacklist: old DB `TB_BLACKLIST_MST` list/search/edit screen
 - POST /legacy-blacklist: create or update `TB_BLACKLIST_MST` row
 - POST /legacy-blacklist/{blacklistNo}/status: update `TB_BLACKLIST_MST.BLACK_YN`
