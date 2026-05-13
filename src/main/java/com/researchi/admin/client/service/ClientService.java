@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 @Service
 public class ClientService {
@@ -49,10 +46,9 @@ public class ClientService {
         form.setClientName(summary.clientName());
         form.setDepartmentName(summary.departmentName());
         form.setPrimaryContactName(summary.primaryContactName());
+        form.setPrimaryPhone(summary.primaryPhone());
+        form.setPrimaryContactNo(summary.primaryContactNo());
         form.setPrimaryEmail(summary.primaryEmail());
-        form.setReplyToEmail(summary.replyToEmail());
-        form.setAdditionalEmails(String.join(System.lineSeparator(),
-                summary.activeEmails().stream().filter(email -> !email.equals(summary.primaryEmail())).toList()));
         form.setActive(summary.active());
         form.setConfirmImpact(Boolean.FALSE);
         return form;
@@ -65,9 +61,13 @@ public class ClientService {
     @Transactional("adminTransactionManager")
     public Long save(ClientForm form) {
         AdminClient client = form.getId() == null ? new AdminClient() : requiredClient(form.getId());
+        String primaryEmail = normalizeEmail(form.getPrimaryEmail());
+        if (primaryEmail == null) {
+            throw new IllegalArgumentException("대표 이메일을 입력하세요.");
+        }
         client.setClientName(form.getClientName().trim());
         client.setDepartmentName(trimToNull(form.getDepartmentName()));
-        client.setReplyToEmail(normalizeEmail(form.getReplyToEmail()));
+        client.setReplyToEmail(primaryEmail);
         client.setActiveYn(Boolean.FALSE.equals(form.getActive()) ? "N" : "Y");
         if (form.getId() == null) {
             adminClientMapper.insert(client);
@@ -86,6 +86,8 @@ public class ClientService {
             contact.setClientId(client.getId());
             contact.setContactName(seed.contactName());
             contact.setEmail(seed.email());
+            contact.setPhone(seed.phone());
+            contact.setContactNo(seed.contactNo());
             contact.setPrimaryYn(index == 0 ? "Y" : "N");
             contact.setActiveYn("Y");
             adminClientContactMapper.insert(contact);
@@ -116,8 +118,6 @@ public class ClientService {
         ClientForm form = new ClientForm();
         form.setClientName(normalizedName);
         form.setPrimaryEmail(normalizedPrimaryEmail);
-        form.setReplyToEmail(normalizedPrimaryEmail);
-        form.setAdditionalEmails(additionalEmails);
         form.setActive(Boolean.TRUE);
         Long clientId = save(form);
         return getClientSummary(clientId);
@@ -143,9 +143,11 @@ public class ClientService {
                     return "Y".equals(left.getPrimaryYn()) ? -1 : 1;
                 })
                 .toList();
-        List<String> activeEmails = activeContacts.stream().map(AdminClientContact::getEmail).toList();
-        String primaryEmail = activeEmails.isEmpty() ? null : activeEmails.get(0);
+        String primaryEmail = activeContacts.isEmpty() ? null : activeContacts.get(0).getEmail();
+        List<String> activeEmails = primaryEmail == null ? List.of() : List.of(primaryEmail);
         String primaryContactName = activeContacts.isEmpty() ? null : activeContacts.get(0).getContactName();
+        String primaryPhone = activeContacts.isEmpty() ? null : activeContacts.get(0).getPhone();
+        String primaryContactNo = activeContacts.isEmpty() ? null : activeContacts.get(0).getContactNo();
         String replyToEmail = normalizeEmail(client.getReplyToEmail());
         if (replyToEmail == null) {
             replyToEmail = primaryEmail;
@@ -155,6 +157,8 @@ public class ClientService {
                 client.getClientName(),
                 client.getDepartmentName(),
                 primaryContactName,
+                primaryPhone,
+                primaryContactNo,
                 primaryEmail,
                 replyToEmail,
                 activeEmails,
@@ -176,33 +180,13 @@ public class ClientService {
         if (primaryEmail == null) {
             throw new IllegalArgumentException("대표 이메일을 입력하세요.");
         }
-        seeds.add(new ContactSeed(trimToNull(form.getPrimaryContactName()), primaryEmail));
-
-        Set<String> seen = new LinkedHashSet<>();
-        seen.add(primaryEmail.toLowerCase(Locale.ROOT));
-        for (String token : splitEmails(form.getAdditionalEmails())) {
-            String normalized = normalizeEmail(token);
-            if (normalized == null) {
-                continue;
-            }
-            if (seen.add(normalized.toLowerCase(Locale.ROOT))) {
-                seeds.add(new ContactSeed(null, normalized));
-            }
-        }
+        seeds.add(new ContactSeed(
+                trimToNull(form.getPrimaryContactName()),
+                primaryEmail,
+                trimToNull(form.getPrimaryPhone()),
+                trimToNull(form.getPrimaryContactNo())
+        ));
         return seeds;
-    }
-
-    private List<String> splitEmails(String rawEmails) {
-        if (rawEmails == null || rawEmails.isBlank()) {
-            return List.of();
-        }
-        List<String> emails = new ArrayList<>();
-        for (String token : rawEmails.split("[,;\\r\\n]+")) {
-            if (!token.isBlank()) {
-                emails.add(token.trim());
-            }
-        }
-        return emails;
     }
 
     private String normalizeEmail(String email) {
@@ -225,6 +209,6 @@ public class ClientService {
         return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
     }
 
-    private record ContactSeed(String contactName, String email) {
+    private record ContactSeed(String contactName, String email, String phone, String contactNo) {
     }
 }

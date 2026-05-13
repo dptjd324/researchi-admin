@@ -182,6 +182,18 @@
         ORDER BY COALESCE(job.sent_at, job.scheduled_at, job.created_at) DESC, job.id DESC
     </select>
 
+    <select id="findLegacyScheduledByResearchNo" resultMap="adminMailSendJobResultMap">
+        SELECT
+            job.*,
+            template.template_name
+        FROM admin_mail_send_job job
+        LEFT JOIN admin_mail_template template ON template.id = job.template_id
+        WHERE job.document_srl = #{researchNo}
+          AND job.trigger_type IN ('LEGACY_SCHEDULED', 'LEGACY_SCHEDULED_DAILY')
+          AND job.send_status = 'SCHEDULED'
+        ORDER BY job.scheduled_at ASC, job.id ASC
+    </select>
+
     <select id="findDueScheduled" resultMap="adminMailSendJobResultMap">
         SELECT
             job.*,

@@ -141,6 +141,13 @@ public class MailingService {
         return buildHistoryItems(jobs);
     }
 
+    public List<AdminMailSendJob> getLegacyScheduledJobs(Long researchNo) {
+        if (researchNo == null) {
+            return List.of();
+        }
+        return adminMailSendJobMapper.findLegacyScheduledByResearchNo(researchNo);
+    }
+
     public int countProvisionCompletedApplications(Long sendJobId) {
         if (sendJobId == null) {
             return 0;
@@ -362,6 +369,13 @@ public class MailingService {
         return defaultRule;
     }
 
+    public List<LegacyMailRule> getLegacyMailRuleItems(Long researchNo) {
+        if (researchNo == null) {
+            return List.of();
+        }
+        return legacyMailRuleMapper.findRuleItemsByResearchNo(researchNo);
+    }
+
     @Transactional("adminTransactionManager")
     public void saveLegacyMailRule(
             Long researchNo,
@@ -388,6 +402,41 @@ public class MailingService {
         rule.setAttachmentType(attachmentType.name());
         rule.setEnabledYn(enabled ? "Y" : "N");
         legacyMailRuleMapper.upsert(rule);
+    }
+
+    @Transactional("adminTransactionManager")
+    public void addLegacyMailRuleItem(
+            Long researchNo,
+            Integer thresholdCount,
+            Long templateId,
+            String directMailSubject,
+            String directMailBody,
+            MailAttachmentType attachmentType,
+            boolean enabled
+    ) {
+        researchMasterService.getResearchMaster(researchNo);
+        if (thresholdCount == null || thresholdCount < 1) {
+            throw new IllegalArgumentException("Legacy threshold count must be at least 1.");
+        }
+        if (templateId == null && (trimToNull(directMailSubject) == null || trimToNull(directMailBody) == null)) {
+            throw new IllegalArgumentException("Select a template or enter both direct subject and body.");
+        }
+        LegacyMailRule rule = new LegacyMailRule();
+        rule.setResearchNo(researchNo);
+        rule.setThresholdCount(thresholdCount);
+        rule.setTemplateId(templateId);
+        rule.setDirectMailSubject(trimToNull(directMailSubject));
+        rule.setDirectMailBody(trimToNull(directMailBody));
+        rule.setAttachmentType(attachmentType.name());
+        rule.setEnabledYn(enabled ? "Y" : "N");
+        legacyMailRuleMapper.insertRuleItem(rule);
+    }
+
+    @Transactional("adminTransactionManager")
+    public void deleteLegacyMailRuleItem(Long researchNo, Long ruleId) {
+        if (ruleId == null || legacyMailRuleMapper.deleteRuleItem(ruleId, researchNo) == 0) {
+            throw new IllegalArgumentException("Legacy threshold rule was not found.");
+        }
     }
 
     @Transactional("adminTransactionManager")
@@ -481,7 +530,29 @@ public class MailingService {
         if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
             throw new IllegalStateException("Legacy threshold has not been reached.");
         }
-        Long sendJobId = sendLegacyThresholdNow(rule, snapshot, principal, request);
+        Long sendJobId = sendLegacyThresholdNow(rule, snapshot, principal, request, false);
+        return requireImmediateSendSuccess(sendJobId);
+    }
+
+    @Transactional("adminTransactionManager")
+    public Long triggerLegacyThresholdRule(
+            Long researchNo,
+            Long ruleId,
+            AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        LegacyMailRule rule = legacyMailRuleMapper.findRuleItemById(ruleId);
+        if (rule == null || !Objects.equals(rule.getResearchNo(), researchNo)) {
+            throw new IllegalStateException("Legacy threshold rule is not configured.");
+        }
+        if (rule.getThresholdCount() == null || rule.getThresholdCount() < 1) {
+            throw new IllegalStateException("Legacy threshold rule is not configured.");
+        }
+        Snapshot snapshot = loadLegacyThresholdSnapshot(researchNo);
+        if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
+            throw new IllegalStateException("Legacy threshold has not been reached.");
+        }
+        Long sendJobId = sendLegacyThresholdNow(rule, snapshot, principal, request, true);
         return requireImmediateSendSuccess(sendJobId);
     }
 
@@ -545,7 +616,28 @@ public class MailingService {
                 rule,
                 snapshot,
                 new AdminPrincipal(null, "scheduler", "", "Scheduler", "Y", null),
-                null
+                null,
+                false
+        );
+        return "SENT".equals(adminMailSendJobMapper.findById(sendJobId).getSendStatus());
+    }
+
+    @Transactional("adminTransactionManager")
+    public boolean triggerLegacyThresholdRuleAutomatically(Long ruleId) {
+        LegacyMailRule rule = legacyMailRuleMapper.findRuleItemById(ruleId);
+        if (rule == null || !rule.isEnabled() || rule.getThresholdCount() == null || rule.getThresholdCount() < 1) {
+            return false;
+        }
+        Snapshot snapshot = loadLegacyThresholdSnapshot(rule.getResearchNo());
+        if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
+            return false;
+        }
+        Long sendJobId = sendLegacyThresholdNow(
+                rule,
+                snapshot,
+                new AdminPrincipal(null, "scheduler", "", "Scheduler", "Y", null),
+                null,
+                true
         );
         return "SENT".equals(adminMailSendJobMapper.findById(sendJobId).getSendStatus());
     }
@@ -557,17 +649,26 @@ public class MailingService {
                 .toList();
     }
 
+    public List<Long> getEnabledLegacyThresholdRuleIds() {
+        return legacyMailRuleMapper.findEnabledRuleItems().stream()
+                .map(LegacyMailRule::getId)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     private Long sendLegacyThresholdNow(
             LegacyMailRule rule,
             Snapshot snapshot,
             AdminPrincipal principal,
-            HttpServletRequest request
+            HttpServletRequest request,
+            boolean ruleItem
     ) {
         ResearchMaster researchMaster = researchMasterService.getResearchMaster(rule.getResearchNo());
         RecipientSelection recipients = parseLegacyRecipients(researchMaster);
         MailContent mailContent = resolveMailContent(rule.getTemplateId(), rule.getDirectMailSubject(), rule.getDirectMailBody());
         MailAttachmentType attachmentType = MailAttachmentType.fromValue(rule.getAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : rule.getAttachmentType());
-        String duplicateKey = "LEGACY_THRESHOLD:" + rule.getResearchNo() + ":" + rule.getThresholdCount() + ":" + snapshot.applicationIds().size();
+        String duplicateKey = (ruleItem ? "LEGACY_THRESHOLD_RULE:" + rule.getId() : "LEGACY_THRESHOLD:" + rule.getResearchNo())
+                + ":" + rule.getThresholdCount() + ":" + snapshot.applicationIds().size();
         assertNoDuplicate(duplicateKey);
 
         AdminMailSendJob sendJob = baseJob(
@@ -619,7 +720,11 @@ public class MailingService {
         adminMailSendJobMapper.updateStatus(sendJob);
         insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, targetResult, failReason, sentAt);
         if ("SENT".equals(sendStatus)) {
-            legacyMailRuleMapper.updateLastTriggeredAt(rule.getResearchNo(), sentAt);
+            if (ruleItem) {
+                legacyMailRuleMapper.updateRuleItemLastTriggeredAt(rule.getId(), sentAt);
+            } else {
+                legacyMailRuleMapper.updateLastTriggeredAt(rule.getResearchNo(), sentAt);
+            }
             markLegacyApplicationsProvided(
                     rule.getResearchNo(),
                     snapshot.applicationIds(),

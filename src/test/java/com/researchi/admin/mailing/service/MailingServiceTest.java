@@ -1426,7 +1426,7 @@ class MailingServiceTest {
         when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
         when(clientService.getActiveRecipientEmails(5L)).thenReturn(List.of("owner@example.com", "team@example.com"));
-        when(clientService.getClientSummary(5L)).thenReturn(new ClientSummary(5L, "Real Client", "Ops", "Owner", "owner@example.com", "reply@example.com", List.of("owner@example.com", "team@example.com"), true));
+        when(clientService.getClientSummary(5L)).thenReturn(new ClientSummary(5L, "Real Client", "Ops", "Owner", null, null, "owner@example.com", "reply@example.com", List.of("owner@example.com", "team@example.com"), true));
         when(adminExportQueryMapper.findApplicationsByDocumentSrl(9L)).thenReturn(List.of(
                 exportApplication(101L, "Y", "N")
         ));

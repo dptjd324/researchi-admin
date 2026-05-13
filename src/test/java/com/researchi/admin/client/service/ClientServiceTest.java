@@ -33,12 +33,11 @@ class ClientServiceTest {
     private ClientService clientService;
 
     @Test
-    void saveCreatesClientAndDeduplicatedContacts() {
+    void saveCreatesSinglePrimaryContact() {
         ClientForm form = new ClientForm();
         form.setClientName("Client A");
         form.setPrimaryContactName("Owner");
         form.setPrimaryEmail("owner@example.com");
-        form.setAdditionalEmails("owner@example.com\nteam@example.com; second@example.com");
 
         doAnswer(invocation -> {
             AdminClient client = invocation.getArgument(0);
@@ -51,9 +50,9 @@ class ClientServiceTest {
         assertThat(clientId).isEqualTo(9L);
         ArgumentCaptor<AdminClientContact> contactCaptor = ArgumentCaptor.forClass(AdminClientContact.class);
         verify(adminClientContactMapper).deleteByClientId(9L);
-        verify(adminClientContactMapper, org.mockito.Mockito.times(3)).insert(contactCaptor.capture());
+        verify(adminClientContactMapper).insert(contactCaptor.capture());
         assertThat(contactCaptor.getAllValues()).extracting(AdminClientContact::getEmail)
-                .containsExactly("owner@example.com", "team@example.com", "second@example.com");
+                .containsExactly("owner@example.com");
         assertThat(contactCaptor.getAllValues().get(0).getPrimaryYn()).isEqualTo("Y");
     }
 
@@ -84,7 +83,7 @@ class ClientServiceTest {
 
         assertThat(summary.clientName()).isEqualTo("Client A");
         assertThat(summary.primaryEmail()).isEqualTo("owner@example.com");
-        assertThat(summary.activeEmails()).containsExactly("owner@example.com", "team@example.com");
+        assertThat(summary.activeEmails()).containsExactly("owner@example.com");
     }
 
     @Test

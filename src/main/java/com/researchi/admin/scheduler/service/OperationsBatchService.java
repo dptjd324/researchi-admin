@@ -90,6 +90,15 @@ public class OperationsBatchService {
                 // Keep legacy threshold jobs from blocking the existing threshold batch.
             }
         }
+        for (Long ruleId : mailingService.getEnabledLegacyThresholdRuleIds()) {
+            try {
+                if (mailingService.triggerLegacyThresholdRuleAutomatically(ruleId)) {
+                    executed++;
+                }
+            } catch (RuntimeException ignored) {
+                // Keep additional legacy threshold rules from blocking the batch.
+            }
+        }
         return executed;
     }
 

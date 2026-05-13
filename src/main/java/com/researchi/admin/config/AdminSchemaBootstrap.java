@@ -42,6 +42,7 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminLegacyApplicationExtraAnswerTable(connection);
             ensureAdminManualPublishLogTable(connection);
             ensureAdminLegacyMailRuleTable(connection);
+            ensureAdminLegacyMailRuleItemTable(connection);
             ensureAdminPerformanceIndexes(connection);
         }
     }
@@ -90,6 +91,8 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     client_id BIGINT NOT NULL,
                     contact_name VARCHAR(100) NULL,
                     email VARCHAR(255) NOT NULL,
+                    phone VARCHAR(50) NULL,
+                    contact_no VARCHAR(50) NULL,
                     primary_yn CHAR(1) NOT NULL DEFAULT 'N',
                     active_yn CHAR(1) NOT NULL DEFAULT 'Y',
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -108,6 +111,18 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "admin_client",
                 "reply_to_email",
                 "ALTER TABLE admin_client ADD COLUMN reply_to_email VARCHAR(255) NULL AFTER department_name"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_client_contact",
+                "phone",
+                "ALTER TABLE admin_client_contact ADD COLUMN phone VARCHAR(50) NULL AFTER email"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_client_contact",
+                "contact_no",
+                "ALTER TABLE admin_client_contact ADD COLUMN contact_no VARCHAR(50) NULL AFTER phone"
         );
     }
 
@@ -292,6 +307,28 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
     }
 
+    private void ensureAdminLegacyMailRuleItemTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_mail_rule_item",
+                """
+                CREATE TABLE admin_legacy_mail_rule_item (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    threshold_count INT NULL,
+                    template_id BIGINT NULL,
+                    direct_mail_subject VARCHAR(255) NULL,
+                    direct_mail_body TEXT NULL,
+                    attachment_type VARCHAR(20) NOT NULL DEFAULT 'XLSX',
+                    enabled_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    last_triggered_at DATETIME NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+    }
+
     private void ensureAdminPerformanceIndexes(Connection connection) throws Exception {
         createUniqueIndexIfMissingAndNoDuplicates(
                 connection,
@@ -411,6 +448,13 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "uk_admin_legacy_mail_rule_research_no",
                 "research_no",
                 "CREATE UNIQUE INDEX uk_admin_legacy_mail_rule_research_no ON admin_legacy_mail_rule (research_no)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_mail_rule_item",
+                "idx_admin_legacy_mail_rule_item_enabled",
+                List.of("enabled_yn", "research_no", "threshold_count", "id"),
+                "CREATE INDEX idx_admin_legacy_mail_rule_item_enabled ON admin_legacy_mail_rule_item (enabled_yn, research_no, threshold_count, id)"
         );
         createIndexIfMissing(
                 connection,

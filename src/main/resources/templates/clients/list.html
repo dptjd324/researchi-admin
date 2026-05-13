@@ -73,12 +73,11 @@
                             <div class="job-meta-grid">
                                 <span><strong>부서</strong><span th:text="${client.departmentName() != null ? client.departmentName() : '-'}">-</span></span>
                                 <span><strong>대표 담당자</strong><span th:text="${client.primaryContactName() != null ? client.primaryContactName() : '-'}">-</span></span>
+                                <span><strong>대표 전화</strong><span th:text="${client.primaryPhone() != null ? client.primaryPhone() : '-'}">-</span></span>
+                                <span><strong>담당자 연락처</strong><span th:text="${client.primaryContactNo() != null ? client.primaryContactNo() : '-'}">-</span></span>
                                 <span><strong>대표 이메일</strong><span th:text="${client.primaryEmail() != null ? client.primaryEmail() : '-'}">-</span></span>
-                                <span><strong>Reply-To</strong><span th:text="${client.replyToEmail() != null ? client.replyToEmail() : '-'}">-</span></span>
-                                <span><strong>활성 이메일 수</strong><span th:text="${client.activeEmails().size() + '개'}">0개</span></span>
                                 <span><strong>사용 여부</strong><span th:text="${client.active() ? '사용' : '미사용'}">사용</span></span>
                             </div>
-                            <p class="summary" style="margin-top: 0.75rem;" th:text="${client.emailsSummary() != '' ? client.emailsSummary() : '등록된 수신 이메일이 없습니다.'}">이메일 요약</p>
                         </article>
                     </div>
                     <div th:if="${#lists.isEmpty(clients)}" class="note">등록된 거래처가 없습니다.</div>
@@ -129,17 +128,17 @@
                                 <small th:if="${#fields.hasErrors('primaryEmail')}" th:errors="*{primaryEmail}" class="field-error"></small>
                             </label>
                             <label>
-                                <span>Reply-To 이메일</span>
-                                <input type="email" th:field="*{replyToEmail}">
-                                <small class="field-help">비워두면 대표 이메일을 reply-to 로 사용합니다.</small>
+                                <span>대표 전화</span>
+                                <input type="text" th:field="*{primaryPhone}">
                             </label>
                         </div>
 
-                        <label>
-                            <span>추가 수신 이메일</span>
-                            <textarea th:field="*{additionalEmails}" rows="5"></textarea>
-                            <small class="field-help">공고에 이 거래처가 연결되면 수동 발송, 예약 발송, 임계치 발송에 함께 자동 반영됩니다.</small>
-                        </label>
+                        <div class="form-grid">
+                            <label>
+                                <span>담당자 연락처</span>
+                                <input type="text" th:field="*{primaryContactNo}">
+                            </label>
+                        </div>
 
                         <label>
                             <span>사용 여부</span>

@@ -9,6 +9,8 @@
         <result property="clientId" column="client_id"/>
         <result property="contactName" column="contact_name"/>
         <result property="email" column="email"/>
+        <result property="phone" column="phone"/>
+        <result property="contactNo" column="contact_no"/>
         <result property="primaryYn" column="primary_yn"/>
         <result property="activeYn" column="active_yn"/>
         <result property="createdAt" column="created_at"/>
@@ -27,6 +29,8 @@
             client_id,
             contact_name,
             email,
+            phone,
+            contact_no,
             primary_yn,
             active_yn,
             created_at,
@@ -35,6 +39,8 @@
             #{clientId},
             #{contactName},
             #{email},
+            #{phone},
+            #{contactNo},
             #{primaryYn},
             #{activeYn},
             CURRENT_TIMESTAMP,
