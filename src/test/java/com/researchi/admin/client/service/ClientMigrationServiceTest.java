@@ -65,7 +65,7 @@ class ClientMigrationServiceTest {
         when(adminJobMetaMapper.findAll()).thenReturn(List.of(legacy));
         when(clientService.getAllClientSummaries()).thenReturn(List.of());
         when(clientService.findOrCreateLegacyClient("Client A", "owner@example.com", "team@example.com"))
-                .thenReturn(new ClientSummary(5L, "Client A", null, null, null, null, "owner@example.com", "owner@example.com", List.of("owner@example.com", "team@example.com"), true));
+                .thenReturn(new ClientSummary(5L, "Client A", null, null, null, "owner@example.com", "owner@example.com", List.of("owner@example.com", "team@example.com"), true));
 
         var result = clientMigrationService.migrateLegacyJobClients();
 

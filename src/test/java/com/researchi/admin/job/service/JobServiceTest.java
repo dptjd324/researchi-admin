@@ -71,7 +71,7 @@ class JobServiceTest {
         JobForm form = baseForm();
         AdminPrincipal principal = new AdminPrincipal(1L, "admin", "hash", "관리자", "Y", LocalDateTime.now().minusMinutes(1));
         when(xeJobService.createJobDocument(eq("newjob"), eq("신규 공고"), eq("본문"), eq("PUBLIC"), anyString())).thenReturn(321L);
-        when(clientService.getClientSummary(7L)).thenReturn(new ClientSummary(7L, "클라이언트", "리서치팀", "담당자", null, null, "client@example.com", "reply@example.com", List.of("client@example.com", "client2@example.com"), true));
+        when(clientService.getClientSummary(7L)).thenReturn(new ClientSummary(7L, "클라이언트", "리서치팀", "담당자", null, "client@example.com", "reply@example.com", List.of("client@example.com", "client2@example.com"), true));
         AdminJobMeta savedMeta = new AdminJobMeta();
         savedMeta.setDocumentSrl(321L);
         when(adminJobMetaMapper.findByDocumentSrl(321L)).thenReturn(null, savedMeta);

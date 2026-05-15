@@ -4,6 +4,7 @@ import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.export.domain.ExportFileDescriptor;
 import com.researchi.admin.export.service.ExportService;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.legacy.research.service.LegacyResearchExportService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,8 @@ class ExportControllerTest {
 
     @Mock
     private ExportService exportService;
+    @Mock
+    private LegacyResearchExportService legacyResearchExportService;
     @Mock
     private JobService jobService;
 

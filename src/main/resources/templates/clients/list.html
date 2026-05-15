@@ -2,7 +2,7 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
     <th:block th:fragment="content">
-        <section class="panel">
+        <section class="panel admin-data-page client-admin-page">
             <div class="dashboard-head">
                 <div>
                     <h2 class="h3 mb-2">거래처 관리</h2>
@@ -73,7 +73,6 @@
                             <div class="job-meta-grid">
                                 <span><strong>부서</strong><span th:text="${client.departmentName() != null ? client.departmentName() : '-'}">-</span></span>
                                 <span><strong>대표 담당자</strong><span th:text="${client.primaryContactName() != null ? client.primaryContactName() : '-'}">-</span></span>
-                                <span><strong>대표 전화</strong><span th:text="${client.primaryPhone() != null ? client.primaryPhone() : '-'}">-</span></span>
                                 <span><strong>담당자 연락처</strong><span th:text="${client.primaryContactNo() != null ? client.primaryContactNo() : '-'}">-</span></span>
                                 <span><strong>대표 이메일</strong><span th:text="${client.primaryEmail() != null ? client.primaryEmail() : '-'}">-</span></span>
                                 <span><strong>사용 여부</strong><span th:text="${client.active() ? '사용' : '미사용'}">사용</span></span>
@@ -126,10 +125,6 @@
                                 <span>대표 이메일</span>
                                 <input type="email" th:field="*{primaryEmail}" required>
                                 <small th:if="${#fields.hasErrors('primaryEmail')}" th:errors="*{primaryEmail}" class="field-error"></small>
-                            </label>
-                            <label>
-                                <span>대표 전화</span>
-                                <input type="text" th:field="*{primaryPhone}">
                             </label>
                         </div>
 

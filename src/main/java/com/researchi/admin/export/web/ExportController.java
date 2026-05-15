@@ -4,6 +4,7 @@ import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.export.domain.ExportFileDescriptor;
 import com.researchi.admin.export.service.ExportService;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.legacy.research.service.LegacyResearchExportService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -15,14 +16,22 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.nio.charset.StandardCharsets;
+
 @Controller
 public class ExportController {
 
     private final ExportService exportService;
+    private final LegacyResearchExportService legacyResearchExportService;
     private final JobService jobService;
 
-    public ExportController(ExportService exportService, JobService jobService) {
+    public ExportController(
+            ExportService exportService,
+            LegacyResearchExportService legacyResearchExportService,
+            JobService jobService
+    ) {
         this.exportService = exportService;
+        this.legacyResearchExportService = legacyResearchExportService;
         this.jobService = jobService;
     }
 
@@ -60,10 +69,23 @@ public class ExportController {
             @AuthenticationPrincipal AdminPrincipal principal,
             HttpServletRequest request
     ) {
-        ExportFileDescriptor descriptor = exportService.describeLegacyResearchXlsx(researchNo);
+        ExportFileDescriptor descriptor = legacyResearchExportService.describeXlsx(researchNo);
         return toResponse(
                 descriptor,
-                outputStream -> exportService.streamLegacyResearchXlsx(researchNo, descriptor.fileName(), principal, request, outputStream)
+                outputStream -> legacyResearchExportService.streamXlsx(researchNo, descriptor.fileName(), principal, request, outputStream)
+        );
+    }
+
+    @PostMapping("/research/{researchNo}/export/provide-xlsx")
+    public ResponseEntity<StreamingResponseBody> exportLegacyResearchProvideXlsx(
+            @PathVariable Long researchNo,
+            @AuthenticationPrincipal AdminPrincipal principal,
+            HttpServletRequest request
+    ) {
+        ExportFileDescriptor descriptor = legacyResearchExportService.describeProvideXlsx(researchNo);
+        return toResponse(
+                descriptor,
+                outputStream -> legacyResearchExportService.streamProvideXlsx(researchNo, descriptor.fileName(), principal, request, outputStream)
         );
     }
 
@@ -73,10 +95,10 @@ public class ExportController {
             @AuthenticationPrincipal AdminPrincipal principal,
             HttpServletRequest request
     ) {
-        ExportFileDescriptor descriptor = exportService.describeLegacyResearchTxt(researchNo);
+        ExportFileDescriptor descriptor = legacyResearchExportService.describeTxt(researchNo);
         return toResponse(
                 descriptor,
-                outputStream -> exportService.streamLegacyResearchTxt(researchNo, descriptor.fileName(), principal, request, outputStream)
+                outputStream -> legacyResearchExportService.streamTxt(researchNo, descriptor.fileName(), principal, request, outputStream)
         );
     }
 
@@ -86,16 +108,16 @@ public class ExportController {
             @AuthenticationPrincipal AdminPrincipal principal,
             HttpServletRequest request
     ) {
-        ExportFileDescriptor descriptor = exportService.describeLegacyResearchProvideTxt(researchNo);
+        ExportFileDescriptor descriptor = legacyResearchExportService.describeProvideTxt(researchNo);
         return toResponse(
                 descriptor,
-                outputStream -> exportService.streamLegacyResearchProvideTxt(researchNo, descriptor.fileName(), principal, request, outputStream)
+                outputStream -> legacyResearchExportService.streamProvideTxt(researchNo, descriptor.fileName(), principal, request, outputStream)
         );
     }
 
     private ResponseEntity<StreamingResponseBody> toResponse(ExportFileDescriptor descriptor, StreamingResponseBody body) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentDisposition(ContentDisposition.attachment().filename(descriptor.fileName()).build());
+        headers.setContentDisposition(ContentDisposition.attachment().filename(descriptor.fileName(), StandardCharsets.UTF_8).build());
         return ResponseEntity.ok()
                 .headers(headers)
                 .contentType(MediaType.parseMediaType(descriptor.contentType()))

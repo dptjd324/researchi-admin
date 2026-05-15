@@ -1,10 +1,10 @@
 package com.researchi.admin.job.domain;
 
 public enum JobType {
-    NEW("newjob", "\uc2e0\uaddc\uc77c\uac10"),
-    ADDITIONAL("additional", "\ucd94\uac00\uc77c\uac10"),
-    FAST("fast", "\uae09\uc9c4\ud589\uc2e0\uccad"),
-    RECRUIT("recruit", "\uc804\uad6d/\uc9c0\uc5ed\ubaa8\uc9d1");
+    NEW("newjob", "신규일감"),
+    ADDITIONAL("additional", "추가일감"),
+    FAST("fast", "급진행신청"),
+    RECRUIT("recruit", "전국/지역모집");
 
     private final String mid;
     private final String label;

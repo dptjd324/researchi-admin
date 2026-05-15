@@ -7,7 +7,6 @@ public record ClientSummary(
         String clientName,
         String departmentName,
         String primaryContactName,
-        String primaryPhone,
         String primaryContactNo,
         String primaryEmail,
         String replyToEmail,

@@ -308,8 +308,7 @@ body.admin-body {
     flex: 0 1 auto;
 }
 
-.dashboard-actions .secondary-link,
-.actions .secondary-link,
+.secondary-link,
 .filter-link,
 .top-nav a {
     display: inline-flex;
@@ -394,6 +393,11 @@ button:focus,
     background: #fff;
     color: var(--admin-primary);
     border-color: rgba(15, 118, 110, 0.24);
+    border-radius: 0.8rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
 .secondary-link.danger-button {
@@ -880,6 +884,208 @@ textarea {
     font-size: 0.84rem;
 }
 
+.admin-data-page .dashboard-head {
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(159, 209, 236, 0.85);
+}
+
+.admin-data-page .dashboard-actions {
+    align-items: center;
+}
+
+.admin-data-page .secondary-link,
+.admin-data-page button,
+.admin-data-page .btn-like {
+    min-height: 2.55rem;
+}
+
+.admin-data-page .note,
+.admin-data-page .notice {
+    border-radius: 0.8rem;
+}
+
+.admin-data-search {
+    border-top: 1px solid #9fd1ec;
+    border-bottom: 1px solid #9fd1ec;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 251, 255, 0.62));
+}
+
+.admin-data-search input,
+.admin-data-search select {
+    min-height: 2.75rem;
+    border-radius: 0.75rem;
+}
+
+.admin-data-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.admin-data-table th {
+    background: #f1f8fc;
+}
+
+.admin-data-table tbody tr:hover td {
+    background: #f8fcff;
+}
+
+.applicant-table-wrap {
+    border: 1px solid #d4e1ef;
+    border-radius: 0.95rem;
+    background: #fbfdff;
+    padding: 0.7rem;
+}
+
+.applicant-table-wrap .admin-data-table {
+    margin-bottom: 0;
+}
+
+.applicant-table-wrap .admin-data-table th:first-child {
+    border-top-left-radius: 0.7rem;
+}
+
+.applicant-table-wrap .admin-data-table th:last-child {
+    border-top-right-radius: 0.7rem;
+}
+
+.applicant-summary {
+    border: 1px solid #d4e1ef;
+    border-radius: 0.8rem;
+    background: #f8fbff;
+}
+
+.summary-metric strong,
+.admin-data-count strong {
+    font-weight: 800;
+}
+
+.research-edit-page .panel,
+.client-admin-page .panel,
+.legacy-mail-section {
+    border-radius: 1rem;
+    box-shadow: none;
+}
+
+.research-edit-page > .research-edit-form,
+.legacy-mail-page > .research-edit-form,
+.legacy-mail-page > .legacy-mail-section,
+.client-admin-page .form-layout > .panel,
+.client-admin-page > .panel {
+    border: 1px solid #d4e1ef;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 1rem;
+}
+
+.research-edit-page > .research-edit-form {
+    border-top: 1px solid #d4e1ef;
+}
+
+.research-meta-grid div {
+    min-height: 4.65rem;
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.research-meta-grid span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.research-edit-grid {
+    align-items: start;
+}
+
+.research-edit-grid label,
+.research-edit-block,
+.job-form label {
+    min-width: 0;
+}
+
+.research-edit-block textarea,
+.legacy-mail-section textarea {
+    line-height: 1.65;
+}
+
+.research-client-helper,
+.research-link-builder {
+    border-radius: 1rem !important;
+    background: linear-gradient(180deg, #ffffff, #f8fbff) !important;
+}
+
+.research-client-helper {
+    align-items: end;
+}
+
+.research-client-helper .secondary-link,
+.research-link-builder .secondary-link {
+    white-space: nowrap;
+}
+
+.legacy-mail-summary {
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.legacy-mail-recipient {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    border: 1px solid #d4e1ef;
+}
+
+.legacy-mail-section__head {
+    border-bottom: 1px solid rgba(159, 209, 236, 0.55);
+}
+
+.legacy-mail-section .research-edit-grid {
+    align-items: end;
+}
+
+.legacy-mail-actions {
+    padding-top: 0.25rem;
+    border-top: 1px solid rgba(159, 209, 236, 0.55);
+}
+
+.legacy-mail-history__item {
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.client-admin-page .form-layout {
+    align-items: start;
+}
+
+.client-admin-page .job-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.client-admin-page .job-item {
+    border: 1px solid #d4e1ef;
+    border-radius: 0.95rem;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.client-admin-page .job-meta-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.55rem;
+}
+
+.client-admin-page .job-meta-grid span {
+    min-width: 0;
+}
+
+.client-admin-page .job-form {
+    gap: 0.9rem;
+}
+
+.client-admin-page .actions {
+    padding-top: 0.25rem;
+}
+
 @media (max-width: 991.98px) {
     .form-layout,
     .form-grid,
@@ -888,7 +1094,8 @@ textarea {
     }
 
     .research-meta-grid,
-    .research-edit-grid {
+    .research-edit-grid,
+    .legacy-mail-summary {
         grid-template-columns: 1fr;
     }
 

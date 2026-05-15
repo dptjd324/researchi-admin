@@ -15,7 +15,6 @@ public class AdminClientContact {
     private Long clientId;
     private String contactName;
     private String email;
-    private String phone;
     private String contactNo;
     private String primaryYn;
     private String activeYn;

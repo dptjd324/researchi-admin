@@ -12,11 +12,6 @@ import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.service.JobService;
-import com.researchi.admin.legacy.blacklist.mapper.LegacyBlacklistMapper;
-import com.researchi.admin.legacy.mail.mapper.LegacyMailRuleMapper;
-import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
-import com.researchi.admin.legacy.research.mapper.ResearchMasterMapper;
-import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.domain.AdminMailSendTarget;
 import com.researchi.admin.mailing.domain.AdminMailTemplate;
@@ -69,16 +64,6 @@ class MailingServiceTest {
     private AdminJobMetaMapper adminJobMetaMapper;
     @Mock
     private AdminExportQueryMapper adminExportQueryMapper;
-    @Mock
-    private ResearchApplicationMapper researchApplicationMapper;
-    @Mock
-    private ResearchMasterMapper researchMasterMapper;
-    @Mock
-    private ResearchMasterService researchMasterService;
-    @Mock
-    private LegacyBlacklistMapper legacyBlacklistMapper;
-    @Mock
-    private LegacyMailRuleMapper legacyMailRuleMapper;
     @Mock
     private ExportService exportService;
     @Mock
@@ -250,11 +235,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -337,11 +317,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -397,11 +372,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -470,11 +440,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -539,11 +504,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -581,11 +541,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -649,11 +604,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -728,11 +678,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -790,11 +735,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -855,11 +795,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -930,11 +865,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1003,11 +933,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1075,11 +1000,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1140,11 +1060,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1187,11 +1102,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1267,11 +1177,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1318,11 +1223,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1357,11 +1257,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1405,11 +1300,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,
@@ -1426,7 +1316,7 @@ class MailingServiceTest {
         when(jobService.ensureJobMeta(9L)).thenReturn(jobMeta);
         when(jobService.getJob(9L)).thenReturn(jobDetail(9L));
         when(clientService.getActiveRecipientEmails(5L)).thenReturn(List.of("owner@example.com", "team@example.com"));
-        when(clientService.getClientSummary(5L)).thenReturn(new ClientSummary(5L, "Real Client", "Ops", "Owner", null, null, "owner@example.com", "reply@example.com", List.of("owner@example.com", "team@example.com"), true));
+        when(clientService.getClientSummary(5L)).thenReturn(new ClientSummary(5L, "Real Client", "Ops", "Owner", null, "owner@example.com", "reply@example.com", List.of("owner@example.com", "team@example.com"), true));
         when(adminExportQueryMapper.findApplicationsByDocumentSrl(9L)).thenReturn(List.of(
                 exportApplication(101L, "Y", "N")
         ));
@@ -1450,11 +1340,6 @@ class MailingServiceTest {
                 adminMailingApplicationMapper,
                 adminJobMetaMapper,
                 adminExportQueryMapper,
-                researchApplicationMapper,
-                researchMasterMapper,
-                researchMasterService,
-                legacyBlacklistMapper,
-                legacyMailRuleMapper,
                 exportService,
                 jobService,
                 clientService,

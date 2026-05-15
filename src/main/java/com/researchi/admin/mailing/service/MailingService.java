@@ -11,15 +11,6 @@ import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.domain.JobListItem;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.service.JobService;
-import com.researchi.admin.legacy.blacklist.mapper.LegacyBlacklistMapper;
-import com.researchi.admin.legacy.mail.domain.LegacyMailRule;
-import com.researchi.admin.legacy.mail.mapper.LegacyMailRuleMapper;
-import com.researchi.admin.legacy.research.domain.ResearchApplication;
-import com.researchi.admin.legacy.research.domain.ResearchMaster;
-import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
-import com.researchi.admin.legacy.research.mapper.ResearchMasterMapper;
-import com.researchi.admin.legacy.research.service.ResearchApplicationService;
-import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.domain.AdminMailSendTarget;
 import com.researchi.admin.mailing.domain.AdminMailTemplate;
@@ -43,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -55,15 +45,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class MailingService {
 
     private static final DateTimeFormatter MAIL_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
-    private static final DateTimeFormatter LEGACY_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
     private static final String DEFAULT_ATTACHMENT_TYPE = "XLSX";
     private static final String DEFAULT_DIRECT_SUBJECT = "공고 지원서 안내";
     private static final String DEFAULT_DIRECT_BODY = "지원서를 첨부해 드립니다.";
@@ -74,12 +60,6 @@ public class MailingService {
     private final AdminMailingApplicationMapper adminMailingApplicationMapper;
     private final AdminJobMetaMapper adminJobMetaMapper;
     private final AdminExportQueryMapper adminExportQueryMapper;
-    private final ResearchApplicationMapper researchApplicationMapper;
-    private final ResearchMasterMapper researchMasterMapper;
-    private final ResearchApplicationService researchApplicationService;
-    private final ResearchMasterService researchMasterService;
-    private final LegacyBlacklistMapper legacyBlacklistMapper;
-    private final LegacyMailRuleMapper legacyMailRuleMapper;
     private final ExportService exportService;
     private final JobService jobService;
     private final ClientService clientService;
@@ -94,12 +74,6 @@ public class MailingService {
             AdminMailingApplicationMapper adminMailingApplicationMapper,
             AdminJobMetaMapper adminJobMetaMapper,
             AdminExportQueryMapper adminExportQueryMapper,
-            ResearchApplicationMapper researchApplicationMapper,
-            ResearchMasterMapper researchMasterMapper,
-            ResearchApplicationService researchApplicationService,
-            ResearchMasterService researchMasterService,
-            LegacyBlacklistMapper legacyBlacklistMapper,
-            LegacyMailRuleMapper legacyMailRuleMapper,
             ExportService exportService,
             JobService jobService,
             ClientService clientService,
@@ -113,12 +87,6 @@ public class MailingService {
         this.adminMailingApplicationMapper = adminMailingApplicationMapper;
         this.adminJobMetaMapper = adminJobMetaMapper;
         this.adminExportQueryMapper = adminExportQueryMapper;
-        this.researchApplicationMapper = researchApplicationMapper;
-        this.researchMasterMapper = researchMasterMapper;
-        this.researchApplicationService = researchApplicationService;
-        this.researchMasterService = researchMasterService;
-        this.legacyBlacklistMapper = legacyBlacklistMapper;
-        this.legacyMailRuleMapper = legacyMailRuleMapper;
         this.exportService = exportService;
         this.jobService = jobService;
         this.clientService = clientService;
@@ -132,36 +100,6 @@ public class MailingService {
                 ? adminMailSendJobMapper.findAll()
                 : adminMailSendJobMapper.findByDocumentSrl(documentSrl);
         return buildHistoryItems(jobs);
-    }
-
-    public List<MailingHistoryItem> getLegacyHistory(Long researchNo) {
-        List<AdminMailSendJob> jobs = researchNo == null
-                ? List.of()
-                : adminMailSendJobMapper.findLegacyByResearchNo(researchNo);
-        return buildHistoryItems(jobs);
-    }
-
-    public List<AdminMailSendJob> getLegacyScheduledJobs(Long researchNo) {
-        if (researchNo == null) {
-            return List.of();
-        }
-        return adminMailSendJobMapper.findLegacyScheduledByResearchNo(researchNo);
-    }
-
-    public int countProvisionCompletedApplications(Long sendJobId) {
-        if (sendJobId == null) {
-            return 0;
-        }
-        AdminMailSendJob sendJob = adminMailSendJobMapper.findById(sendJobId);
-        if (sendJob == null || !isLegacyMailJob(sendJob) || !"SENT".equalsIgnoreCase(sendJob.getSendStatus())) {
-            return 0;
-        }
-        return (int) adminMailSendTargetMapper.findBySendJobId(sendJobId).stream()
-                .filter(target -> "SENT".equalsIgnoreCase(target.getSendResult()))
-                .map(AdminMailSendTarget::getApplicationId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .count();
     }
 
     private List<MailingHistoryItem> buildHistoryItems(List<AdminMailSendJob> jobs) {
@@ -186,21 +124,9 @@ public class MailingService {
         for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
             titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
         }
-        Map<Long, String> titlesByResearchNo = new LinkedHashMap<>();
-        List<Long> researchNos = displayJobs.stream()
-                .filter(this::isLegacyMailJob)
-                .map(AdminMailSendJob::getDocumentSrl)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (!researchNos.isEmpty()) {
-            for (ResearchMaster researchMaster : researchMasterMapper.findByResearchNos(researchNos)) {
-                titlesByResearchNo.put(researchMaster.getResearchNo(), researchMaster.getResearchTitle());
-            }
-        }
         for (AdminMailSendJob job : displayJobs) {
             if (isLegacyMailJob(job)) {
-                job.setJobTitle(titlesByResearchNo.getOrDefault(job.getDocumentSrl(), "Research #" + job.getDocumentSrl()));
+                job.setJobTitle("Research #" + job.getDocumentSrl());
             } else {
                 job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl()));
             }
@@ -336,404 +262,6 @@ public class MailingService {
                 request
         );
         return requireImmediateSendSuccess(sendJobId);
-    }
-
-    public MailingPreview getLegacyResearchPreview(Long researchNo) {
-        if (researchNo == null) {
-            return null;
-        }
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        RecipientSelection recipients = parseLegacyRecipients(researchMaster);
-        Snapshot snapshot = loadLegacySnapshot(researchNo);
-        return new MailingPreview(
-                researchNo,
-                researchMaster.getResearchTitle(),
-                recipients.recipients(),
-                recipients.recipients().size(),
-                recipients.excludedCount(),
-                snapshot.applicationIds().size(),
-                snapshot.blacklistExcludedCount()
-        );
-    }
-
-    public LegacyMailRule getLegacyMailRule(Long researchNo) {
-        LegacyMailRule rule = legacyMailRuleMapper.findByResearchNo(researchNo);
-        if (rule != null) {
-            return rule;
-        }
-        LegacyMailRule defaultRule = new LegacyMailRule();
-        defaultRule.setResearchNo(researchNo);
-        defaultRule.setThresholdCount(null);
-        defaultRule.setAttachmentType(DEFAULT_ATTACHMENT_TYPE);
-        defaultRule.setEnabledYn("N");
-        return defaultRule;
-    }
-
-    public List<LegacyMailRule> getLegacyMailRuleItems(Long researchNo) {
-        if (researchNo == null) {
-            return List.of();
-        }
-        return legacyMailRuleMapper.findRuleItemsByResearchNo(researchNo);
-    }
-
-    @Transactional("adminTransactionManager")
-    public void saveLegacyMailRule(
-            Long researchNo,
-            Integer thresholdCount,
-            Long templateId,
-            String directMailSubject,
-            String directMailBody,
-            MailAttachmentType attachmentType,
-            boolean enabled
-    ) {
-        researchMasterService.getResearchMaster(researchNo);
-        if (enabled && (thresholdCount == null || thresholdCount < 1)) {
-            throw new IllegalArgumentException("Legacy threshold count must be at least 1.");
-        }
-        if (templateId == null && (trimToNull(directMailSubject) == null || trimToNull(directMailBody) == null)) {
-            throw new IllegalArgumentException("Select a template or enter both direct subject and body.");
-        }
-        LegacyMailRule rule = new LegacyMailRule();
-        rule.setResearchNo(researchNo);
-        rule.setThresholdCount(thresholdCount);
-        rule.setTemplateId(templateId);
-        rule.setDirectMailSubject(trimToNull(directMailSubject));
-        rule.setDirectMailBody(trimToNull(directMailBody));
-        rule.setAttachmentType(attachmentType.name());
-        rule.setEnabledYn(enabled ? "Y" : "N");
-        legacyMailRuleMapper.upsert(rule);
-    }
-
-    @Transactional("adminTransactionManager")
-    public void addLegacyMailRuleItem(
-            Long researchNo,
-            Integer thresholdCount,
-            Long templateId,
-            String directMailSubject,
-            String directMailBody,
-            MailAttachmentType attachmentType,
-            boolean enabled
-    ) {
-        researchMasterService.getResearchMaster(researchNo);
-        if (thresholdCount == null || thresholdCount < 1) {
-            throw new IllegalArgumentException("Legacy threshold count must be at least 1.");
-        }
-        if (templateId == null && (trimToNull(directMailSubject) == null || trimToNull(directMailBody) == null)) {
-            throw new IllegalArgumentException("Select a template or enter both direct subject and body.");
-        }
-        LegacyMailRule rule = new LegacyMailRule();
-        rule.setResearchNo(researchNo);
-        rule.setThresholdCount(thresholdCount);
-        rule.setTemplateId(templateId);
-        rule.setDirectMailSubject(trimToNull(directMailSubject));
-        rule.setDirectMailBody(trimToNull(directMailBody));
-        rule.setAttachmentType(attachmentType.name());
-        rule.setEnabledYn(enabled ? "Y" : "N");
-        legacyMailRuleMapper.insertRuleItem(rule);
-    }
-
-    @Transactional("adminTransactionManager")
-    public void deleteLegacyMailRuleItem(Long researchNo, Long ruleId) {
-        if (ruleId == null || legacyMailRuleMapper.deleteRuleItem(ruleId, researchNo) == 0) {
-            throw new IllegalArgumentException("Legacy threshold rule was not found.");
-        }
-    }
-
-    @Transactional("adminTransactionManager")
-    public Long sendLegacyResearchManual(
-            Long researchNo,
-            Long templateId,
-            String directMailSubject,
-            String directMailBody,
-            MailAttachmentType attachmentType,
-            AdminPrincipal principal,
-            HttpServletRequest request
-    ) {
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        Snapshot snapshot = loadLegacySnapshot(researchNo);
-        RecipientSelection recipients = parseLegacyRecipients(researchMaster);
-        MailContent mailContent = resolveMailContent(templateId, directMailSubject, directMailBody);
-        String duplicateKey = "LEGACY_MANUAL:" + researchNo + ":" + System.currentTimeMillis();
-        AdminMailSendJob sendJob = baseJob(
-                researchNo,
-                mailContent.templateId(),
-                mailContent.subject(),
-                mailContent.body(),
-                attachmentType,
-                "MANUAL",
-                "LEGACY_MANUAL",
-                recipients,
-                snapshot,
-                null,
-                duplicateKey,
-                principal == null ? null : principal.getId()
-        );
-        sendJob.setSendStatus(snapshot.applicationIds().isEmpty() ? "NO_TARGETS" : "RUNNING");
-        adminMailSendJobMapper.insert(sendJob);
-
-        if (snapshot.applicationIds().isEmpty()) {
-            safeLog(principal == null ? null : principal.getId(), "MAIL_SEND_LEGACY_MANUAL", "RESEARCH", String.valueOf(researchNo), "Legacy mail send job #" + sendJob.getId() + " created: no targets", request);
-            return requireImmediateSendSuccess(sendJob.getId());
-        }
-
-        String sendStatus;
-        String targetResult;
-        String failReason = null;
-        LocalDateTime sentAt = null;
-        if (recipients.recipients().isEmpty()) {
-            sendStatus = "FAILED";
-            targetResult = "FAILED";
-            failReason = "Recipient email was not found in the old research row.";
-        } else {
-            ExportPayload attachment = attachmentType == MailAttachmentType.XLSX
-                    ? exportService.prepareLegacyResearchXlsx(researchNo, snapshot.applicationIds())
-                    : exportService.prepareLegacyResearchTxt(researchNo, snapshot.applicationIds());
-            try {
-                mailDispatchGateway.dispatch(buildLegacyDispatchRequest(researchMaster, recipients.recipients(), mailContent, attachment, attachmentType, snapshot.applicationIds().size()));
-                sendStatus = "SENT";
-                targetResult = "SENT";
-                sentAt = LocalDateTime.now();
-            } catch (Exception ex) {
-                sendStatus = "FAILED";
-                targetResult = "FAILED";
-                failReason = trimFailureReason(ex.getMessage());
-            }
-        }
-
-        sendJob.setSendStatus(sendStatus);
-        sendJob.setSentAt(sentAt);
-        adminMailSendJobMapper.updateStatus(sendJob);
-        insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, targetResult, failReason, sentAt);
-        if ("SENT".equals(sendStatus)) {
-            markLegacyApplicationsProvided(
-                    researchNo,
-                    snapshot.applicationIds(),
-                    principal == null ? null : principal.getId(),
-                    "legacy manual mail job #" + sendJob.getId()
-            );
-        }
-        safeLog(principal == null ? null : principal.getId(), "MAIL_SEND_LEGACY_MANUAL", "RESEARCH", String.valueOf(researchNo), "Legacy mail send job #" + sendJob.getId() + " completed: " + displaySendStatus(sendStatus), request);
-        return requireImmediateSendSuccess(sendJob.getId());
-    }
-
-    @Transactional("adminTransactionManager")
-    public Long triggerLegacyThreshold(
-            Long researchNo,
-            AdminPrincipal principal,
-            HttpServletRequest request
-    ) {
-        LegacyMailRule rule = legacyMailRuleMapper.findByResearchNo(researchNo);
-        if (rule == null || rule.getThresholdCount() == null || rule.getThresholdCount() < 1) {
-            throw new IllegalStateException("Legacy threshold rule is not configured.");
-        }
-        Snapshot snapshot = loadLegacyThresholdSnapshot(researchNo);
-        if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
-            throw new IllegalStateException("Legacy threshold has not been reached.");
-        }
-        Long sendJobId = sendLegacyThresholdNow(rule, snapshot, principal, request, false);
-        return requireImmediateSendSuccess(sendJobId);
-    }
-
-    @Transactional("adminTransactionManager")
-    public Long triggerLegacyThresholdRule(
-            Long researchNo,
-            Long ruleId,
-            AdminPrincipal principal,
-            HttpServletRequest request
-    ) {
-        LegacyMailRule rule = legacyMailRuleMapper.findRuleItemById(ruleId);
-        if (rule == null || !Objects.equals(rule.getResearchNo(), researchNo)) {
-            throw new IllegalStateException("Legacy threshold rule is not configured.");
-        }
-        if (rule.getThresholdCount() == null || rule.getThresholdCount() < 1) {
-            throw new IllegalStateException("Legacy threshold rule is not configured.");
-        }
-        Snapshot snapshot = loadLegacyThresholdSnapshot(researchNo);
-        if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
-            throw new IllegalStateException("Legacy threshold has not been reached.");
-        }
-        Long sendJobId = sendLegacyThresholdNow(rule, snapshot, principal, request, true);
-        return requireImmediateSendSuccess(sendJobId);
-    }
-
-    @Transactional("adminTransactionManager")
-    public Long scheduleLegacyResearch(
-            Long researchNo,
-            Long templateId,
-            String directMailSubject,
-            String directMailBody,
-            MailAttachmentType attachmentType,
-            LocalDateTime scheduledAt,
-            boolean dailyRepeat,
-            AdminPrincipal principal,
-            HttpServletRequest request
-    ) {
-        validateScheduledAt(scheduledAt);
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        Snapshot snapshot = dailyRepeat ? new Snapshot(List.of(), 0) : loadLegacySnapshot(researchNo);
-        RecipientSelection recipients = parseLegacyRecipients(researchMaster);
-        MailContent mailContent = resolveMailContent(templateId, directMailSubject, directMailBody);
-        String duplicateKey = (dailyRepeat ? "LEGACY_SCHEDULED_DAILY" : "LEGACY_SCHEDULED") + ":" + researchNo + ":" + scheduledAt.withNano(0);
-        assertNoDuplicate(duplicateKey);
-
-        AdminMailSendJob sendJob = baseJob(
-                researchNo,
-                mailContent.templateId(),
-                mailContent.subject(),
-                mailContent.body(),
-                attachmentType,
-                "SCHEDULED",
-                dailyRepeat ? "LEGACY_SCHEDULED_DAILY" : "LEGACY_SCHEDULED",
-                recipients,
-                snapshot,
-                null,
-                duplicateKey,
-                principal == null ? null : principal.getId()
-        );
-        sendJob.setSendStatus(!dailyRepeat && snapshot.applicationIds().isEmpty() ? "NO_TARGETS" : "SCHEDULED");
-        sendJob.setScheduledAt(scheduledAt);
-        sendJob.setRepeatYn(dailyRepeat ? "Y" : "N");
-        sendJob.setRepeatUnit(dailyRepeat ? "DAILY" : null);
-        adminMailSendJobMapper.insert(sendJob);
-        if (!dailyRepeat) {
-            insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, "PENDING", null, null);
-        }
-        safeLog(principal == null ? null : principal.getId(), "MAIL_SEND_LEGACY_SCHEDULE", "RESEARCH", String.valueOf(researchNo), "Legacy scheduled mail job #" + sendJob.getId() + " registered", request);
-        return sendJob.getId();
-    }
-
-    @Transactional("adminTransactionManager")
-    public boolean triggerLegacyThresholdAutomatically(Long researchNo) {
-        LegacyMailRule rule = legacyMailRuleMapper.findByResearchNo(researchNo);
-        if (rule == null || !rule.isEnabled() || rule.getThresholdCount() == null || rule.getThresholdCount() < 1) {
-            return false;
-        }
-        Snapshot snapshot = loadLegacyThresholdSnapshot(researchNo);
-        if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
-            return false;
-        }
-        Long sendJobId = sendLegacyThresholdNow(
-                rule,
-                snapshot,
-                new AdminPrincipal(null, "scheduler", "", "Scheduler", "Y", null),
-                null,
-                false
-        );
-        return "SENT".equals(adminMailSendJobMapper.findById(sendJobId).getSendStatus());
-    }
-
-    @Transactional("adminTransactionManager")
-    public boolean triggerLegacyThresholdRuleAutomatically(Long ruleId) {
-        LegacyMailRule rule = legacyMailRuleMapper.findRuleItemById(ruleId);
-        if (rule == null || !rule.isEnabled() || rule.getThresholdCount() == null || rule.getThresholdCount() < 1) {
-            return false;
-        }
-        Snapshot snapshot = loadLegacyThresholdSnapshot(rule.getResearchNo());
-        if (snapshot.applicationIds().size() < rule.getThresholdCount()) {
-            return false;
-        }
-        Long sendJobId = sendLegacyThresholdNow(
-                rule,
-                snapshot,
-                new AdminPrincipal(null, "scheduler", "", "Scheduler", "Y", null),
-                null,
-                true
-        );
-        return "SENT".equals(adminMailSendJobMapper.findById(sendJobId).getSendStatus());
-    }
-
-    public List<Long> getEnabledLegacyThresholdResearchNos() {
-        return legacyMailRuleMapper.findEnabled().stream()
-                .map(LegacyMailRule::getResearchNo)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    public List<Long> getEnabledLegacyThresholdRuleIds() {
-        return legacyMailRuleMapper.findEnabledRuleItems().stream()
-                .map(LegacyMailRule::getId)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    private Long sendLegacyThresholdNow(
-            LegacyMailRule rule,
-            Snapshot snapshot,
-            AdminPrincipal principal,
-            HttpServletRequest request,
-            boolean ruleItem
-    ) {
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(rule.getResearchNo());
-        RecipientSelection recipients = parseLegacyRecipients(researchMaster);
-        MailContent mailContent = resolveMailContent(rule.getTemplateId(), rule.getDirectMailSubject(), rule.getDirectMailBody());
-        MailAttachmentType attachmentType = MailAttachmentType.fromValue(rule.getAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : rule.getAttachmentType());
-        String duplicateKey = (ruleItem ? "LEGACY_THRESHOLD_RULE:" + rule.getId() : "LEGACY_THRESHOLD:" + rule.getResearchNo())
-                + ":" + rule.getThresholdCount() + ":" + snapshot.applicationIds().size();
-        assertNoDuplicate(duplicateKey);
-
-        AdminMailSendJob sendJob = baseJob(
-                rule.getResearchNo(),
-                mailContent.templateId(),
-                mailContent.subject(),
-                mailContent.body(),
-                attachmentType,
-                "AUTO",
-                "LEGACY_THRESHOLD",
-                recipients,
-                snapshot,
-                rule.getThresholdCount(),
-                duplicateKey,
-                principal == null ? null : principal.getId()
-        );
-        sendJob.setSendStatus(snapshot.applicationIds().isEmpty() ? "NO_TARGETS" : "RUNNING");
-        adminMailSendJobMapper.insert(sendJob);
-
-        String sendStatus;
-        String targetResult;
-        String failReason = null;
-        LocalDateTime sentAt = null;
-        if (snapshot.applicationIds().isEmpty()) {
-            sendStatus = "NO_TARGETS";
-            targetResult = "NO_TARGETS";
-        } else if (recipients.recipients().isEmpty()) {
-            sendStatus = "FAILED";
-            targetResult = "FAILED";
-            failReason = "Recipient email was not found in the old research row.";
-        } else {
-            ExportPayload attachment = attachmentType == MailAttachmentType.XLSX
-                    ? exportService.prepareLegacyResearchXlsx(rule.getResearchNo(), snapshot.applicationIds())
-                    : exportService.prepareLegacyResearchTxt(rule.getResearchNo(), snapshot.applicationIds());
-            try {
-                mailDispatchGateway.dispatch(buildLegacyDispatchRequest(researchMaster, recipients.recipients(), mailContent, attachment, attachmentType, snapshot.applicationIds().size()));
-                sendStatus = "SENT";
-                targetResult = "SENT";
-                sentAt = LocalDateTime.now();
-            } catch (Exception ex) {
-                sendStatus = "FAILED";
-                targetResult = "FAILED";
-                failReason = trimFailureReason(ex.getMessage());
-            }
-        }
-
-        sendJob.setSendStatus(sendStatus);
-        sendJob.setSentAt(sentAt);
-        adminMailSendJobMapper.updateStatus(sendJob);
-        insertTargets(sendJob.getId(), snapshot.applicationIds(), recipients, targetResult, failReason, sentAt);
-        if ("SENT".equals(sendStatus)) {
-            if (ruleItem) {
-                legacyMailRuleMapper.updateRuleItemLastTriggeredAt(rule.getId(), sentAt);
-            } else {
-                legacyMailRuleMapper.updateLastTriggeredAt(rule.getResearchNo(), sentAt);
-            }
-            markLegacyApplicationsProvided(
-                    rule.getResearchNo(),
-                    snapshot.applicationIds(),
-                    principal == null ? null : principal.getId(),
-                    "legacy threshold mail job #" + sendJob.getId()
-            );
-        }
-        safeLog(principal == null ? null : principal.getId(), "MAIL_SEND_LEGACY_THRESHOLD", "RESEARCH", String.valueOf(rule.getResearchNo()), "Legacy threshold mail job #" + sendJob.getId() + " completed: " + displaySendStatus(sendStatus), request);
-        return sendJob.getId();
     }
 
     @Transactional("adminTransactionManager")
@@ -901,10 +429,6 @@ public class MailingService {
         if (sendJob == null || !"SCHEDULED".equals(sendJob.getSendStatus())) {
             return false;
         }
-        if (isLegacyScheduled(sendJob)) {
-            return executeLegacyScheduledSend(sendJob);
-        }
-
         boolean dailyRepeat = isDailyRepeat(sendJob);
         ScheduledTargetSnapshot targetSnapshot = dailyRepeat
                 ? new ScheduledTargetSnapshot(loadDailyScheduledSnapshot(sendJob.getDocumentSrl()).applicationIds(), List.of())
@@ -992,79 +516,6 @@ public class MailingService {
                 "예약 발송 작업 #" + sendJobId + " 처리 완료: " + displaySendStatus(sendStatus),
                 null
         );
-        return "SENT".equals(sendStatus);
-    }
-
-    private boolean executeLegacyScheduledSend(AdminMailSendJob sendJob) {
-        boolean dailyRepeat = isDailyRepeat(sendJob);
-        ScheduledTargetSnapshot targetSnapshot = dailyRepeat
-                ? new ScheduledTargetSnapshot(loadLegacyDailyScheduledSnapshot(sendJob.getDocumentSrl()).applicationIds(), List.of())
-                : loadLegacyScheduledTargetSnapshot(sendJob);
-        List<Long> applicationIds = targetSnapshot.applicationIds();
-
-        if (applicationIds.isEmpty()) {
-            markScheduledBlacklistExcludedTargets(sendJob.getId(), targetSnapshot.blacklistExcludedApplicationIds(), null);
-            sendJob.setSendStatus("NO_TARGETS");
-            adminMailSendJobMapper.updateStatus(sendJob);
-            if (dailyRepeat) {
-                scheduleNextDailySend(sendJob);
-            }
-            safeLog(null, "MAIL_SEND_LEGACY_SCHEDULED_EXECUTE", "MAIL_SEND_JOB", String.valueOf(sendJob.getId()), "Legacy scheduled mail job #" + sendJob.getId() + " had no targets.", null);
-            return false;
-        }
-
-        int claimed = adminMailSendJobMapper.updateStatusIfCurrent(sendJob.getId(), "RUNNING", null, "SCHEDULED");
-        if (claimed < 1) {
-            return false;
-        }
-        sendJob.setSendStatus("RUNNING");
-        sendJob.setSentAt(null);
-
-        String sendStatus;
-        String targetResult;
-        String failReason = null;
-        LocalDateTime sentAt = null;
-        RecipientSelection recipients = null;
-        try {
-            ResearchMaster researchMaster = researchMasterService.getResearchMaster(sendJob.getDocumentSrl());
-            recipients = parseLegacyRecipients(researchMaster);
-            if (recipients.recipients().isEmpty()) {
-                throw new IllegalStateException("Recipient email was not found in the old research row.");
-            }
-            MailContent mailContent = resolveStoredMailContent(sendJob);
-            MailAttachmentType attachmentType = MailAttachmentType.fromValue(sendJob.getAttachmentType() == null ? DEFAULT_ATTACHMENT_TYPE : sendJob.getAttachmentType());
-            ExportPayload attachment = attachmentType == MailAttachmentType.XLSX
-                    ? exportService.prepareLegacyResearchXlsx(sendJob.getDocumentSrl(), applicationIds)
-                    : exportService.prepareLegacyResearchTxt(sendJob.getDocumentSrl(), applicationIds);
-            mailDispatchGateway.dispatch(buildLegacyDispatchRequest(researchMaster, recipients.recipients(), mailContent, attachment, attachmentType, applicationIds.size()));
-            sendStatus = "SENT";
-            targetResult = "SENT";
-            sentAt = LocalDateTime.now();
-        } catch (Exception ex) {
-            sendStatus = "FAILED";
-            targetResult = "FAILED";
-            failReason = trimFailureReason(ex.getMessage());
-        }
-
-        sendJob.setSendStatus(sendStatus);
-        sendJob.setSentAt(sentAt);
-        adminMailSendJobMapper.updateStatus(sendJob);
-        if (dailyRepeat) {
-            insertTargets(sendJob.getId(), applicationIds, recipients == null ? new RecipientSelection(List.of(), 0, "Client") : recipients, targetResult, failReason, sentAt);
-            scheduleNextDailySend(sendJob);
-        } else {
-            markScheduledBlacklistExcludedTargets(sendJob.getId(), targetSnapshot.blacklistExcludedApplicationIds(), sentAt);
-            updateScheduledTargets(sendJob.getId(), applicationIds, targetResult, failReason, sentAt);
-        }
-        if ("SENT".equals(sendStatus)) {
-            markLegacyApplicationsProvided(
-                    sendJob.getDocumentSrl(),
-                    applicationIds,
-                    sendJob.getCreatedBy(),
-                    "legacy scheduled mail job #" + sendJob.getId()
-            );
-        }
-        safeLog(null, "MAIL_SEND_LEGACY_SCHEDULED_EXECUTE", "MAIL_SEND_JOB", String.valueOf(sendJob.getId()), "Legacy scheduled mail job #" + sendJob.getId() + " completed: " + displaySendStatus(sendStatus), null);
         return "SENT".equals(sendStatus);
     }
 
@@ -1314,58 +765,6 @@ public class MailingService {
         return new Snapshot(includedApplicationIds, blacklistExcludedCount);
     }
 
-    private Snapshot loadLegacySnapshot(Long researchNo) {
-        List<Long> includedApplicationIds = new ArrayList<>();
-        int blacklistExcludedCount = 0;
-        for (ResearchApplication application : researchApplicationMapper.findAllByResearchNo(researchNo)) {
-            if (isLegacyBlacklisted(application)) {
-                blacklistExcludedCount++;
-                continue;
-            }
-            includedApplicationIds.add(application.getResearchAppSeq());
-        }
-        return new Snapshot(includedApplicationIds, blacklistExcludedCount);
-    }
-
-    private Snapshot loadLegacyDailyScheduledSnapshot(Long researchNo) {
-        String today = LocalDate.now().format(LEGACY_DATE);
-        Set<Long> alreadySentIds = new LinkedHashSet<>(
-                adminMailSendTargetMapper.findSentApplicationIdsByDocumentSrlAndTriggerPrefix(researchNo, "LEGACY_")
-        );
-        List<Long> includedApplicationIds = new ArrayList<>();
-        int blacklistExcludedCount = 0;
-        for (ResearchApplication application : researchApplicationMapper.findByResearchNoAndRegistDate(researchNo, today)) {
-            if (alreadySentIds.contains(application.getResearchAppSeq())) {
-                continue;
-            }
-            if (isLegacyBlacklisted(application)) {
-                blacklistExcludedCount++;
-                continue;
-            }
-            includedApplicationIds.add(application.getResearchAppSeq());
-        }
-        return new Snapshot(includedApplicationIds, blacklistExcludedCount);
-    }
-
-    private Snapshot loadLegacyThresholdSnapshot(Long researchNo) {
-        Set<Long> alreadySentIds = new LinkedHashSet<>(
-                adminMailSendTargetMapper.findSentApplicationIdsByDocumentSrlAndTriggerPrefix(researchNo, "LEGACY_")
-        );
-        List<Long> includedApplicationIds = new ArrayList<>();
-        int blacklistExcludedCount = 0;
-        for (ResearchApplication application : researchApplicationMapper.findAllByResearchNo(researchNo)) {
-            if (alreadySentIds.contains(application.getResearchAppSeq())) {
-                continue;
-            }
-            if (isLegacyBlacklisted(application)) {
-                blacklistExcludedCount++;
-                continue;
-            }
-            includedApplicationIds.add(application.getResearchAppSeq());
-        }
-        return new Snapshot(includedApplicationIds, blacklistExcludedCount);
-    }
-
     private ScheduledTargetSnapshot loadScheduledTargetSnapshot(AdminMailSendJob sendJob) {
         List<Long> scheduledApplicationIds = scheduledApplicationIds(sendJob.getId());
         Set<Long> scheduledIdSet = new LinkedHashSet<>(scheduledApplicationIds);
@@ -1373,22 +772,6 @@ public class MailingService {
                 .filter(application -> scheduledIdSet.contains(application.getId()))
                 .filter(application -> "Y".equals(application.getIsBlacklisted()))
                 .map(ExportApplicationSource::getId)
-                .distinct()
-                .toList();
-        Set<Long> blacklistExcludedSet = new LinkedHashSet<>(blacklistExcludedIds);
-        List<Long> includedIds = scheduledApplicationIds.stream()
-                .filter(applicationId -> !blacklistExcludedSet.contains(applicationId))
-                .toList();
-        return new ScheduledTargetSnapshot(includedIds, blacklistExcludedIds);
-    }
-
-    private ScheduledTargetSnapshot loadLegacyScheduledTargetSnapshot(AdminMailSendJob sendJob) {
-        List<Long> scheduledApplicationIds = scheduledApplicationIds(sendJob.getId());
-        Set<Long> scheduledIdSet = new LinkedHashSet<>(scheduledApplicationIds);
-        List<Long> blacklistExcludedIds = researchApplicationMapper.findAllByResearchNo(sendJob.getDocumentSrl()).stream()
-                .filter(application -> scheduledIdSet.contains(application.getResearchAppSeq()))
-                .filter(this::isLegacyBlacklisted)
-                .map(ResearchApplication::getResearchAppSeq)
                 .distinct()
                 .toList();
         Set<Long> blacklistExcludedSet = new LinkedHashSet<>(blacklistExcludedIds);
@@ -1421,54 +804,6 @@ public class MailingService {
             return;
         }
         adminMailSendTargetMapper.updateResultBySendJobIdAndApplicationIds(sendJobId, applicationIds, sendResult, failReason, sentAt);
-    }
-
-    private boolean isLegacyBlacklisted(ResearchApplication application) {
-        String contact = normalizeDigits(application.getAppHphone());
-        if (contact == null) {
-            contact = normalizeDigits(application.getAppTele());
-        }
-        String birth = normalizeDigits(application.getAppBirth());
-        return legacyBlacklistMapper.countActiveMatch(
-                trimToNull(application.getAppName()),
-                birth,
-                contact
-        ) > 0;
-    }
-
-    private RecipientSelection parseLegacyRecipients(ResearchMaster researchMaster) {
-        List<String> rawValues = new ArrayList<>();
-        addEmailMatches(rawValues, researchMaster.getRemark());
-        addEmailMatches(rawValues, researchMaster.getContactNo());
-
-        Set<String> deduplicatedKeys = new LinkedHashSet<>();
-        List<String> recipients = new ArrayList<>();
-        int excludedCount = 0;
-        for (String value : rawValues) {
-            String normalized = value.trim();
-            if (!isValidEmail(normalized)) {
-                excludedCount++;
-                continue;
-            }
-            String key = normalized.toLowerCase(Locale.ROOT);
-            if (!deduplicatedKeys.add(key)) {
-                excludedCount++;
-                continue;
-            }
-            recipients.add(normalized);
-        }
-        String targetName = blankToDefault(researchMaster.getCompanyName(), "Client");
-        return new RecipientSelection(recipients, excludedCount, targetName);
-    }
-
-    private void addEmailMatches(List<String> target, String source) {
-        if (source == null || source.isBlank()) {
-            return;
-        }
-        Matcher matcher = EMAIL_PATTERN.matcher(source);
-        while (matcher.find()) {
-            target.add(matcher.group());
-        }
     }
 
     private RecipientSelection parseRecipients(Long documentSrl) {
@@ -1572,26 +907,6 @@ public class MailingService {
         );
     }
 
-    private MailDispatchRequest buildLegacyDispatchRequest(
-            ResearchMaster researchMaster,
-            List<String> recipients,
-            MailContent mailContent,
-            ExportPayload attachment,
-            MailAttachmentType attachmentType,
-            int applicationCount
-    ) {
-        Map<String, String> variables = buildLegacyTemplateVariables(researchMaster, attachmentType, applicationCount);
-        return new MailDispatchRequest(
-                recipients,
-                null,
-                renderTemplate(mailContent.subject(), variables),
-                renderTemplate(mailContent.body(), variables),
-                attachment.fileName(),
-                attachment.contentType(),
-                attachment.content()
-        );
-    }
-
     private Map<String, String> buildTemplateVariables(
             Long documentSrl,
             MailAttachmentType attachmentType,
@@ -1604,22 +919,6 @@ public class MailingService {
         variables.put("applicationCount", String.valueOf(applicationCount));
         variables.put("attachmentType", attachmentType.name());
         variables.put("triggerType", triggerType);
-        variables.put("sentAt", LocalDateTime.now().format(MAIL_DT));
-        return variables;
-    }
-
-    private Map<String, String> buildLegacyTemplateVariables(
-            ResearchMaster researchMaster,
-            MailAttachmentType attachmentType,
-            int applicationCount
-    ) {
-        Map<String, String> variables = new LinkedHashMap<>();
-        variables.put("jobTitle", researchMaster.getResearchTitle());
-        variables.put("documentSrl", String.valueOf(researchMaster.getResearchNo()));
-        variables.put("researchNo", String.valueOf(researchMaster.getResearchNo()));
-        variables.put("applicationCount", String.valueOf(applicationCount));
-        variables.put("attachmentType", attachmentType.name());
-        variables.put("triggerType", "LEGACY_MANUAL");
         variables.put("sentAt", LocalDateTime.now().format(MAIL_DT));
         return variables;
     }
@@ -1668,35 +967,6 @@ public class MailingService {
         }
     }
 
-    private void markLegacyApplicationsProvided(
-            Long researchNo,
-            List<Long> researchAppSeqs,
-            Long changedBy,
-            String source
-    ) {
-        if (researchNo == null || researchAppSeqs == null || researchAppSeqs.isEmpty()) {
-            return;
-        }
-        for (Long researchAppSeq : researchAppSeqs.stream().filter(Objects::nonNull).distinct().toList()) {
-            try {
-                ResearchApplication application = researchApplicationMapper.findByResearchNoAndSeq(researchNo, researchAppSeq);
-                if (application == null || "Y".equalsIgnoreCase(application.getProvideYn())) {
-                    continue;
-                }
-                researchApplicationService.updateProvideYn(researchNo, researchAppSeq, "Y", changedBy);
-            } catch (RuntimeException ex) {
-                safeLog(
-                        changedBy,
-                        "LEGACY_PROVIDE_UPDATE_FAILED",
-                        "RESEARCH_APP",
-                        researchNo + ":" + researchAppSeq,
-                        "Failed to mark PROVIDE_YN=Y after " + source + ": " + trimFailureReason(ex.getMessage()),
-                        null
-                );
-            }
-        }
-    }
-
     private String renderTemplate(String templateText, Map<String, String> variables) {
         String rendered = templateText;
         for (Map.Entry<String, String> entry : variables.entrySet()) {
@@ -1731,14 +1001,6 @@ public class MailingService {
                 target.add(token);
             }
         }
-    }
-
-    private String normalizeDigits(String value) {
-        if (value == null) {
-            return null;
-        }
-        String digits = value.replaceAll("\\D", "");
-        return digits.isBlank() ? null : digits;
     }
 
     private String buildManualDuplicateKey(Long documentSrl) {
@@ -1789,22 +1051,15 @@ public class MailingService {
         return "Y".equals(sendJob.getRepeatYn()) && "DAILY".equals(sendJob.getRepeatUnit());
     }
 
-    private boolean isLegacyScheduled(AdminMailSendJob sendJob) {
-        return sendJob.getTriggerType() != null && sendJob.getTriggerType().startsWith("LEGACY_SCHEDULED");
-    }
-
     private void scheduleNextDailySend(AdminMailSendJob completedJob) {
         LocalDateTime base = completedJob.getScheduledAt() == null ? LocalDateTime.now() : completedJob.getScheduledAt();
         LocalDateTime nextScheduledAt = base.plusDays(1);
-        boolean legacy = isLegacyScheduled(completedJob);
-        String triggerType = legacy ? "LEGACY_SCHEDULED_DAILY" : "SCHEDULED_DAILY";
+        String triggerType = "SCHEDULED_DAILY";
         String duplicateKey = triggerType + ":" + completedJob.getDocumentSrl() + ":" + nextScheduledAt.withNano(0);
         if (adminMailSendJobMapper.findByDuplicatePreventKey(duplicateKey) != null) {
             return;
         }
-        RecipientSelection recipients = legacy
-                ? parseLegacyRecipients(researchMasterService.getResearchMaster(completedJob.getDocumentSrl()))
-                : parseRecipients(completedJob.getDocumentSrl());
+        RecipientSelection recipients = parseRecipients(completedJob.getDocumentSrl());
         AdminMailSendJob nextJob = baseJob(
                 completedJob.getDocumentSrl(),
                 completedJob.getTemplateId(),

@@ -37,9 +37,11 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminBoardConfigTable(connection);
             ensureAdminJobMetaColumns(connection);
             ensureAdminMailSendJobColumns(connection);
+            ensureAdminExportLogColumns(connection);
             ensureAdminJobApplicationExtraAnswerTable(connection);
             ensureAdminLegacyRevisionLogTable(connection);
             ensureAdminLegacyApplicationExtraAnswerTable(connection);
+            ensureAdminLegacyApplicationKeywordTable(connection);
             ensureAdminManualPublishLogTable(connection);
             ensureAdminLegacyMailRuleTable(connection);
             ensureAdminLegacyMailRuleItemTable(connection);
@@ -91,7 +93,6 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     client_id BIGINT NOT NULL,
                     contact_name VARCHAR(100) NULL,
                     email VARCHAR(255) NOT NULL,
-                    phone VARCHAR(50) NULL,
                     contact_no VARCHAR(50) NULL,
                     primary_yn CHAR(1) NOT NULL DEFAULT 'N',
                     active_yn CHAR(1) NOT NULL DEFAULT 'Y',
@@ -115,14 +116,8 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         addColumnIfMissing(
                 connection,
                 "admin_client_contact",
-                "phone",
-                "ALTER TABLE admin_client_contact ADD COLUMN phone VARCHAR(50) NULL AFTER email"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_client_contact",
                 "contact_no",
-                "ALTER TABLE admin_client_contact ADD COLUMN contact_no VARCHAR(50) NULL AFTER phone"
+                "ALTER TABLE admin_client_contact ADD COLUMN contact_no VARCHAR(50) NULL AFTER email"
         );
     }
 
@@ -210,6 +205,16 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
     }
 
+    private void ensureAdminExportLogColumns(Connection connection) throws Exception {
+        alterColumnIfVarcharShorter(
+                connection,
+                "admin_export_log",
+                "export_type",
+                50,
+                "ALTER TABLE admin_export_log MODIFY COLUMN export_type VARCHAR(50) NOT NULL"
+        );
+    }
+
     private void ensureAdminJobApplicationExtraAnswerTable(Connection connection) throws Exception {
         createTableIfMissing(
                 connection,
@@ -261,6 +266,31 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
+        );
+    }
+
+    private void ensureAdminLegacyApplicationKeywordTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_application_keyword",
+                """
+                CREATE TABLE admin_legacy_application_keyword (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    research_app_seq BIGINT NOT NULL,
+                    application_regist_dt VARCHAR(30) NULL,
+                    keyword_normalized VARCHAR(120) NOT NULL,
+                    keyword VARCHAR(120) NOT NULL,
+                    source_type VARCHAR(50) NOT NULL,
+                    indexed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_legacy_application_keyword",
+                "application_regist_dt",
+                "ALTER TABLE admin_legacy_application_keyword ADD COLUMN application_regist_dt VARCHAR(30) NULL AFTER research_app_seq"
         );
     }
 
@@ -427,6 +457,20 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "idx_admin_legacy_extra_answer_research_app",
                 List.of("research_no", "research_app_seq", "answer_order", "id"),
                 "CREATE INDEX idx_admin_legacy_extra_answer_research_app ON admin_legacy_application_extra_answer (research_no, research_app_seq, answer_order, id)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_application_keyword",
+                "idx_admin_legacy_keyword_lookup",
+                List.of("keyword_normalized", "application_regist_dt", "research_no", "research_app_seq"),
+                "CREATE INDEX idx_admin_legacy_keyword_lookup ON admin_legacy_application_keyword (keyword_normalized, application_regist_dt, research_no, research_app_seq)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_application_keyword",
+                "idx_admin_legacy_keyword_app",
+                List.of("research_no", "research_app_seq"),
+                "CREATE INDEX idx_admin_legacy_keyword_app ON admin_legacy_application_keyword (research_no, research_app_seq)"
         );
         createIndexIfMissing(
                 connection,
@@ -699,6 +743,32 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         try (Statement statement = connection.createStatement()) {
             statement.execute(ddl);
             log.info("Ensured column shape {}.{}.", tableName, columnName);
+        }
+    }
+
+    private void alterColumnIfVarcharShorter(
+            Connection connection,
+            String tableName,
+            String columnName,
+            int minimumLength,
+            String ddl
+    ) throws Exception {
+        if (!hasColumn(connection, tableName, columnName) || getColumnSize(connection, tableName, columnName) >= minimumLength) {
+            return;
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(ddl);
+            log.info("Expanded column length {}.{} to at least {}.", tableName, columnName, minimumLength);
+        }
+    }
+
+    private int getColumnSize(Connection connection, String tableName, String columnName) throws Exception {
+        DatabaseMetaData metaData = connection.getMetaData();
+        try (ResultSet columns = metaData.getColumns(connection.getCatalog(), null, tableName, columnName)) {
+            if (columns.next()) {
+                return columns.getInt("COLUMN_SIZE");
+            }
+            return 0;
         }
     }
 

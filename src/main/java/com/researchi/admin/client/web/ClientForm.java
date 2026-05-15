@@ -19,8 +19,6 @@ public class ClientForm {
 
     private String primaryContactName;
 
-    private String primaryPhone;
-
     private String primaryContactNo;
 
     @NotBlank(message = "대표 이메일을 입력하세요.")

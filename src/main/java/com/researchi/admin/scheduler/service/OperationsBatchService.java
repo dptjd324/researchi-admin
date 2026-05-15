@@ -5,6 +5,7 @@ import com.researchi.admin.blacklist.service.BlacklistService;
 import com.researchi.admin.job.domain.AdminJobMeta;
 import com.researchi.admin.job.mapper.AdminJobMetaMapper;
 import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.legacy.research.service.LegacyResearchMailService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
 import com.researchi.admin.mailing.service.MailingService;
@@ -23,6 +24,7 @@ public class OperationsBatchService {
     private final SchedulerProperties schedulerProperties;
     private final AdminMailSendJobMapper adminMailSendJobMapper;
     private final MailingService mailingService;
+    private final LegacyResearchMailService legacyResearchMailService;
     private final AdminJobMetaMapper adminJobMetaMapper;
     private final OperationsCleanupMapper operationsCleanupMapper;
     private final BlacklistService blacklistService;
@@ -34,6 +36,7 @@ public class OperationsBatchService {
             SchedulerProperties schedulerProperties,
             AdminMailSendJobMapper adminMailSendJobMapper,
             MailingService mailingService,
+            LegacyResearchMailService legacyResearchMailService,
             AdminJobMetaMapper adminJobMetaMapper,
             OperationsCleanupMapper operationsCleanupMapper,
             BlacklistService blacklistService,
@@ -44,6 +47,7 @@ public class OperationsBatchService {
         this.schedulerProperties = schedulerProperties;
         this.adminMailSendJobMapper = adminMailSendJobMapper;
         this.mailingService = mailingService;
+        this.legacyResearchMailService = legacyResearchMailService;
         this.adminJobMetaMapper = adminJobMetaMapper;
         this.operationsCleanupMapper = operationsCleanupMapper;
         this.blacklistService = blacklistService;
@@ -60,7 +64,10 @@ public class OperationsBatchService {
         int executed = 0;
         for (AdminMailSendJob sendJob : adminMailSendJobMapper.findDueScheduled(LocalDateTime.now())) {
             try {
-                if (mailingService.executeScheduledSend(sendJob.getId())) {
+                boolean sent = isLegacyScheduled(sendJob)
+                        ? legacyResearchMailService.executeScheduledSend(sendJob.getId())
+                        : mailingService.executeScheduledSend(sendJob.getId());
+                if (sent) {
                     executed++;
                 }
             } catch (RuntimeException ignored) {
@@ -68,6 +75,12 @@ public class OperationsBatchService {
             }
         }
         return executed;
+    }
+
+    private boolean isLegacyScheduled(AdminMailSendJob sendJob) {
+        return sendJob != null
+                && sendJob.getTriggerType() != null
+                && sendJob.getTriggerType().startsWith("LEGACY_SCHEDULED");
     }
 
     public int runThresholdVerificationBatch() {
@@ -81,18 +94,18 @@ public class OperationsBatchService {
                 // Keep later threshold jobs from being blocked by one broken job.
             }
         }
-        for (Long researchNo : mailingService.getEnabledLegacyThresholdResearchNos()) {
+        for (Long researchNo : legacyResearchMailService.getEnabledThresholdResearchNos()) {
             try {
-                if (mailingService.triggerLegacyThresholdAutomatically(researchNo)) {
+                if (legacyResearchMailService.triggerThresholdAutomatically(researchNo)) {
                     executed++;
                 }
             } catch (RuntimeException ignored) {
                 // Keep legacy threshold jobs from blocking the existing threshold batch.
             }
         }
-        for (Long ruleId : mailingService.getEnabledLegacyThresholdRuleIds()) {
+        for (Long ruleId : legacyResearchMailService.getEnabledThresholdRuleIds()) {
             try {
-                if (mailingService.triggerLegacyThresholdRuleAutomatically(ruleId)) {
+                if (legacyResearchMailService.triggerThresholdRuleAutomatically(ruleId)) {
                     executed++;
                 }
             } catch (RuntimeException ignored) {

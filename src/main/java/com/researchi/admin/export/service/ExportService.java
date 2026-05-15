@@ -13,10 +13,6 @@ import com.researchi.admin.form.domain.FormFieldDetail;
 import com.researchi.admin.form.service.FormFieldService;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
-import com.researchi.admin.legacy.research.domain.ResearchApplication;
-import com.researchi.admin.legacy.research.domain.ResearchMaster;
-import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
-import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.Row;
@@ -51,43 +47,41 @@ public class ExportService {
     private static final int XLSX_STREAM_WINDOW_SIZE = 100;
     private static final String XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     private static final String TXT_CONTENT_TYPE = "text/plain; charset=UTF-8";
-    private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+    private static final int FILE_NAME_TITLE_LIMIT = 90;
+    private static final String INTRODUCER_LABEL = "소개자 하진혁";
     private static final DateTimeFormatter EXPORTED_DT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
     private static final DateTimeFormatter EXPORTED_DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
-    private static final String LEGACY_RESEARCH_TXT_COLUMNS = "성명/성별/생년월일/나이(만)/직업/회사 학교/휴대폰/유선전화/주소/추가기재사항";
     private static final List<ColumnDefinition> COMMON_COLUMNS = List.of(
-            new ColumnDefinition("\uC21C\uBC88", row -> stringValue(row.sequence())),
-            new ColumnDefinition("\uC131\uBA85", ExportRow::applicantName),
-            new ColumnDefinition("\uC131\uBCC4", ExportRow::genderCode),
-            new ColumnDefinition("\uC0DD\uB144\uC6D4\uC77C", row -> stringValue(row.birthDate())),
-            new ColumnDefinition("\uB9CC\uB098\uC774", ExportRow::ageText),
-            new ColumnDefinition("\uC9C1\uC5C5", ExportRow::jobText),
-            new ColumnDefinition("\uD68C\uC0AC/\uD559\uAD50\uBA85", ExportRow::organizationText),
-            new ColumnDefinition("\uD734\uB300\uC804\uD654", ExportRow::mobilePhone),
-            new ColumnDefinition("\uC804\uD654\uBC88\uD638", ExportRow::telPhone),
-            new ColumnDefinition("\uC9C0\uC5ED", ExportRow::regionText),
-            new ColumnDefinition("\uC8FC\uC18C", ExportRow::address),
-            new ColumnDefinition("\uCD94\uAC00\uAE30\uC7AC\uC0AC\uD56D", ExportRow::extraComment),
-            new ColumnDefinition("\uAE30\uC874 \uC870\uC0AC \uACBD\uD5D8", ExportRow::priorResearchText),
-            new ColumnDefinition("\uC774\uBA54\uC77C", ExportRow::emailAddress),
-            new ColumnDefinition("\uC774\uBA54\uC77C \uC54C\uB9BC \uB3D9\uC758", row -> yesNoLabel(row.notifyEmailYn())),
-            new ColumnDefinition("SMS \uC54C\uB9BC \uB3D9\uC758", row -> yesNoLabel(row.notifySmsYn())),
-            new ColumnDefinition("\uD0A4\uC6CC\uB4DC \uC54C\uB9BC \uB3D9\uC758", row -> yesNoLabel(row.notifyKeywordYn())),
-            new ColumnDefinition("\uC9C0\uC6D0\uC11C \uC0C1\uD0DC", row -> applicationStatusLabel(row.applicationStatus())),
-            new ColumnDefinition("\uC2E0\uADDC \uC9C0\uC6D0\uC790", row -> yesNoLabel(row.isNewApplicant())),
-            new ColumnDefinition("\uBE14\uB799\uB9AC\uC2A4\uD2B8 \uC5EC\uBD80", row -> yesNoLabel(row.isBlacklisted())),
-            new ColumnDefinition("\uBE14\uB799\uB9AC\uC2A4\uD2B8 \uBAA8\uB4DC", row -> blacklistModeLabel(row.blackModeApplied())),
-            new ColumnDefinition("\uAC1C\uC778\uC815\uBCF4 \uB3D9\uC758", row -> yesNoLabel(row.provideYn())),
-            new ColumnDefinition("\uBC1C\uC1A1 \uC0C1\uD0DC", row -> deliveryStatusLabel(row.deliveryStatus())),
-            new ColumnDefinition("\uC9C0\uC6D0 \uC2DC\uAC01", row -> stringValue(row.appliedAt()))
+            new ColumnDefinition("순번", row -> stringValue(row.sequence())),
+            new ColumnDefinition("성명", ExportRow::applicantName),
+            new ColumnDefinition("성별", ExportRow::genderCode),
+            new ColumnDefinition("생년월일", row -> stringValue(row.birthDate())),
+            new ColumnDefinition("만나이", ExportRow::ageText),
+            new ColumnDefinition("직업", ExportRow::jobText),
+            new ColumnDefinition("회사/학교명", ExportRow::organizationText),
+            new ColumnDefinition("휴대전화", ExportRow::mobilePhone),
+            new ColumnDefinition("전화번호", ExportRow::telPhone),
+            new ColumnDefinition("지역", ExportRow::regionText),
+            new ColumnDefinition("주소", ExportRow::address),
+            new ColumnDefinition("추가기재사항", ExportRow::extraComment),
+            new ColumnDefinition("기존 조사 경험", ExportRow::priorResearchText),
+            new ColumnDefinition("이메일", ExportRow::emailAddress),
+            new ColumnDefinition("이메일 알림 동의", row -> yesNoLabel(row.notifyEmailYn())),
+            new ColumnDefinition("SMS 알림 동의", row -> yesNoLabel(row.notifySmsYn())),
+            new ColumnDefinition("키워드 알림 동의", row -> yesNoLabel(row.notifyKeywordYn())),
+            new ColumnDefinition("지원서 상태", row -> applicationStatusLabel(row.applicationStatus())),
+            new ColumnDefinition("신규 지원자", row -> yesNoLabel(row.isNewApplicant())),
+            new ColumnDefinition("블랙리스트 여부", row -> yesNoLabel(row.isBlacklisted())),
+            new ColumnDefinition("블랙리스트 모드", row -> blacklistModeLabel(row.blackModeApplied())),
+            new ColumnDefinition("개인정보 동의", row -> yesNoLabel(row.provideYn())),
+            new ColumnDefinition("발송 상태", row -> deliveryStatusLabel(row.deliveryStatus())),
+            new ColumnDefinition("지원 시각", row -> stringValue(row.appliedAt()))
     );
 
     private final JobService jobService;
     private final FormFieldService formFieldService;
     private final AdminExportQueryMapper adminExportQueryMapper;
     private final AdminExportLogMapper adminExportLogMapper;
-    private final ResearchApplicationMapper researchApplicationMapper;
-    private final ResearchMasterService researchMasterService;
     private final PublicFormProtectionService protectionService;
     private final AdminActionLogService adminActionLogService;
 
@@ -96,8 +90,6 @@ public class ExportService {
             FormFieldService formFieldService,
             AdminExportQueryMapper adminExportQueryMapper,
             AdminExportLogMapper adminExportLogMapper,
-            ResearchApplicationMapper researchApplicationMapper,
-            ResearchMasterService researchMasterService,
             PublicFormProtectionService protectionService,
             AdminActionLogService adminActionLogService
     ) {
@@ -105,8 +97,6 @@ public class ExportService {
         this.formFieldService = formFieldService;
         this.adminExportQueryMapper = adminExportQueryMapper;
         this.adminExportLogMapper = adminExportLogMapper;
-        this.researchApplicationMapper = researchApplicationMapper;
-        this.researchMasterService = researchMasterService;
         this.protectionService = protectionService;
         this.adminActionLogService = adminActionLogService;
     }
@@ -128,7 +118,7 @@ public class ExportService {
     public ExportPayload prepareXlsx(Long documentSrl, List<Long> applicationIds) {
         ExportContext context = buildContext(documentSrl, applicationIds);
         byte[] content = buildXlsx(context);
-        String fileName = buildFileName(documentSrl, "xlsx");
+        String fileName = buildApplicationFileName(context.jobTitle(), context.rows().size(), "xlsx");
         return new ExportPayload(
                 fileName,
                 XLSX_CONTENT_TYPE,
@@ -140,51 +130,18 @@ public class ExportService {
     public ExportPayload prepareTxt(Long documentSrl, List<Long> applicationIds) {
         ExportContext context = buildContext(documentSrl, applicationIds);
         byte[] content = buildTxt(context);
-        String fileName = buildFileName(documentSrl, "txt");
+        String fileName = buildApplicationFileName(context.jobTitle(), context.rows().size(), "txt");
         return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, context.rows().size());
     }
 
-    public ExportPayload prepareLegacyResearchXlsx(Long researchNo, List<Long> researchAppSeqs) {
-        ExportContext context = buildLegacyResearchContext(researchNo, researchAppSeqs);
-        byte[] content = buildXlsx(context);
-        String fileName = buildLegacyFileName(researchNo, "xlsx");
-        return new ExportPayload(fileName, XLSX_CONTENT_TYPE, content, context.rows().size());
-    }
-
-    public ExportPayload prepareLegacyResearchTxt(Long researchNo, List<Long> researchAppSeqs) {
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        List<ResearchApplication> applications = findLegacyResearchApplications(researchNo, researchAppSeqs);
-        byte[] content = buildLegacyResearchTxt(researchMaster, applications, "신청자 정보");
-        String fileName = buildLegacyFileName(researchNo, "txt");
-        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, applications.size());
-    }
-
-    public ExportPayload prepareLegacyResearchProvideTxt(Long researchNo) {
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        List<ResearchApplication> applications = researchApplicationMapper.findUnprovidedByResearchNo(researchNo);
-        byte[] content = buildLegacyResearchTxt(researchMaster, applications, "정보 제공 대상");
-        String fileName = buildLegacyProvideFileName(researchNo, "txt");
-        return new ExportPayload(fileName, TXT_CONTENT_TYPE, content, applications.size());
-    }
-
     public ExportFileDescriptor describeXlsx(Long documentSrl) {
-        return new ExportFileDescriptor(buildFileName(documentSrl, "xlsx"), XLSX_CONTENT_TYPE);
+        ExportContext context = buildContext(documentSrl, null);
+        return new ExportFileDescriptor(buildApplicationFileName(context.jobTitle(), context.rows().size(), "xlsx"), XLSX_CONTENT_TYPE);
     }
 
     public ExportFileDescriptor describeTxt(Long documentSrl) {
-        return new ExportFileDescriptor(buildFileName(documentSrl, "txt"), TXT_CONTENT_TYPE);
-    }
-
-    public ExportFileDescriptor describeLegacyResearchXlsx(Long researchNo) {
-        return new ExportFileDescriptor(buildLegacyFileName(researchNo, "xlsx"), XLSX_CONTENT_TYPE);
-    }
-
-    public ExportFileDescriptor describeLegacyResearchTxt(Long researchNo) {
-        return new ExportFileDescriptor(buildLegacyFileName(researchNo, "txt"), TXT_CONTENT_TYPE);
-    }
-
-    public ExportFileDescriptor describeLegacyResearchProvideTxt(Long researchNo) {
-        return new ExportFileDescriptor(buildLegacyProvideFileName(researchNo, "txt"), TXT_CONTENT_TYPE);
+        ExportContext context = buildContext(documentSrl, null);
+        return new ExportFileDescriptor(buildApplicationFileName(context.jobTitle(), context.rows().size(), "txt"), TXT_CONTENT_TYPE);
     }
 
     @Transactional("adminTransactionManager")
@@ -209,45 +166,6 @@ public class ExportService {
     ) {
         int exportedCount = writeTxtStreaming(documentSrl, outputStream);
         writeLogs(documentSrl, "TXT", fileName, exportedCount, principal, request);
-    }
-
-    @Transactional("adminTransactionManager")
-    public void streamLegacyResearchXlsx(
-            Long researchNo,
-            String fileName,
-            AdminPrincipal principal,
-            HttpServletRequest request,
-            OutputStream outputStream
-    ) {
-        ExportPayload payload = prepareLegacyResearchXlsx(researchNo, null);
-        writePayload(outputStream, payload);
-        writeLogs(researchNo, "LEGACY_RESEARCH_XLSX", fileName, payload.exportedCount(), principal, request);
-    }
-
-    @Transactional("adminTransactionManager")
-    public void streamLegacyResearchTxt(
-            Long researchNo,
-            String fileName,
-            AdminPrincipal principal,
-            HttpServletRequest request,
-            OutputStream outputStream
-    ) {
-        ExportPayload payload = prepareLegacyResearchTxt(researchNo, null);
-        writePayload(outputStream, payload);
-        writeLogs(researchNo, "LEGACY_RESEARCH_TXT", fileName, payload.exportedCount(), principal, request);
-    }
-
-    @Transactional("adminTransactionManager")
-    public void streamLegacyResearchProvideTxt(
-            Long researchNo,
-            String fileName,
-            AdminPrincipal principal,
-            HttpServletRequest request,
-            OutputStream outputStream
-    ) {
-        ExportPayload payload = prepareLegacyResearchProvideTxt(researchNo);
-        writePayload(outputStream, payload);
-        writeLogs(researchNo, "LEGACY_RESEARCH_PROVIDE_TXT", fileName, payload.exportedCount(), principal, request);
     }
 
     private ExportContext buildContext(Long documentSrl, List<Long> applicationIds) {
@@ -283,22 +201,6 @@ public class ExportService {
             columns.add(new ColumnDefinition(field.fieldLabel(), row -> row.dynamicAnswers().getOrDefault(field.id(), "")));
         }
         return new ExportContext(jobDetail.getDocument().getTitle(), columns, rows);
-    }
-
-    private ExportContext buildLegacyResearchContext(Long researchNo, List<Long> researchAppSeqs) {
-        ResearchMaster researchMaster = researchMasterService.getResearchMaster(researchNo);
-        List<ResearchApplication> applications = findLegacyResearchApplications(researchNo, researchAppSeqs);
-        List<ExportRow> rows = new ArrayList<>();
-        for (int index = 0; index < applications.size(); index++) {
-            rows.add(toLegacyRow(index + 1, applications.get(index)));
-        }
-        return new ExportContext(researchMaster.getResearchTitle(), COMMON_COLUMNS, rows, "/");
-    }
-
-    private List<ResearchApplication> findLegacyResearchApplications(Long researchNo, List<Long> researchAppSeqs) {
-        return researchAppSeqs == null || researchAppSeqs.isEmpty()
-                ? researchApplicationMapper.findAllByResearchNo(researchNo)
-                : researchApplicationMapper.findByResearchNoAndSeqs(researchNo, researchAppSeqs);
     }
 
     private ExportLayout buildLayout(Long documentSrl) {
@@ -355,36 +257,6 @@ public class ExportService {
                     .put(answer.getFieldId(), toDisplayAnswer(answer.getAnswerText(), answer.getAnswerJson()));
         }
         return answersByApplicationId;
-    }
-
-    private ExportRow toLegacyRow(int sequence, ResearchApplication application) {
-        return new ExportRow(
-                sequence,
-                application.getAppName(),
-                legacySexLabel(application.getAppSex()),
-                application.getAppBirth(),
-                application.getAppAge(),
-                application.getAppJob(),
-                application.getAppCompany(),
-                application.getAppHphone(),
-                application.getAppTele(),
-                "",
-                application.getAppAddr(),
-                application.getAddComment(),
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                application.getProvideYn(),
-                "",
-                legacyDateTimeLabel(application.getRegistDt()),
-                Map.of()
-        );
     }
 
     private ExportRow toRow(
@@ -455,25 +327,6 @@ public class ExportService {
         appendTxtLine(builder, context.columns().stream().map(ColumnDefinition::header).toList(), context.txtDelimiter());
         for (ExportRow row : context.rows()) {
             appendTxtLine(builder, context.columns().stream().map(column -> column.value(row)).toList(), context.txtDelimiter());
-        }
-        return builder.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    private byte[] buildLegacyResearchTxt(ResearchMaster researchMaster, List<ResearchApplication> applications, String titleSuffix) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(sanitizeTxt(researchMaster.getResearchTitle())).append(" - ").append(titleSuffix).append(System.lineSeparator());
-        builder.append(applications.size()).append("건").append(System.lineSeparator());
-        builder.append(System.lineSeparator());
-        builder.append(LEGACY_RESEARCH_TXT_COLUMNS).append(System.lineSeparator());
-        builder.append(System.lineSeparator());
-        for (int index = 0; index < applications.size(); index++) {
-            builder.append(index + 1)
-                    .append(". ")
-                    .append(sanitizeTxt(applications.get(index).getProvidePreviewLine()))
-                    .append(System.lineSeparator());
-            if (index + 1 < applications.size()) {
-                builder.append(System.lineSeparator());
-            }
         }
         return builder.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -596,16 +449,27 @@ public class ExportService {
         }
     }
 
-    private String buildFileName(Long documentSrl, String extension) {
-        return "job-" + documentSrl + "-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
+    private String buildApplicationFileName(String title, int applicantCount, String extension) {
+        return sanitizeFileNamePart(title)
+                + " "
+                + applicantCount
+                + "명 "
+                + INTRODUCER_LABEL
+                + "."
+                + extension;
     }
 
-    private String buildLegacyFileName(Long researchNo, String extension) {
-        return "research-" + researchNo + "-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
-    }
-
-    private String buildLegacyProvideFileName(Long researchNo, String extension) {
-        return "research-" + researchNo + "-provide-applications-" + LocalDateTime.now().format(FILE_TS) + "." + extension;
+    private String sanitizeFileNamePart(String value) {
+        String sanitized = value == null ? "" : value;
+        sanitized = sanitized.replaceAll("[\\\\/:*?\"<>|]", " ");
+        sanitized = sanitized.replaceAll("\\s+", " ").trim();
+        if (sanitized.isBlank()) {
+            sanitized = "applications";
+        }
+        if (sanitized.length() > FILE_NAME_TITLE_LIMIT) {
+            sanitized = sanitized.substring(0, FILE_NAME_TITLE_LIMIT).trim();
+        }
+        return sanitized;
     }
 
     private String toDisplayAnswer(String answerText, String answerJson) {
@@ -664,53 +528,16 @@ public class ExportService {
         return String.valueOf(value);
     }
 
-    private static String legacySexLabel(String value) {
-        if ("1".equals(value)) {
-            return "\uB0A8\uC790";
-        }
-        if ("2".equals(value)) {
-            return "\uC5EC\uC790";
-        }
-        return stringValue(value);
-    }
-
-    private static LocalDateTime legacyDateTimeLabel(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        String digits = value.replaceAll("\\D", "");
-        if (digits.length() >= 14) {
-            return LocalDateTime.of(
-                    Integer.parseInt(digits.substring(0, 4)),
-                    Integer.parseInt(digits.substring(4, 6)),
-                    Integer.parseInt(digits.substring(6, 8)),
-                    Integer.parseInt(digits.substring(8, 10)),
-                    Integer.parseInt(digits.substring(10, 12)),
-                    Integer.parseInt(digits.substring(12, 14))
-            );
-        }
-        if (digits.length() >= 8) {
-            return LocalDateTime.of(
-                    Integer.parseInt(digits.substring(0, 4)),
-                    Integer.parseInt(digits.substring(4, 6)),
-                    Integer.parseInt(digits.substring(6, 8)),
-                    0,
-                    0
-            );
-        }
-        return null;
-    }
-
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
     }
 
     private static String yesNoLabel(String value) {
         if ("Y".equalsIgnoreCase(value)) {
-            return "\uC608";
+            return "예";
         }
         if ("N".equalsIgnoreCase(value)) {
-            return "\uC544\uB2C8\uC624";
+            return "아니오";
         }
         return stringValue(value);
     }
@@ -720,11 +547,11 @@ public class ExportService {
             return "";
         }
         return switch (value.toUpperCase()) {
-            case "RECEIVED" -> "\uC811\uC218";
-            case "REVIEWING" -> "\uAC80\uD1A0\uC911";
-            case "APPROVED" -> "\uC2B9\uC778";
-            case "REJECTED" -> "\uAC70\uC808";
-            case "BLOCKED" -> "\uC81C\uD55C";
+            case "RECEIVED" -> "접수";
+            case "REVIEWING" -> "검토중";
+            case "APPROVED" -> "승인";
+            case "REJECTED" -> "거절";
+            case "BLOCKED" -> "제한";
             default -> value;
         };
     }
@@ -734,10 +561,10 @@ public class ExportService {
             return "";
         }
         return switch (value.toUpperCase()) {
-            case "PENDING" -> "\uBC1C\uC1A1 \uB300\uAE30";
-            case "SENT" -> "\uBC1C\uC1A1 \uC644\uB8CC";
-            case "FAILED" -> "\uBC1C\uC1A1 \uC2E4\uD328";
-            case "NO_TARGETS" -> "\uBC1C\uC1A1 \uB300\uC0C1 \uC5C6\uC74C";
+            case "PENDING" -> "발송 대기";
+            case "SENT" -> "발송 완료";
+            case "FAILED" -> "발송 실패";
+            case "NO_TARGETS" -> "발송 대상 없음";
             default -> value;
         };
     }
@@ -747,9 +574,9 @@ public class ExportService {
             return "";
         }
         return switch (value.toUpperCase()) {
-            case "BLOCK", "PERMANENT_BLOCK" -> "\uCC28\uB2E8";
-            case "TEMPORARY_BLOCK" -> "\uC784\uC2DC \uCC28\uB2E8";
-            case "MANUAL_REVIEW" -> "\uC218\uB3D9 \uAC80\uD1A0";
+            case "BLOCK", "PERMANENT_BLOCK" -> "차단";
+            case "TEMPORARY_BLOCK" -> "임시 차단";
+            case "MANUAL_REVIEW" -> "수동 검토";
             default -> value;
         };
     }

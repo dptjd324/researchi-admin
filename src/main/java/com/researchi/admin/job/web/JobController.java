@@ -83,7 +83,7 @@ public class JobController {
             CsrfToken csrfToken
     ) {
         request.getSession(true);
-        model.addAttribute("pageTitle", "\uACF5\uACE0");
+        model.addAttribute("pageTitle", "공고");
         model.addAttribute("pageDescription", "Researchi XE managed boards.");
         String normalizedJobType = isSupportedJobType(jobType) ? jobType : null;
         int totalCount = jobService.countJobs(normalizedJobType, keyword);
@@ -159,7 +159,7 @@ public class JobController {
         form.setAutoSendEnabled(Boolean.FALSE);
         form.setAutoSendRepeatYn("N");
         form.setAutoSendAttachmentType("XLSX");
-        populateFormModel(model, "\uACF5\uACE0 \uB4F1\uB85D", form, null, csrfToken, request);
+        populateFormModel(model, "공고 등록", form, null, csrfToken, request);
         return "jobs/form";
     }
 
@@ -167,8 +167,8 @@ public class JobController {
     public String jobDetail(@PathVariable Long documentSrl, Model model, HttpServletRequest request, CsrfToken csrfToken) {
         request.getSession(true);
         JobDetail jobDetail = jobService.getJob(documentSrl);
-        model.addAttribute("pageTitle", "\uACF5\uACE0 \uC0C1\uC138");
-        model.addAttribute("pageDescription", "\uACF5\uACE0 \uB0B4\uC6A9, \uBAA8\uC9D1 \uC0C1\uD0DC, \uAC70\uB798\uCC98 \uBC0F \uC6B4\uC601 \uBA54\uD0C0 \uC815\uBCF4\uB97C \uD655\uC778\uD569\uB2C8\uB2E4.");
+        model.addAttribute("pageTitle", "공고 상세");
+        model.addAttribute("pageDescription", "공고 내용, 모집 상태, 거래처 및 운영 메타 정보를 확인합니다.");
         model.addAttribute("jobDetail", jobDetail);
         model.addAttribute("applicationBoard", jobDetail.isApplicationBoard());
         model.addAttribute(
@@ -190,7 +190,7 @@ public class JobController {
     ) {
         validateBusinessRules(form, bindingResult);
         if (bindingResult.hasErrors()) {
-            populateFormModel(model, "\uACF5\uACE0 \uB4F1\uB85D", form, null, null, request);
+            populateFormModel(model, "공고 등록", form, null, null, request);
             return "jobs/form";
         }
 
@@ -203,7 +203,7 @@ public class JobController {
     public String editJob(@PathVariable Long documentSrl, Model model, HttpServletRequest request, CsrfToken csrfToken) {
         request.getSession(true);
         JobDetail jobDetail = jobService.getJob(documentSrl);
-        populateFormModel(model, "\uACF5\uACE0 \uC218\uC815", jobService.toForm(jobDetail), documentSrl, csrfToken, request);
+        populateFormModel(model, "공고 수정", jobService.toForm(jobDetail), documentSrl, csrfToken, request);
         return "jobs/form";
     }
 
@@ -218,7 +218,7 @@ public class JobController {
     ) {
         validateBusinessRules(form, bindingResult);
         if (bindingResult.hasErrors()) {
-            populateFormModel(model, "\uACF5\uACE0 \uC218\uC815", form, documentSrl, null, request);
+            populateFormModel(model, "공고 수정", form, documentSrl, null, request);
             return "jobs/form";
         }
 
@@ -300,7 +300,7 @@ public class JobController {
 
     private void populateFormModel(Model model, String pageTitle, JobForm form, Long documentSrl, CsrfToken csrfToken, HttpServletRequest request) {
         model.addAttribute("pageTitle", pageTitle);
-        model.addAttribute("pageDescription", "\uACF5\uACE0 \uB0B4\uC6A9, \uACF5\uAC1C \uC9C0\uC6D0 \uC5EC\uBD80, \uC790\uB3D9 \uBC1C\uC1A1 \uC124\uC815\uC744 \uAD00\uB9AC\uD569\uB2C8\uB2E4.");
+        model.addAttribute("pageDescription", "공고 내용, 공개 지원 여부, 자동 발송 설정을 관리합니다.");
         model.addAttribute("jobForm", form);
         model.addAttribute("jobTypes", documentSrl == null ? BoardConfig.applicationBoards() : Arrays.asList(BoardConfig.values()));
         model.addAttribute("applicationBoard", isApplicationBoard(form.getJobType()));
@@ -339,20 +339,20 @@ public class JobController {
     private void validateBusinessRules(JobForm form, BindingResult bindingResult) {
         validateJobType(form, bindingResult);
         if (form.getAgeMin() != null && form.getAgeMax() != null && form.getAgeMin() > form.getAgeMax()) {
-            bindingResult.rejectValue("ageMax", "range", "\uCD5C\uB300 \uB098\uC774\uB294 \uCD5C\uC18C \uB098\uC774\uBCF4\uB2E4 \uC791\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+            bindingResult.rejectValue("ageMax", "range", "최대 나이는 최소 나이보다 작을 수 없습니다.");
         }
         if (Boolean.TRUE.equals(form.getAutoSendEnabled()) && (form.getAutoSendMode() == null || form.getAutoSendMode().isBlank())) {
-            bindingResult.rejectValue("autoSendMode", "required", "\uC790\uB3D9 \uBC1C\uC1A1\uC744 \uC0AC\uC6A9\uD558\uB824\uBA74 \uBC1C\uC1A1 \uBC29\uC2DD\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+            bindingResult.rejectValue("autoSendMode", "required", "자동 발송을 사용하려면 발송 방식을 선택해주세요.");
         }
         if (Boolean.TRUE.equals(form.getAutoSendEnabled())
                 && "THRESHOLD".equals(form.getAutoSendMode())
                 && (form.getAutoSendThreshold() == null || form.getAutoSendThreshold() < 1)) {
-            bindingResult.rejectValue("autoSendThreshold", "required", "\uC784\uACC4\uCE58 \uC790\uB3D9 \uBC1C\uC1A1\uC5D0\uB294 \uC720\uD6A8\uD55C \uC784\uACC4\uCE58\uAC00 \uD544\uC218\uC785\uB2C8\uB2E4.");
+            bindingResult.rejectValue("autoSendThreshold", "required", "임계치 자동 발송에는 유효한 임계치가 필수입니다.");
         }
         if (Boolean.TRUE.equals(form.getAutoSendEnabled())
                 && "THRESHOLD".equals(form.getAutoSendMode())
                 && form.getAutoSendTemplateId() == null) {
-            bindingResult.rejectValue("autoSendTemplateId", "required", "\uC784\uACC4\uCE58 \uC790\uB3D9 \uBC1C\uC1A1\uC5D0\uB294 \uBA54\uC77C \uD15C\uD50C\uB9BF\uC774 \uD544\uC218\uC785\uB2C8\uB2E4.");
+            bindingResult.rejectValue("autoSendTemplateId", "required", "임계치 자동 발송에는 메일 템플릿이 필수입니다.");
         }
         if (form.getClientId() == null) {
             validateDirectClientEmails(form, bindingResult);

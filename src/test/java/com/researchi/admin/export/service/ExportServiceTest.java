@@ -12,8 +12,6 @@ import com.researchi.admin.form.domain.FormFieldOption;
 import com.researchi.admin.form.service.FormFieldService;
 import com.researchi.admin.job.domain.JobDetail;
 import com.researchi.admin.job.service.JobService;
-import com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper;
-import com.researchi.admin.legacy.research.service.ResearchMasterService;
 import com.researchi.admin.publicform.config.PublicFormProperties;
 import com.researchi.admin.publicform.service.PublicFormProtectionService;
 import com.researchi.admin.xe.domain.XeJobDocument;
@@ -51,10 +49,6 @@ class ExportServiceTest {
     @Mock
     private AdminExportLogMapper adminExportLogMapper;
     @Mock
-    private ResearchApplicationMapper researchApplicationMapper;
-    @Mock
-    private ResearchMasterService researchMasterService;
-    @Mock
     private AdminActionLogService adminActionLogService;
 
     private ExportService exportService;
@@ -66,8 +60,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -88,17 +80,17 @@ class ExportServiceTest {
                 new MockHttpServletRequest()
         );
 
-        assertThat(payload.fileName()).startsWith("job-9-applications-").endsWith(".txt");
+        assertThat(payload.fileName()).isEqualTo("Survey Job 1명 소개자 하진혁.txt");
         assertThat(payload.exportedCount()).isEqualTo(1);
         String content = new String(payload.content(), StandardCharsets.UTF_8);
-        assertThat(content).contains("\uC21C\uBC88\t\uC131\uBA85");
+        assertThat(content).contains("순번\t성명");
         assertThat(content).contains("Availability");
         assertThat(content).contains("Preferred Brands");
         assertThat(content).contains("Hong");
         assertThat(content).contains("01012345678");
         assertThat(content).contains("hong@example.com");
-        assertThat(content).contains("\uC811\uC218");
-        assertThat(content).contains("\uBC1C\uC1A1 \uB300\uAE30");
+        assertThat(content).contains("접수");
+        assertThat(content).contains("발송 대기");
         assertThat(content).contains("weekday\tBrandA, BrandB");
         verify(adminExportLogMapper).insert(any());
         verify(adminActionLogService).log(eq(1L), eq("APPLICATION_EXPORT"), eq("JOB"), eq("9"), eq("Exported TXT applications (1 rows)"), any());
@@ -111,8 +103,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -134,7 +124,7 @@ class ExportServiceTest {
         );
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(payload.content()))) {
-            assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue()).isEqualTo("\uC21C\uBC88");
+            assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue()).isEqualTo("순번");
             assertThat(workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue()).isEqualTo("1");
             assertThat(workbook.getSheetAt(0).getRow(0).getCell(24).getStringCellValue()).isEqualTo("First Question");
             assertThat(workbook.getSheetAt(0).getRow(0).getCell(25).getStringCellValue()).isEqualTo("Second Question");
@@ -150,8 +140,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -194,8 +182,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -228,8 +214,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -255,8 +239,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );
@@ -277,7 +259,7 @@ class ExportServiceTest {
         );
 
         String content = outputStream.toString(StandardCharsets.UTF_8);
-        assertThat(content).contains("\uC21C\uBC88\t\uC131\uBA85");
+        assertThat(content).contains("순번\t성명");
         assertThat(content).contains("Hong");
         assertThat(content).contains("One");
         verify(adminExportLogMapper).insert(any());
@@ -291,8 +273,6 @@ class ExportServiceTest {
                 formFieldService,
                 adminExportQueryMapper,
                 adminExportLogMapper,
-                researchApplicationMapper,
-                researchMasterService,
                 protectionService(),
                 adminActionLogService
         );

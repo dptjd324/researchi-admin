@@ -46,7 +46,6 @@ public class ClientService {
         form.setClientName(summary.clientName());
         form.setDepartmentName(summary.departmentName());
         form.setPrimaryContactName(summary.primaryContactName());
-        form.setPrimaryPhone(summary.primaryPhone());
         form.setPrimaryContactNo(summary.primaryContactNo());
         form.setPrimaryEmail(summary.primaryEmail());
         form.setActive(summary.active());
@@ -86,7 +85,6 @@ public class ClientService {
             contact.setClientId(client.getId());
             contact.setContactName(seed.contactName());
             contact.setEmail(seed.email());
-            contact.setPhone(seed.phone());
             contact.setContactNo(seed.contactNo());
             contact.setPrimaryYn(index == 0 ? "Y" : "N");
             contact.setActiveYn("Y");
@@ -146,7 +144,6 @@ public class ClientService {
         String primaryEmail = activeContacts.isEmpty() ? null : activeContacts.get(0).getEmail();
         List<String> activeEmails = primaryEmail == null ? List.of() : List.of(primaryEmail);
         String primaryContactName = activeContacts.isEmpty() ? null : activeContacts.get(0).getContactName();
-        String primaryPhone = activeContacts.isEmpty() ? null : activeContacts.get(0).getPhone();
         String primaryContactNo = activeContacts.isEmpty() ? null : activeContacts.get(0).getContactNo();
         String replyToEmail = normalizeEmail(client.getReplyToEmail());
         if (replyToEmail == null) {
@@ -157,7 +154,6 @@ public class ClientService {
                 client.getClientName(),
                 client.getDepartmentName(),
                 primaryContactName,
-                primaryPhone,
                 primaryContactNo,
                 primaryEmail,
                 replyToEmail,
@@ -183,7 +179,6 @@ public class ClientService {
         seeds.add(new ContactSeed(
                 trimToNull(form.getPrimaryContactName()),
                 primaryEmail,
-                trimToNull(form.getPrimaryPhone()),
                 trimToNull(form.getPrimaryContactNo())
         ));
         return seeds;
@@ -209,6 +204,6 @@ public class ClientService {
         return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
     }
 
-    private record ContactSeed(String contactName, String email, String phone, String contactNo) {
+    private record ContactSeed(String contactName, String email, String contactNo) {
     }
 }

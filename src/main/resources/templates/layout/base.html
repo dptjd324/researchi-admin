@@ -7,7 +7,7 @@
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/material_green.css">
-    <link rel="stylesheet" th:href="@{/css/admin-ui.css}">
+    <link rel="stylesheet" th:href="@{/css/admin-ui.css(v=2026051402)}">
 </head>
 <body class="admin-body">
 <div class="admin-shell">
@@ -19,7 +19,7 @@
                         <div class="admin-header__title">
                             <div class="admin-header__eyebrow">RESEARCHI 운영 관리</div>
                             <h1 class="admin-page-title h4 mb-1" th:text="${title}">Researchi Admin</h1>
-                            <p class="admin-page-description mb-0" th:text="${pageDescription}">공고, 지원서, 메일, 로그, 기간 검색을 한 화면 안에서 관리합니다.</p>
+                            <p class="admin-page-description mb-0" th:text="${pageDescription}">좌담회/설문, 거래처, 블랙리스트, 로그를 관리합니다.</p>
                         </div>
                     </div>
                     <div class="admin-account-actions">
@@ -31,14 +31,11 @@
                     </div>
                 </div>
                 <ul class="navbar-nav mb-0 admin-nav-list">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/jobs}">공고</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/research}">좌담회/설문</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/clients}">거래처</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/applications}">지원서</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/legacy-blacklist}">블랙리스트</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/search}">통합 검색</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/mail/send/history}">메일</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/logs/actions}">로그</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/preserved-tools}">보존 기능</a></li>
                 </ul>
             </nav>
         </div>
