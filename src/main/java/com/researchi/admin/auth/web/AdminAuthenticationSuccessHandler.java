@@ -42,6 +42,6 @@ public class AdminAuthenticationSuccessHandler implements AuthenticationSuccessH
                 "관리자 로그인 성공",
                 request
         );
-        response.sendRedirect("/jobs");
+        response.sendRedirect("/research");
     }
 }

@@ -79,7 +79,7 @@ class AdminAuthenticationHandlersTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), response, authentication);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/jobs");
+        assertThat(response.getRedirectedUrl()).isEqualTo("/research");
         verify(adminAuthService).recordLoginSuccess(1L);
         verify(adminActionLogService).log(eq(1L), eq("LOGIN_SUCCESS"), eq("ADMIN_USER"), eq("admin"), eq("관리자 로그인 성공"), any(HttpServletRequest.class));
     }

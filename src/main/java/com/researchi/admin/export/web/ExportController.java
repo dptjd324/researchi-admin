@@ -2,8 +2,6 @@ package com.researchi.admin.export.web;
 
 import com.researchi.admin.auth.service.AdminPrincipal;
 import com.researchi.admin.export.domain.ExportFileDescriptor;
-import com.researchi.admin.export.service.ExportService;
-import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.legacy.research.service.LegacyResearchExportService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ContentDisposition;
@@ -21,46 +19,12 @@ import java.nio.charset.StandardCharsets;
 @Controller
 public class ExportController {
 
-    private final ExportService exportService;
     private final LegacyResearchExportService legacyResearchExportService;
-    private final JobService jobService;
 
     public ExportController(
-            ExportService exportService,
-            LegacyResearchExportService legacyResearchExportService,
-            JobService jobService
+            LegacyResearchExportService legacyResearchExportService
     ) {
-        this.exportService = exportService;
         this.legacyResearchExportService = legacyResearchExportService;
-        this.jobService = jobService;
-    }
-
-    @PostMapping("/jobs/{documentSrl}/export/xlsx")
-    public ResponseEntity<StreamingResponseBody> exportXlsx(
-            @PathVariable Long documentSrl,
-            @AuthenticationPrincipal AdminPrincipal principal,
-            HttpServletRequest request
-    ) {
-        jobService.requireApplicationBoard(documentSrl);
-        ExportFileDescriptor descriptor = exportService.describeXlsx(documentSrl);
-        return toResponse(
-                descriptor,
-                outputStream -> exportService.streamXlsx(documentSrl, descriptor.fileName(), principal, request, outputStream)
-        );
-    }
-
-    @PostMapping("/jobs/{documentSrl}/export/txt")
-    public ResponseEntity<StreamingResponseBody> exportTxt(
-            @PathVariable Long documentSrl,
-            @AuthenticationPrincipal AdminPrincipal principal,
-            HttpServletRequest request
-    ) {
-        jobService.requireApplicationBoard(documentSrl);
-        ExportFileDescriptor descriptor = exportService.describeTxt(documentSrl);
-        return toResponse(
-                descriptor,
-                outputStream -> exportService.streamTxt(documentSrl, descriptor.fileName(), principal, request, outputStream)
-        );
     }
 
     @PostMapping("/research/{researchNo}/export/xlsx")

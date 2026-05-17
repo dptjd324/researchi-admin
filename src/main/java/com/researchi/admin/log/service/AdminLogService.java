@@ -1,8 +1,6 @@
 package com.researchi.admin.log.service;
 
 import com.researchi.admin.auth.mapper.AdminActionLogMapper;
-import com.researchi.admin.job.domain.JobListItem;
-import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.log.domain.ActionLogItem;
 import com.researchi.admin.log.domain.StatusBarSummary;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
@@ -13,9 +11,7 @@ import com.researchi.admin.search.domain.SearchLogItem;
 import com.researchi.admin.search.mapper.AdminSearchLogMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class AdminLogService {
@@ -24,20 +20,17 @@ public class AdminLogService {
     private final AdminMailSendJobMapper adminMailSendJobMapper;
     private final AdminSearchLogMapper adminSearchLogMapper;
     private final AdminNotificationLogMapper adminNotificationLogMapper;
-    private final JobService jobService;
 
     public AdminLogService(
             AdminActionLogMapper adminActionLogMapper,
             AdminMailSendJobMapper adminMailSendJobMapper,
             AdminSearchLogMapper adminSearchLogMapper,
-            AdminNotificationLogMapper adminNotificationLogMapper,
-            JobService jobService
+            AdminNotificationLogMapper adminNotificationLogMapper
     ) {
         this.adminActionLogMapper = adminActionLogMapper;
         this.adminMailSendJobMapper = adminMailSendJobMapper;
         this.adminSearchLogMapper = adminSearchLogMapper;
         this.adminNotificationLogMapper = adminNotificationLogMapper;
-        this.jobService = jobService;
     }
 
     public List<ActionLogItem> getActionLogs() {
@@ -89,16 +82,16 @@ public class AdminLogService {
     }
 
     private List<AdminMailSendJob> addJobTitles(List<AdminMailSendJob> mailJobs) {
-        Map<Long, String> titlesByDocumentSrl = new LinkedHashMap<>();
-        List<Long> documentSrls = mailJobs.stream()
-                .map(AdminMailSendJob::getDocumentSrl)
-                .toList();
-        for (JobListItem job : jobService.getJobsByDocumentSrls(documentSrls)) {
-            titlesByDocumentSrl.put(job.getDocumentSrl(), job.getTitle());
-        }
         return mailJobs.stream()
-                .peek(job -> job.setJobTitle(titlesByDocumentSrl.getOrDefault(job.getDocumentSrl(), "Job #" + job.getDocumentSrl())))
+                .peek(job -> job.setJobTitle(mailLogTitle(job)))
                 .toList();
+    }
+
+    private String mailLogTitle(AdminMailSendJob job) {
+        if (job.getMailSubjectSnapshot() != null && !job.getMailSubjectSnapshot().isBlank()) {
+            return job.getMailSubjectSnapshot();
+        }
+        return "CODE " + job.getDocumentSrl();
     }
 
     public StatusBarSummary getStatusBarSummary() {

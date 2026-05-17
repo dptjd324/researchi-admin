@@ -1,8 +1,6 @@
 package com.researchi.admin.log.service;
 
 import com.researchi.admin.auth.mapper.AdminActionLogMapper;
-import com.researchi.admin.job.domain.JobListItem;
-import com.researchi.admin.job.service.JobService;
 import com.researchi.admin.log.domain.StatusBarSummary;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
@@ -33,20 +31,16 @@ class AdminLogServiceTest {
     private AdminSearchLogMapper adminSearchLogMapper;
     @Mock
     private AdminNotificationLogMapper adminNotificationLogMapper;
-    @Mock
-    private JobService jobService;
 
     @InjectMocks
     private AdminLogService adminLogService;
 
     @Test
-    void getMailLogsAddsJobTitlesAndStatusBarSummarizesCounts() {
-        JobListItem job = new JobListItem(9L, "Survey Job", "", "PUBLIC", "", "", null, "newjob");
-        when(jobService.getJobsByDocumentSrls(List.of(9L))).thenReturn(List.of(job));
-
+    void getMailLogsUsesMailSubjectSnapshotAsDisplayTitle() {
         AdminMailSendJob mailJob = new AdminMailSendJob();
         mailJob.setId(71L);
         mailJob.setDocumentSrl(9L);
+        mailJob.setMailSubjectSnapshot("Survey Job");
         mailJob.setSentAt(LocalDateTime.now());
         when(adminMailSendJobMapper.findAll()).thenReturn(List.of(mailJob));
 

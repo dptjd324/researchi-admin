@@ -42,6 +42,7 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminLegacyRevisionLogTable(connection);
             ensureAdminLegacyApplicationExtraAnswerTable(connection);
             ensureAdminLegacyApplicationKeywordTable(connection);
+            ensureAdminLegacyMatchingTables(connection);
             ensureAdminManualPublishLogTable(connection);
             ensureAdminLegacyMailRuleTable(connection);
             ensureAdminLegacyMailRuleItemTable(connection);
@@ -294,6 +295,80 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
     }
 
+    private void ensureAdminLegacyMatchingTables(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_matching_job",
+                """
+                CREATE TABLE admin_legacy_matching_job (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    include_keyword_text TEXT NULL,
+                    exclude_keyword_text TEXT NULL,
+                    use_auto_keywords CHAR(1) NOT NULL DEFAULT 'Y',
+                    active_keyword_text TEXT NULL,
+                    status VARCHAR(30) NOT NULL,
+                    candidate_pool_count INT NOT NULL DEFAULT 0,
+                    matched_count INT NOT NULL DEFAULT 0,
+                    blacklisted_excluded_count INT NOT NULL DEFAULT 0,
+                    fail_reason VARCHAR(500) NULL,
+                    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    started_at DATETIME NULL,
+                    finished_at DATETIME NULL
+                )
+                """
+        );
+        createTableIfMissing(
+                connection,
+                "admin_legacy_matching_result",
+                """
+                CREATE TABLE admin_legacy_matching_result (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    matching_job_id BIGINT NOT NULL,
+                    research_no BIGINT NOT NULL,
+                    research_app_seq BIGINT NOT NULL,
+                    row_no INT NOT NULL,
+                    match_score INT NOT NULL,
+                    matched_keyword_text TEXT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+        createTableIfMissing(
+                connection,
+                "admin_legacy_matching_index_job",
+                """
+                CREATE TABLE admin_legacy_matching_index_job (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    cycle_no INT NOT NULL DEFAULT 1,
+                    include_keyword_text TEXT NULL,
+                    exclude_keyword_text TEXT NULL,
+                    applied_years INT NOT NULL DEFAULT 2,
+                    index_limit INT NOT NULL DEFAULT 5000,
+                    batch_size INT NOT NULL DEFAULT 500,
+                    require_contact_yn CHAR(1) NOT NULL DEFAULT 'Y',
+                    exclude_blacklist_yn CHAR(1) NOT NULL DEFAULT 'Y',
+                    reset_before_run_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    status VARCHAR(30) NOT NULL,
+                    indexed_application_count INT NOT NULL DEFAULT 0,
+                    inserted_keyword_count INT NOT NULL DEFAULT 0,
+                    skipped_already_indexed_count INT NOT NULL DEFAULT 0,
+                    fail_reason VARCHAR(500) NULL,
+                    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    started_at DATETIME NULL,
+                    finished_at DATETIME NULL
+                )
+                """
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_legacy_matching_index_job",
+                "cycle_no",
+                "ALTER TABLE admin_legacy_matching_index_job ADD COLUMN cycle_no INT NOT NULL DEFAULT 1 AFTER research_no"
+        );
+    }
+
     private void ensureAdminManualPublishLogTable(Connection connection) throws Exception {
         createTableIfMissing(
                 connection,
@@ -471,6 +546,27 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "idx_admin_legacy_keyword_app",
                 List.of("research_no", "research_app_seq"),
                 "CREATE INDEX idx_admin_legacy_keyword_app ON admin_legacy_application_keyword (research_no, research_app_seq)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_matching_job",
+                "idx_admin_legacy_matching_job_lookup",
+                List.of("research_no", "status", "finished_at"),
+                "CREATE INDEX idx_admin_legacy_matching_job_lookup ON admin_legacy_matching_job (research_no, status, finished_at)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_matching_result",
+                "idx_admin_legacy_matching_result_job",
+                List.of("matching_job_id", "row_no"),
+                "CREATE INDEX idx_admin_legacy_matching_result_job ON admin_legacy_matching_result (matching_job_id, row_no)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_matching_index_job",
+                "idx_admin_legacy_matching_index_job_lookup",
+                List.of("research_no", "status", "requested_at"),
+                "CREATE INDEX idx_admin_legacy_matching_index_job_lookup ON admin_legacy_matching_index_job (research_no, status, requested_at)"
         );
         createIndexIfMissing(
                 connection,
