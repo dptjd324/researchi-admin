@@ -15,8 +15,8 @@ public interface AdminMailSendTargetMapper {
 
     List<AdminMailSendTarget> findBySendJobId(@Param("sendJobId") Long sendJobId);
 
-    List<Long> findSentApplicationIdsByDocumentSrlAndTriggerPrefix(
-            @Param("documentSrl") Long documentSrl,
+    List<Long> findSentApplicationIdsByResearchNoAndTriggerPrefix(
+            @Param("researchNo") Long researchNo,
             @Param("triggerPrefix") String triggerPrefix
     );
 

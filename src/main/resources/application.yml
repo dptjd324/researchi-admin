@@ -44,6 +44,7 @@ logging:
   level:
     root: info
     com.researchi.admin: debug
+    org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer: error
 
 mybatis:
   mapper-locations: classpath:/mapper/**/*.xml
@@ -83,13 +84,11 @@ app:
     base-url: ${APP_SMS_BASE_URL:https://sens.apigw.ntruss.com}
     message-type: ${APP_SMS_MESSAGE_TYPE:LMS}
   scheduler:
-    #예약발송 : true
+    # 예약/임계치/정리 배치 활성화
     enabled: ${APP_SCHEDULER_ENABLED:true}
     scheduled-send-cron: ${APP_SCHEDULER_SCHEDULED_SEND_CRON:0 * * * * *}
     threshold-cron: ${APP_SCHEDULER_THRESHOLD_CRON:30 * * * * *}
     cleanup-cron: ${APP_SCHEDULER_CLEANUP_CRON:0 0 3 * * *}
-    blacklist-expiry-cron: ${APP_SCHEDULER_BLACKLIST_EXPIRY_CRON:0 15 * * * *}
-    keyword-match-cron: ${APP_SCHEDULER_KEYWORD_MATCH_CRON:0 30 * * * *}
     retention-months: ${APP_SCHEDULER_RETENTION_MONTHS:6}
   security:
     login-fail-limit: 5

@@ -1,9 +1,10 @@
 package com.researchi.admin.mailing.domain;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record MailingHistoryItem(
+public record  MailingHistoryItem(
         AdminMailSendJob sendJob,
         List<AdminMailSendTarget> targets,
         List<String> recipientAddresses,
@@ -68,11 +69,36 @@ public record MailingHistoryItem(
     }
 
     public String failReasonSummary() {
-        return targets.stream()
+        String summary = targets.stream()
                 .map(AdminMailSendTarget::getFailReason)
                 .filter(value -> value != null && !value.isBlank())
                 .distinct()
                 .collect(Collectors.joining(" / "));
+        if (!summary.isBlank()) {
+            return summary;
+        }
+        if (failed()) {
+            return "발송 가능한 지원자(PROVIDE_YN=N)가 없거나 발송 처리 중 오류가 발생했습니다.";
+        }
+        return "";
+    }
+
+    public LocalDateTime activityAt() {
+        if (sendJob == null) {
+            return null;
+        }
+        if (sendJob.getSentAt() != null) {
+            return sendJob.getSentAt();
+        }
+        if ("SCHEDULED".equalsIgnoreCase(sendJob.getSendStatus())) {
+            return sendJob.getScheduledAt() != null ? sendJob.getScheduledAt() : sendJob.getCreatedAt();
+        }
+        return sendJob.getCreatedAt() != null ? sendJob.getCreatedAt() : sendJob.getScheduledAt();
+    }
+
+    public boolean failed() {
+        return sendJob != null && ("FAILED".equalsIgnoreCase(sendJob.getSendStatus())
+                || "NO_TARGETS".equalsIgnoreCase(sendJob.getSendStatus()));
     }
 
     public int provisionCompletedCount() {

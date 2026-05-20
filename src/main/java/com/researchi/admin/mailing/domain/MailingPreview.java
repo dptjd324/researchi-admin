@@ -4,7 +4,7 @@ import java.util.stream.Collectors;
 import java.util.List;
 
 public record MailingPreview(
-        Long documentSrl,
+        Long researchNo,
         String jobTitle,
         List<String> recipients,
         int recipientCount,

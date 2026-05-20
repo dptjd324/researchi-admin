@@ -91,7 +91,7 @@ public class AdminLogService {
         if (job.getMailSubjectSnapshot() != null && !job.getMailSubjectSnapshot().isBlank()) {
             return job.getMailSubjectSnapshot();
         }
-        return "CODE " + job.getDocumentSrl();
+        return "CODE " + job.getResearchNo();
     }
 
     public StatusBarSummary getStatusBarSummary() {

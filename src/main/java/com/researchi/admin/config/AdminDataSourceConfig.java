@@ -22,13 +22,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 @MapperScan(
         basePackages = {
                 "com.researchi.admin.auth.mapper",
-                "com.researchi.admin.application.mapper",
-                "com.researchi.admin.blacklist.mapper",
                 "com.researchi.admin.client.mapper",
                 "com.researchi.admin.export.mapper",
-                "com.researchi.admin.job.mapper",
-                "com.researchi.admin.form.mapper",
-                "com.researchi.admin.keyword.mapper",
                 "com.researchi.admin.log.mapper",
                 "com.researchi.admin.legacy.application.mapper",
                 "com.researchi.admin.legacy.mail.mapper",
@@ -36,10 +31,7 @@ import org.springframework.transaction.PlatformTransactionManager;
                 "com.researchi.admin.legacy.publish.mapper",
                 "com.researchi.admin.legacy.revision.mapper",
                 "com.researchi.admin.mailing.mapper",
-                "com.researchi.admin.matching.mapper",
                 "com.researchi.admin.notification.mapper",
-                "com.researchi.admin.publicform.mapper",
-                "com.researchi.admin.scheduler.mapper",
                 "com.researchi.admin.search.mapper"
         },
         sqlSessionTemplateRef = "adminSqlSessionTemplate"

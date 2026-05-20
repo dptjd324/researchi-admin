@@ -5,6 +5,7 @@ import com.researchi.admin.client.domain.AdminClientContact;
 import com.researchi.admin.client.domain.ClientSummary;
 import com.researchi.admin.client.mapper.AdminClientContactMapper;
 import com.researchi.admin.client.mapper.AdminClientMapper;
+import com.researchi.admin.client.mapper.AdminResearchClientLinkMapper;
 import com.researchi.admin.client.web.ClientForm;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,13 +18,16 @@ public class ClientService {
 
     private final AdminClientMapper adminClientMapper;
     private final AdminClientContactMapper adminClientContactMapper;
+    private final AdminResearchClientLinkMapper adminResearchClientLinkMapper;
 
     public ClientService(
             AdminClientMapper adminClientMapper,
-            AdminClientContactMapper adminClientContactMapper
+            AdminClientContactMapper adminClientContactMapper,
+            AdminResearchClientLinkMapper adminResearchClientLinkMapper
     ) {
         this.adminClientMapper = adminClientMapper;
         this.adminClientContactMapper = adminClientContactMapper;
+        this.adminResearchClientLinkMapper = adminResearchClientLinkMapper;
     }
 
     public List<ClientSummary> getClientSummaries() {
@@ -73,7 +77,7 @@ public class ClientService {
         } else {
             int updatedRows = adminClientMapper.update(client);
             if (updatedRows == 0) {
-                throw new IllegalArgumentException("변경되지 않았습니다. 거래처 정보를 다시 확인한 뒤 저장해 주세요.");
+                throw new IllegalArgumentException("변경되지 않았습니다. 거래처 정보를 다시 확인하고 저장해 주세요.");
             }
         }
 
@@ -95,30 +99,9 @@ public class ClientService {
 
     @Transactional("adminTransactionManager")
     public void deleteClient(Long clientId) {
+        adminResearchClientLinkMapper.deleteByClientId(clientId);
         adminClientContactMapper.deleteByClientId(clientId);
         adminClientMapper.deleteById(clientId);
-    }
-
-    @Transactional("adminTransactionManager")
-    public ClientSummary findOrCreateLegacyClient(String clientName, String primaryEmail, String additionalEmails) {
-        String normalizedName = trimToNull(clientName);
-        String normalizedPrimaryEmail = normalizeEmail(primaryEmail);
-        if (normalizedName == null || normalizedPrimaryEmail == null) {
-            throw new IllegalArgumentException("기존 거래처 마이그레이션에 필요한 이름 또는 대표 이메일이 없습니다.");
-        }
-
-        for (ClientSummary summary : getAllClientSummaries()) {
-            if (sameValue(summary.clientName(), normalizedName) && sameValue(summary.primaryEmail(), normalizedPrimaryEmail)) {
-                return summary;
-            }
-        }
-
-        ClientForm form = new ClientForm();
-        form.setClientName(normalizedName);
-        form.setPrimaryEmail(normalizedPrimaryEmail);
-        form.setActive(Boolean.TRUE);
-        Long clientId = save(form);
-        return getClientSummary(clientId);
     }
 
     private List<ClientSummary> summarize(List<AdminClient> clients) {
@@ -198,10 +181,6 @@ public class ClientService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private boolean sameValue(String left, String right) {
-        return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
     }
 
     private record ContactSeed(String contactName, String email, String contactNo) {

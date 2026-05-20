@@ -34,11 +34,10 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         try (Connection connection = adminDataSource.getConnection()) {
             ensureAdminClientTables(connection);
-            ensureAdminBoardConfigTable(connection);
-            ensureAdminJobMetaColumns(connection);
+            ensureAdminResearchClientLinkTable(connection);
             ensureAdminMailSendJobColumns(connection);
             ensureAdminExportLogColumns(connection);
-            ensureAdminJobApplicationExtraAnswerTable(connection);
+            ensureAdminNotificationLogColumns(connection);
             ensureAdminLegacyRevisionLogTable(connection);
             ensureAdminLegacyApplicationExtraAnswerTable(connection);
             ensureAdminLegacyApplicationKeywordTable(connection);
@@ -48,25 +47,6 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminLegacyMailRuleItemTable(connection);
             ensureAdminPerformanceIndexes(connection);
         }
-    }
-
-    private void ensureAdminBoardConfigTable(Connection connection) throws Exception {
-        createTableIfMissing(
-                connection,
-                "admin_board_config",
-                """
-                CREATE TABLE admin_board_config (
-                    xe_mid VARCHAR(80) PRIMARY KEY,
-                    board_name VARCHAR(100) NOT NULL,
-                    board_type VARCHAR(20) NOT NULL,
-                    application_enabled CHAR(1) NOT NULL DEFAULT 'N',
-                    display_order INT NOT NULL DEFAULT 0,
-                    active_yn CHAR(1) NOT NULL DEFAULT 'Y',
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-        );
     }
 
     private void ensureAdminClientTables(Connection connection) throws Exception {
@@ -122,52 +102,31 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
     }
 
-    private void ensureAdminJobMetaColumns(Connection connection) throws Exception {
-        addColumnIfMissing(
+    private void ensureAdminResearchClientLinkTable(Connection connection) throws Exception {
+        createTableIfMissing(
                 connection,
-                "admin_job_meta",
-                "client_id",
-                "ALTER TABLE admin_job_meta ADD COLUMN client_id BIGINT NULL AFTER recruit_limit"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_job_meta",
-                "auto_send_template_id",
-                "ALTER TABLE admin_job_meta ADD COLUMN auto_send_template_id BIGINT NULL AFTER auto_send_repeat_unit"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_job_meta",
-                "auto_send_attachment_type",
-                "ALTER TABLE admin_job_meta ADD COLUMN auto_send_attachment_type VARCHAR(20) NULL AFTER auto_send_template_id"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_job_meta",
-                "deleted_yn",
-                "ALTER TABLE admin_job_meta ADD COLUMN deleted_yn CHAR(1) NOT NULL DEFAULT 'N' AFTER next_auto_send_at"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_job_meta",
-                "delete_reason",
-                "ALTER TABLE admin_job_meta ADD COLUMN delete_reason VARCHAR(500) NULL AFTER deleted_yn"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_job_meta",
-                "deleted_at",
-                "ALTER TABLE admin_job_meta ADD COLUMN deleted_at DATETIME NULL AFTER delete_reason"
-        );
-        addColumnIfMissing(
-                connection,
-                "admin_job_meta",
-                "permanent_delete_after",
-                "ALTER TABLE admin_job_meta ADD COLUMN permanent_delete_after DATETIME NULL AFTER deleted_at"
+                "admin_research_client_link",
+                """
+                CREATE TABLE admin_research_client_link (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    client_id BIGINT NOT NULL,
+                    client_name VARCHAR(200) NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_admin_research_client_link_research_no (research_no)
+                )
+                """
         );
     }
 
     private void ensureAdminMailSendJobColumns(Connection connection) throws Exception {
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "research_no",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN research_no BIGINT NULL AFTER id"
+        );
         alterColumnIfNotNullable(
                 connection,
                 "admin_mail_send_job",
@@ -207,6 +166,12 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
     }
 
     private void ensureAdminExportLogColumns(Connection connection) throws Exception {
+        addColumnIfMissing(
+                connection,
+                "admin_export_log",
+                "research_no",
+                "ALTER TABLE admin_export_log ADD COLUMN research_no BIGINT NULL AFTER id"
+        );
         alterColumnIfVarcharShorter(
                 connection,
                 "admin_export_log",
@@ -216,20 +181,12 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
     }
 
-    private void ensureAdminJobApplicationExtraAnswerTable(Connection connection) throws Exception {
-        createTableIfMissing(
+    private void ensureAdminNotificationLogColumns(Connection connection) throws Exception {
+        addColumnIfMissing(
                 connection,
-                "admin_job_application_extra_answer",
-                """
-                CREATE TABLE admin_job_application_extra_answer (
-                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-                    application_id BIGINT NOT NULL,
-                    answer_order INT NOT NULL,
-                    question_label VARCHAR(255) NOT NULL,
-                    answer_text TEXT NOT NULL,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
-                """
+                "admin_notification_log",
+                "research_no",
+                "ALTER TABLE admin_notification_log ADD COLUMN research_no BIGINT NULL AFTER id"
         );
     }
 
@@ -435,97 +392,6 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
     }
 
     private void ensureAdminPerformanceIndexes(Connection connection) throws Exception {
-        createUniqueIndexIfMissingAndNoDuplicates(
-                connection,
-                "admin_job_meta",
-                "uk_admin_job_meta_document_srl",
-                "document_srl",
-                "CREATE UNIQUE INDEX uk_admin_job_meta_document_srl ON admin_job_meta (document_srl)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_meta",
-                "idx_admin_job_meta_document_srl",
-                List.of("document_srl"),
-                "CREATE INDEX idx_admin_job_meta_document_srl ON admin_job_meta (document_srl)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_meta",
-                "idx_admin_job_meta_client_document",
-                List.of("client_id", "document_srl"),
-                "CREATE INDEX idx_admin_job_meta_client_document ON admin_job_meta (client_id, document_srl)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_meta",
-                "idx_admin_job_meta_apply_recruit_document",
-                List.of("application_enabled", "recruit_status", "document_srl"),
-                "CREATE INDEX idx_admin_job_meta_apply_recruit_document ON admin_job_meta (application_enabled, recruit_status, document_srl)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_meta",
-                "idx_admin_job_meta_deleted_due",
-                List.of("deleted_yn", "permanent_delete_after", "document_srl"),
-                "CREATE INDEX idx_admin_job_meta_deleted_due ON admin_job_meta (deleted_yn, permanent_delete_after, document_srl)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_application",
-                "idx_admin_job_application_document_applied",
-                List.of("document_srl", "applied_at", "id"),
-                "CREATE INDEX idx_admin_job_application_document_applied ON admin_job_application (document_srl, applied_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_application",
-                "idx_admin_job_application_applied",
-                List.of("applied_at", "id"),
-                "CREATE INDEX idx_admin_job_application_applied ON admin_job_application (applied_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_application",
-                "idx_admin_job_application_status_applied",
-                List.of("application_status", "applied_at", "id"),
-                "CREATE INDEX idx_admin_job_application_status_applied ON admin_job_application (application_status, applied_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_application",
-                "idx_admin_job_application_delivery_job",
-                List.of("delivery_job_id"),
-                "CREATE INDEX idx_admin_job_application_delivery_job ON admin_job_application (delivery_job_id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_form_field",
-                "idx_admin_form_field_document_order",
-                List.of("document_srl", "field_order", "id"),
-                "CREATE INDEX idx_admin_form_field_document_order ON admin_form_field (document_srl, field_order, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_form_field",
-                "idx_admin_form_field_document_key",
-                List.of("document_srl", "field_key"),
-                "CREATE INDEX idx_admin_form_field_document_key ON admin_form_field (document_srl, field_key)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_form_submission_answer",
-                "idx_admin_form_answer_application",
-                List.of("application_id", "id"),
-                "CREATE INDEX idx_admin_form_answer_application ON admin_form_submission_answer (application_id, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_application_extra_answer",
-                "idx_admin_extra_answer_application_order",
-                List.of("application_id", "answer_order", "id"),
-                "CREATE INDEX idx_admin_extra_answer_application_order ON admin_job_application_extra_answer (application_id, answer_order, id)"
-        );
         createIndexIfMissing(
                 connection,
                 "admin_legacy_application_extra_answer",
@@ -571,9 +437,9 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         createIndexIfMissing(
                 connection,
                 "admin_mail_send_job",
-                "idx_admin_mail_send_job_document_id",
-                List.of("document_srl", "id"),
-                "CREATE INDEX idx_admin_mail_send_job_document_id ON admin_mail_send_job (document_srl, id)"
+                "idx_admin_mail_send_job_research_id",
+                List.of("research_no", "id"),
+                "CREATE INDEX idx_admin_mail_send_job_research_id ON admin_mail_send_job (research_no, id)"
         );
         createIndexIfMissing(
                 connection,
@@ -641,9 +507,9 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         createIndexIfMissing(
                 connection,
                 "admin_notification_log",
-                "idx_admin_notification_log_document_created",
-                List.of("document_srl", "created_at", "id"),
-                "CREATE INDEX idx_admin_notification_log_document_created ON admin_notification_log (document_srl, created_at, id)"
+                "idx_admin_notification_log_research_created",
+                List.of("research_no", "created_at", "id"),
+                "CREATE INDEX idx_admin_notification_log_research_created ON admin_notification_log (research_no, created_at, id)"
         );
         createIndexIfMissing(
                 connection,
@@ -655,44 +521,9 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         createIndexIfMissing(
                 connection,
                 "admin_notification_log",
-                "idx_admin_notification_log_duplicate",
-                List.of("document_srl", "application_id", "channel_type", "send_status"),
-                "CREATE INDEX idx_admin_notification_log_duplicate ON admin_notification_log (document_srl, application_id, channel_type, send_status)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_keyword_match_job",
-                "idx_admin_keyword_match_job_document_created",
-                List.of("document_srl", "created_at", "id"),
-                "CREATE INDEX idx_admin_keyword_match_job_document_created ON admin_keyword_match_job (document_srl, created_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_keyword_match_target",
-                "idx_admin_keyword_match_target_job_score",
-                List.of("match_job_id", "match_score", "id"),
-                "CREATE INDEX idx_admin_keyword_match_target_job_score ON admin_keyword_match_target (match_job_id, match_score, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_keyword_match_target",
-                "idx_admin_keyword_match_target_application",
-                List.of("application_id"),
-                "CREATE INDEX idx_admin_keyword_match_target_application ON admin_keyword_match_target (application_id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_job_keyword",
-                "idx_admin_job_keyword_document",
-                List.of("document_srl", "id"),
-                "CREATE INDEX idx_admin_job_keyword_document ON admin_job_keyword (document_srl, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_application_keyword",
-                "idx_admin_application_keyword_application",
-                List.of("application_id", "id"),
-                "CREATE INDEX idx_admin_application_keyword_application ON admin_application_keyword (application_id, id)"
+                "idx_admin_notification_log_duplicate_research",
+                List.of("research_no", "application_id", "channel_type", "send_status"),
+                "CREATE INDEX idx_admin_notification_log_duplicate_research ON admin_notification_log (research_no, application_id, channel_type, send_status)"
         );
         createIndexIfMissing(
                 connection,
@@ -710,52 +541,10 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         );
         createIndexIfMissing(
                 connection,
-                "admin_application_duplicate_log",
-                "idx_admin_duplicate_log_document_phone_checked",
-                List.of("document_srl", "mobile_phone_hash", "checked_at", "id"),
-                "CREATE INDEX idx_admin_duplicate_log_document_phone_checked ON admin_application_duplicate_log (document_srl, mobile_phone_hash, checked_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_application_duplicate_log",
-                "idx_admin_duplicate_log_phone_found_match",
-                List.of("mobile_phone_hash", "duplicate_found", "matched_application_id"),
-                "CREATE INDEX idx_admin_duplicate_log_phone_found_match ON admin_application_duplicate_log (mobile_phone_hash, duplicate_found, matched_application_id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_blacklist",
-                "idx_admin_blacklist_active_phone_expiry",
-                List.of("active_yn", "black_mobile_phone_hash", "expires_at", "id"),
-                "CREATE INDEX idx_admin_blacklist_active_phone_expiry ON admin_blacklist (active_yn, black_mobile_phone_hash, expires_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_blacklist",
-                "idx_admin_blacklist_active_name_birth_expiry",
-                List.of("active_yn", "black_name", "black_birth_date", "expires_at", "id"),
-                "CREATE INDEX idx_admin_blacklist_active_name_birth_expiry ON admin_blacklist (active_yn, black_name, black_birth_date, expires_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_blacklist",
-                "idx_admin_blacklist_active_expiry",
-                List.of("active_yn", "expires_at", "id"),
-                "CREATE INDEX idx_admin_blacklist_active_expiry ON admin_blacklist (active_yn, expires_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_blacklist_match_log",
-                "idx_admin_blacklist_match_blacklist",
-                List.of("blacklist_id", "matched_at", "id"),
-                "CREATE INDEX idx_admin_blacklist_match_blacklist ON admin_blacklist_match_log (blacklist_id, matched_at, id)"
-        );
-        createIndexIfMissing(
-                connection,
-                "admin_blacklist_match_log",
-                "idx_admin_blacklist_match_application",
-                List.of("application_id"),
-                "CREATE INDEX idx_admin_blacklist_match_application ON admin_blacklist_match_log (application_id)"
+                "admin_research_client_link",
+                "idx_admin_research_client_link_client_research",
+                List.of("client_id", "research_no"),
+                "CREATE INDEX idx_admin_research_client_link_client_research ON admin_research_client_link (client_id, research_no)"
         );
     }
 

@@ -2,10 +2,12 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
     <th:block th:fragment="content">
-        <section class="auth-shell">
-            <div class="auth-panel">
-                <div class="auth-heading mb-4">
-                    <h2 class="h3 mb-2">관리자 로그인</h2>
+        <section class="auth-shell login-shell">
+            <div class="auth-panel login-panel">
+                <div class="auth-heading login-heading">
+                    <p class="login-eyebrow">RESEARCHI 운영 관리</p>
+                    <h2>관리자 로그인</h2>
+                    <p>                                            </p>
                 </div>
 
                 <div th:if="${loginErrorCode != null}" class="notice error">
@@ -16,15 +18,15 @@
                 <div th:if="${param.passwordChanged}" class="notice success">비밀번호가 변경되어 다시 로그인해야 합니다.</div>
                 <div th:if="${param.expired}" class="notice error">세션이 만료되어 다시 로그인해야 합니다.</div>
 
-                <form action="/login" method="post" class="auth-form mt-4" th:object="${loginForm}">
+                <form action="/login" method="post" class="auth-form login-form" th:object="${loginForm}">
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                     <label>
                         <span>로그인 ID</span>
-                        <input type="text" th:field="*{username}" autocomplete="username" required>
+                        <input type="text" th:field="*{username}" autocomplete="username" placeholder="관리자 ID" required autofocus>
                     </label>
                     <label>
                         <span>비밀번호</span>
-                        <input type="password" th:field="*{password}" autocomplete="current-password" required>
+                        <input type="password" th:field="*{password}" autocomplete="current-password" placeholder="비밀번호" required>
                     </label>
                     <button type="submit">로그인</button>
                 </form>

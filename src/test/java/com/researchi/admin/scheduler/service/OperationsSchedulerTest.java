@@ -26,14 +26,10 @@ class OperationsSchedulerTest {
         operationsScheduler.scheduledSend();
         operationsScheduler.thresholdVerification();
         operationsScheduler.cleanup();
-        operationsScheduler.blacklistExpiry();
-        operationsScheduler.keywordMatch();
 
         verify(operationsBatchService, never()).runScheduledSendBatch();
         verify(operationsBatchService, never()).runThresholdVerificationBatch();
         verify(operationsBatchService, never()).runSixMonthCleanupBatch();
-        verify(operationsBatchService, never()).runBlacklistExpiryBatch();
-        verify(operationsBatchService, never()).runKeywordMatchBatch();
     }
 
     @Test
@@ -43,13 +39,9 @@ class OperationsSchedulerTest {
         operationsScheduler.scheduledSend();
         operationsScheduler.thresholdVerification();
         operationsScheduler.cleanup();
-        operationsScheduler.blacklistExpiry();
-        operationsScheduler.keywordMatch();
 
         verify(operationsBatchService).runScheduledSendBatch();
         verify(operationsBatchService).runThresholdVerificationBatch();
         verify(operationsBatchService).runSixMonthCleanupBatch();
-        verify(operationsBatchService).runBlacklistExpiryBatch();
-        verify(operationsBatchService).runKeywordMatchBatch();
     }
 }

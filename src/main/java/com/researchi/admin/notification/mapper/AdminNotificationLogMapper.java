@@ -1,5 +1,6 @@
 package com.researchi.admin.notification.mapper;
 
+import com.researchi.admin.dashboard.domain.MonthlyMessageCount;
 import com.researchi.admin.notification.domain.AdminNotificationLog;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +13,7 @@ public interface AdminNotificationLogMapper {
 
     void insert(AdminNotificationLog log);
 
-    List<AdminNotificationLog> findByDocumentSrl(@Param("documentSrl") Long documentSrl);
+    List<AdminNotificationLog> findByResearchNo(@Param("researchNo") Long researchNo);
 
     List<AdminNotificationLog> findAll();
 
@@ -22,8 +23,10 @@ public interface AdminNotificationLogMapper {
 
     LocalDateTime findLatestCreatedAt();
 
+    List<MonthlyMessageCount> countSentSmsByMonth(@Param("startDate") java.time.LocalDate startDate);
+
     int countSuccessfulDuplicate(
-            @Param("documentSrl") Long documentSrl,
+            @Param("researchNo") Long researchNo,
             @Param("applicationId") Long applicationId,
             @Param("channelType") String channelType,
             @Param("keywordSummary") String keywordSummary

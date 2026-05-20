@@ -52,11 +52,11 @@
         ORDER BY application_id ASC, id ASC
     </select>
 
-    <select id="findSentApplicationIdsByDocumentSrlAndTriggerPrefix" resultType="long">
+    <select id="findSentApplicationIdsByResearchNoAndTriggerPrefix" resultType="long">
         SELECT DISTINCT target.application_id
         FROM admin_mail_send_target target
         INNER JOIN admin_mail_send_job job ON job.id = target.send_job_id
-        WHERE job.document_srl = #{documentSrl}
+        WHERE job.research_no = #{researchNo}
           AND job.trigger_type LIKE CONCAT(#{triggerPrefix}, '%')
           AND job.send_status = 'SENT'
           AND target.send_result = 'SENT'

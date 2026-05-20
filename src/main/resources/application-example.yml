@@ -22,17 +22,17 @@ spring:
             enable: ${SMTP_STARTTLS_ENABLE:true}
 
   datasource:
-    xe:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      jdbc-url: jdbc:mysql://localhost:3306/spirit0419?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-      username: your_xe_db_username
-      password: your_xe_db_password
-
     admin:
       driver-class-name: com.mysql.cj.jdbc.Driver
       jdbc-url: jdbc:mysql://localhost:3306/researchi_admin?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
       username: your_admin_db_username
       password: your_admin_db_password
+
+    old-admin:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/admin_copy?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      username: your_old_admin_db_username
+      password: your_old_admin_db_password
 
 app:
   export:
@@ -73,8 +73,6 @@ app:
     scheduled-send-cron: ${APP_SCHEDULER_SCHEDULED_SEND_CRON:0 * * * * *}
     threshold-cron: ${APP_SCHEDULER_THRESHOLD_CRON:30 * * * * *}
     cleanup-cron: ${APP_SCHEDULER_CLEANUP_CRON:0 0 3 * * *}
-    blacklist-expiry-cron: ${APP_SCHEDULER_BLACKLIST_EXPIRY_CRON:0 15 * * * *}
-    keyword-match-cron: ${APP_SCHEDULER_KEYWORD_MATCH_CRON:0 30 * * * *}
     retention-months: ${APP_SCHEDULER_RETENTION_MONTHS:6}
 
   security:

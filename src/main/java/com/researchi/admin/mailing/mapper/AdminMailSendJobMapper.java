@@ -1,5 +1,6 @@
 package com.researchi.admin.mailing.mapper;
 
+import com.researchi.admin.dashboard.domain.MonthlyMessageCount;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -26,11 +27,13 @@ public interface AdminMailSendJobMapper {
 
     LocalDateTime findLatestActivityAt();
 
-    LocalDateTime findLastSuccessfulThresholdSentAt(@Param("documentSrl") Long documentSrl);
+    List<MonthlyMessageCount> countSentRecipientsByMonth(@Param("startDate") java.time.LocalDate startDate);
 
-    LocalDateTime findLastSuccessfulDailyScheduledSentAt(@Param("documentSrl") Long documentSrl);
+    LocalDateTime findLastSuccessfulThresholdSentAt(@Param("researchNo") Long researchNo);
 
-    List<AdminMailSendJob> findByDocumentSrl(@Param("documentSrl") Long documentSrl);
+    LocalDateTime findLastSuccessfulDailyScheduledSentAt(@Param("researchNo") Long researchNo);
+
+    List<AdminMailSendJob> findByResearchNo(@Param("researchNo") Long researchNo);
 
     List<AdminMailSendJob> findLegacyByResearchNo(@Param("researchNo") Long researchNo);
 

@@ -12,7 +12,7 @@ public class AdminNotificationLog {
 
     private Long id;
     private Long applicationId;
-    private Long documentSrl;
+    private Long researchNo;
     private String channelType;
     private String targetAddressMasked;
     private String keywordSummary;

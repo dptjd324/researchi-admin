@@ -1,8 +1,8 @@
 package com.researchi.admin.client.domain;
 
 public record ClientImpactJob(
-        Long documentSrl,
+        Long researchNo,
         String jobTitle,
-        String recruitStatus
+        String closeDateLabel
 ) {
 }

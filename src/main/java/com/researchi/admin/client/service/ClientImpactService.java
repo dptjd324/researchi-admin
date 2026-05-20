@@ -1,48 +1,74 @@
 package com.researchi.admin.client.service;
 
+import com.researchi.admin.client.domain.AdminResearchClientLink;
 import com.researchi.admin.client.domain.ClientImpactJob;
 import com.researchi.admin.client.domain.ClientImpactSummary;
-import com.researchi.admin.job.domain.AdminJobMeta;
-import com.researchi.admin.job.domain.JobListItem;
-import com.researchi.admin.job.mapper.AdminJobMetaMapper;
-import com.researchi.admin.job.service.JobService;
+import com.researchi.admin.client.domain.ClientSummary;
+import com.researchi.admin.legacy.research.domain.ResearchMaster;
+import com.researchi.admin.legacy.research.mapper.ResearchMasterMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ClientImpactService {
 
-    private final AdminJobMetaMapper adminJobMetaMapper;
-    private final JobService jobService;
+    private final ResearchMasterMapper researchMasterMapper;
+    private final ClientService clientService;
+    private final ResearchClientLinkService researchClientLinkService;
 
-    public ClientImpactService(AdminJobMetaMapper adminJobMetaMapper, JobService jobService) {
-        this.adminJobMetaMapper = adminJobMetaMapper;
-        this.jobService = jobService;
+    public ClientImpactService(
+            ResearchMasterMapper researchMasterMapper,
+            ClientService clientService,
+            ResearchClientLinkService researchClientLinkService
+    ) {
+        this.researchMasterMapper = researchMasterMapper;
+        this.clientService = clientService;
+        this.researchClientLinkService = researchClientLinkService;
     }
 
     public ClientImpactSummary summarize(Long clientId) {
         if (clientId == null) {
             return new ClientImpactSummary(null, 0, List.of());
         }
-        List<AdminJobMeta> metas = adminJobMetaMapper.findByClientId(clientId);
-        Map<Long, JobListItem> jobsByDocumentSrl = jobService.getJobsByDocumentSrls(
-                        metas.stream().map(AdminJobMeta::getDocumentSrl).toList()
-                ).stream()
-                .collect(LinkedHashMap::new, (map, job) -> map.put(job.getDocumentSrl(), job), Map::putAll);
-        List<ClientImpactJob> linkedJobs = metas.stream()
-                .map(meta -> toImpactJob(meta, jobsByDocumentSrl.get(meta.getDocumentSrl())))
-                .toList();
+        ClientSummary client = clientService.getClientSummary(clientId);
+        List<ClientImpactJob> linkedJobs = new ArrayList<>();
+        LinkedHashSet<Long> linkedResearchNos = new LinkedHashSet<>();
+        List<AdminResearchClientLink> researchLinks = researchClientLinkService.getLinksByClientId(clientId);
+        Map<Long, ResearchMaster> researchByNo = researchLinks.isEmpty()
+                ? Map.of()
+                : researchMasterMapper.findByResearchNos(researchLinks.stream().map(AdminResearchClientLink::getResearchNo).toList()).stream()
+                .collect(Collectors.toMap(ResearchMaster::getResearchNo, Function.identity(), (left, right) -> left));
+        for (AdminResearchClientLink link : researchLinks) {
+            linkedResearchNos.add(link.getResearchNo());
+            linkedJobs.add(toImpactJob(link, researchByNo.get(link.getResearchNo())));
+        }
+        for (ResearchMaster research : researchMasterMapper.findByCompanyName(client.clientName())) {
+            if (linkedResearchNos.add(research.getResearchNo())) {
+                linkedJobs.add(toImpactJob(research));
+            }
+        }
         return new ClientImpactSummary(clientId, linkedJobs.size(), linkedJobs);
     }
 
-    private ClientImpactJob toImpactJob(AdminJobMeta meta, JobListItem job) {
+    private ClientImpactJob toImpactJob(ResearchMaster research) {
         return new ClientImpactJob(
-                meta.getDocumentSrl(),
-                job == null ? "Job #" + meta.getDocumentSrl() : job.getTitle(),
-                meta.getRecruitStatus()
+                research.getResearchNo(),
+                research.getResearchTitle(),
+                research.getCloseDateLabel()
+        );
+    }
+
+    private ClientImpactJob toImpactJob(AdminResearchClientLink link, ResearchMaster research) {
+        return new ClientImpactJob(
+                link.getResearchNo(),
+                research == null ? "좌담회/설문 #" + link.getResearchNo() : research.getResearchTitle(),
+                research == null ? "" : research.getCloseDateLabel()
         );
     }
 }

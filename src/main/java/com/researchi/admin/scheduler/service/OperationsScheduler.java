@@ -35,20 +35,4 @@ public class OperationsScheduler {
         }
         operationsBatchService.runSixMonthCleanupBatch();
     }
-
-    @Scheduled(cron = "${app.scheduler.blacklist-expiry-cron:0 15 * * * *}")
-    public void blacklistExpiry() {
-        if (!operationsBatchService.isEnabled()) {
-            return;
-        }
-        operationsBatchService.runBlacklistExpiryBatch();
-    }
-
-    @Scheduled(cron = "${app.scheduler.keyword-match-cron:0 30 * * * *}")
-    public void keywordMatch() {
-        if (!operationsBatchService.isEnabled()) {
-            return;
-        }
-        operationsBatchService.runKeywordMatchBatch();
-    }
 }

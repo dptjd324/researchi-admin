@@ -5,7 +5,6 @@ import com.researchi.admin.legacy.matching.service.LegacyMatchingService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
 import com.researchi.admin.scheduler.config.SchedulerProperties;
-import com.researchi.admin.scheduler.mapper.OperationsCleanupMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,20 +17,17 @@ public class OperationsBatchService {
     private final AdminMailSendJobMapper adminMailSendJobMapper;
     private final LegacyResearchMailService legacyResearchMailService;
     private final LegacyMatchingService legacyMatchingService;
-    private final OperationsCleanupMapper operationsCleanupMapper;
 
     public OperationsBatchService(
             SchedulerProperties schedulerProperties,
             AdminMailSendJobMapper adminMailSendJobMapper,
             LegacyResearchMailService legacyResearchMailService,
-            LegacyMatchingService legacyMatchingService,
-            OperationsCleanupMapper operationsCleanupMapper
+            LegacyMatchingService legacyMatchingService
     ) {
         this.schedulerProperties = schedulerProperties;
         this.adminMailSendJobMapper = adminMailSendJobMapper;
         this.legacyResearchMailService = legacyResearchMailService;
         this.legacyMatchingService = legacyMatchingService;
-        this.operationsCleanupMapper = operationsCleanupMapper;
     }
 
     public boolean isEnabled() {
@@ -86,29 +82,6 @@ public class OperationsBatchService {
 
     @Transactional("adminTransactionManager")
     public int runSixMonthCleanupBatch() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime cutoff = now.minusMonths(schedulerProperties.getRetentionMonths());
-        int deleted = 0;
-        deleted += operationsCleanupMapper.deleteDuplicateLogsBefore(cutoff);
-        deleted += operationsCleanupMapper.deleteBlacklistMatchLogsForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deletePrivacyConsentsForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deleteFormAnswersForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deleteApplicationKeywordsForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deleteNotificationLogsForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deleteMailTargetsForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deleteKeywordMatchTargetsForExpiredApplications(cutoff);
-        deleted += operationsCleanupMapper.deleteApplicationsBefore(cutoff);
-        deleted += legacyMatchingService.cleanupMatchingLogsAfterClosedDeadline();
-        return deleted;
-    }
-
-    @Transactional("adminTransactionManager")
-    public int runBlacklistExpiryBatch() {
-        return 0;
-    }
-
-    @Transactional("adminTransactionManager")
-    public int runKeywordMatchBatch() {
-        return 0;
+        return legacyMatchingService.cleanupMatchingLogsAfterClosedDeadline();
     }
 }

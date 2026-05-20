@@ -5,7 +5,6 @@ import com.researchi.admin.legacy.matching.service.LegacyMatchingService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
 import com.researchi.admin.scheduler.config.SchedulerProperties;
-import com.researchi.admin.scheduler.mapper.OperationsCleanupMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,8 +30,6 @@ class OperationsBatchServiceTest {
     private LegacyResearchMailService legacyResearchMailService;
     @Mock
     private LegacyMatchingService legacyMatchingService;
-    @Mock
-    private OperationsCleanupMapper operationsCleanupMapper;
 
     @InjectMocks
     private OperationsBatchService operationsBatchService;
@@ -99,34 +96,10 @@ class OperationsBatchServiceTest {
 
     @Test
     void cleanupBatchAggregatesDeletedRows() {
-        when(schedulerProperties.getRetentionMonths()).thenReturn(6);
-        when(operationsCleanupMapper.deleteDuplicateLogsBefore(any())).thenReturn(1);
-        when(operationsCleanupMapper.deleteBlacklistMatchLogsForExpiredApplications(any())).thenReturn(2);
-        when(operationsCleanupMapper.deletePrivacyConsentsForExpiredApplications(any())).thenReturn(3);
-        when(operationsCleanupMapper.deleteFormAnswersForExpiredApplications(any())).thenReturn(4);
-        when(operationsCleanupMapper.deleteApplicationKeywordsForExpiredApplications(any())).thenReturn(5);
-        when(operationsCleanupMapper.deleteNotificationLogsForExpiredApplications(any())).thenReturn(6);
-        when(operationsCleanupMapper.deleteMailTargetsForExpiredApplications(any())).thenReturn(7);
-        when(operationsCleanupMapper.deleteKeywordMatchTargetsForExpiredApplications(any())).thenReturn(8);
-        when(operationsCleanupMapper.deleteApplicationsBefore(any())).thenReturn(9);
         when(legacyMatchingService.cleanupMatchingLogsAfterClosedDeadline()).thenReturn(10);
 
         int deleted = operationsBatchService.runSixMonthCleanupBatch();
 
-        assertThat(deleted).isEqualTo(55);
-    }
-
-    @Test
-    void blacklistExpiryBatchIsNoOpAfterLegacyBlacklistTransition() {
-        int expired = operationsBatchService.runBlacklistExpiryBatch();
-
-        assertThat(expired).isZero();
-    }
-
-    @Test
-    void keywordMatchBatchIsNoOpAfterLegacyMatchingSchedulerTransition() {
-        int executed = operationsBatchService.runKeywordMatchBatch();
-
-        assertThat(executed).isZero();
+        assertThat(deleted).isEqualTo(10);
     }
 }

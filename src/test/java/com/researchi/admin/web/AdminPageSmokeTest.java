@@ -30,9 +30,13 @@ class AdminPageSmokeTest {
 
     @Test
     void currentOperationPagesRender() throws Exception {
+        mockMvc.perform(get("/dashboard").with(user("admin")))
+                .andExpect(status().isOk());
         mockMvc.perform(get("/research").with(user("admin")))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/clients").with(user("admin")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/clients/new").with(user("admin")))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/legacy-blacklist").with(user("admin")))
                 .andExpect(status().isOk());

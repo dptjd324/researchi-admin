@@ -45,6 +45,7 @@ body.public-body {
 
 .public-header {
     margin-bottom: 18px;
+    text-align: center;
 }
 
 .public-header__eyebrow {
@@ -87,6 +88,7 @@ body.public-body {
 .public-period {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
     margin-top: 8px;
 }

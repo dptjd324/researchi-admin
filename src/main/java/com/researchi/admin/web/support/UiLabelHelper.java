@@ -1,7 +1,5 @@
 package com.researchi.admin.web.support;
 
-import com.researchi.admin.job.domain.BoardConfig;
-
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -19,8 +17,7 @@ public class UiLabelHelper {
     private static final DateTimeFormatter DISPLAY_DATE_TIME = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
     private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("HH시 mm분");
-    private static final DateTimeFormatter XE_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final DateTimeFormatter DISPLAY_XE_DATE_TIME = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
+    private static final DateTimeFormatter COMPACT_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final Pattern SCRIPT_OR_STYLE_BLOCK = Pattern.compile("(?is)<(script|style)[^>]*>.*?</\\1>");
     private static final Pattern BLOCK_BREAK_TAG = Pattern.compile("(?i)<\\s*(br|/p|/div|/li|/tr|/h[1-6])\\b[^>]*>");
     private static final Pattern HTML_TAG = Pattern.compile("(?is)<[^>]+>");
@@ -62,34 +59,30 @@ public class UiLabelHelper {
     public String yesNo(String value) {
         return switch (normalize(value)) {
             case "Y" -> "예";
-            case "N" -> "아니요";
+            case "N" -> "아니오";
             case "" -> "-";
             default -> value;
         };
     }
 
     public String jobBoard(String value) {
-        if (value == null || value.isBlank()) {
-            return "-";
-        }
-        try {
-            return BoardConfig.fromMid(value).getLabel();
-        } catch (IllegalArgumentException ex) {
-            try {
-                return BoardConfig.fromCode(value).getLabel();
-            } catch (IllegalArgumentException ignored) {
-                return value;
-            }
-        }
+        return switch (normalize(value)) {
+            case "NEW", "NEWJOB", "NEW_JOB" -> "좌담회/설문";
+            case "ADDITIONAL", "ADDITIONAL_JOB", "ADDITIONAL_WORK", "ADDITIONALBOARD", "ADDITIONAL_BOARD" -> "추가 일감";
+            case "FAST" -> "급진행신청";
+            case "RECRUIT" -> "전국/지역모집";
+            case "SHARING" -> "좌담회 후기";
+            case "QUESTION" -> "Q&A";
+            case "" -> "-";
+            default -> value;
+        };
     }
 
     public String blacklistMode(String value) {
         return switch (normalize(value)) {
             case "MANUAL_REVIEW" -> "관리자 검토";
-            case "TEMPORARY_BLOCK" -> "임시 차단";
-            case "PERMANENT_BLOCK" -> "영구 차단";
-            case "TEMPORARY_BLOCKED" -> "임시 차단 적용";
-            case "PERMANENT_BLOCKED" -> "영구 차단 적용";
+            case "TEMPORARY_BLOCK", "TEMPORARY_BLOCKED" -> "임시 차단";
+            case "PERMANENT_BLOCK", "PERMANENT_BLOCKED" -> "영구 차단";
             case "" -> "-";
             default -> value;
         };
@@ -107,21 +100,14 @@ public class UiLabelHelper {
     }
 
     public String notifyStatus(String value) {
-        return switch (normalize(value)) {
-            case "PENDING" -> "대기";
-            case "READY" -> "준비완료";
-            case "SENT" -> "발송완료";
-            case "FAILED" -> "실패";
-            case "" -> "-";
-            default -> value;
-        };
+        return deliveryStatus(value);
     }
 
     public String channelType(String value) {
         return switch (normalize(value)) {
             case "EMAIL" -> "이메일";
             case "EMAIL_SECONDARY" -> "보조 이메일";
-            case "SMS" -> "문자";
+            case "SMS", "LEGACY_SMS" -> "문자";
             case "" -> "-";
             default -> value;
         };
@@ -129,14 +115,10 @@ public class UiLabelHelper {
 
     public String triggerType(String value) {
         return switch (normalize(value)) {
-            case "MANUAL" -> "수동발송";
-            case "LEGACY_MANUAL" -> "좌담회 수동발송";
-            case "THRESHOLD" -> "임계치발송";
-            case "LEGACY_THRESHOLD" -> "좌담회 임계치발송";
-            case "SCHEDULED" -> "예약발송";
-            case "SCHEDULED_DAILY" -> "매일 예약발송";
-            case "LEGACY_SCHEDULED" -> "좌담회 예약발송";
-            case "LEGACY_SCHEDULED_DAILY" -> "좌담회 매일 예약발송";
+            case "MANUAL", "LEGACY_MANUAL" -> "수동발송";
+            case "THRESHOLD", "LEGACY_THRESHOLD" -> "임계치발송";
+            case "SCHEDULED", "LEGACY_SCHEDULED" -> "예약발송";
+            case "SCHEDULED_DAILY", "LEGACY_SCHEDULED_DAILY" -> "매일 예약발송";
             case "" -> "-";
             default -> value;
         };
@@ -150,7 +132,7 @@ public class UiLabelHelper {
             case "SENT" -> "발송완료";
             case "FAILED" -> "실패";
             case "CANCELLED" -> "취소";
-            case "SKIPPED_DUPLICATE" -> "중복으로 건너뜀";
+            case "SKIPPED_DUPLICATE" -> "중복 제외";
             case "NO_TARGETS" -> "발송 대상 없음";
             case "" -> "-";
             default -> value;
@@ -163,35 +145,17 @@ public class UiLabelHelper {
             case "LOGIN_FAILURE" -> "로그인 실패";
             case "LOGOUT" -> "로그아웃";
             case "PASSWORD_CHANGE" -> "비밀번호 변경";
-            case "JOB_CREATE" -> "공고 등록";
-            case "JOB_UPDATE" -> "공고 수정";
-            case "JOB_DELETE" -> "공고 삭제";
-            case "JOB_STATUS_UPDATE" -> "공고 상태 변경";
-            case "APPLICATION_STATUS_UPDATE" -> "지원서 상태 변경";
-            case "APPLICATION_BLACKLIST_REGISTER" -> "지원자 블랙리스트 등록";
-            case "APPLICATION_EXPORT" -> "지원서 내보내기";
             case "BLACKLIST_CREATE" -> "블랙리스트 등록";
             case "BLACKLIST_UPDATE" -> "블랙리스트 수정";
             case "BLACKLIST_STATUS_UPDATE" -> "블랙리스트 상태 변경";
             case "BLACKLIST_EXPIRE" -> "블랙리스트 만료";
             case "BLACKLIST_EXPORT" -> "블랙리스트 내보내기";
-            case "FORM_FIELD_CREATE" -> "동적 필드 등록";
-            case "FORM_FIELD_UPDATE" -> "동적 필드 수정";
-            case "FORM_FIELD_DELETE" -> "동적 필드 삭제";
-            case "KEYWORD_MATCH_RUN" -> "키워드 매칭 실행";
-            case "KEYWORD_NOTIFICATION_EMAIL" -> "이메일 추천 알림";
-            case "KEYWORD_NOTIFICATION_SMS" -> "문자 추천 알림";
-            case "MAIL_SEND_MANUAL" -> "수동 메일 발송";
-            case "MAIL_SEND_LEGACY_MANUAL" -> "좌담회 수동 메일 발송";
-            case "MAIL_SEND_SCHEDULE" -> "메일 예약 등록";
-            case "MAIL_SEND_LEGACY_SCHEDULE" -> "좌담회 메일 예약 등록";
-            case "MAIL_SEND_SCHEDULED_EXECUTE" -> "예약 메일 실행";
-            case "MAIL_SEND_LEGACY_SCHEDULED_EXECUTE" -> "좌담회 예약 메일 실행";
-            case "MAIL_SEND_THRESHOLD" -> "임계치 메일 발송";
-            case "MAIL_SEND_LEGACY_THRESHOLD" -> "좌담회 임계치 메일 발송";
+            case "MAIL_SEND_LEGACY_MANUAL" -> "수동 메일 발송";
+            case "MAIL_SEND_LEGACY_SCHEDULE" -> "메일 예약 등록";
+            case "MAIL_SEND_LEGACY_SCHEDULED_EXECUTE" -> "예약 메일 실행";
+            case "MAIL_SEND_LEGACY_THRESHOLD" -> "임계치 메일 발송";
             case "MAIL_SEND_CANCEL" -> "메일 예약 취소";
-            case "MAIL_TEMPLATE_CREATE" -> "메일 템플릿 등록";
-            case "MAIL_TEMPLATE_UPDATE" -> "메일 템플릿 수정";
+            case "APPLICATION_BLACKLIST_REGISTER" -> "지원자 블랙리스트 등록";
             case "" -> "-";
             default -> value;
         };
@@ -213,6 +177,7 @@ public class UiLabelHelper {
             case "MAIL_SEND_JOB" -> "메일 발송 작업";
             case "MAIL_TEMPLATE" -> "메일 템플릿";
             case "KEYWORD_MATCH_JOB" -> "키워드 매칭 작업";
+            case "RESEARCH" -> "좌담회/설문";
             case "" -> "-";
             default -> value;
         };
@@ -233,44 +198,19 @@ public class UiLabelHelper {
         if (value == null || value.isBlank()) {
             return "-";
         }
-        String detail = value;
-        detail = detail.replaceAll(
-                "Keyword notification email dispatch completed for match job #(\\d+) with (\\d+) sends\\.",
-                "키워드 이메일 알림 발송 완료 - 매칭 작업 #$1, 발송 $2건"
-        );
-        detail = detail.replaceAll(
-                "Keyword notification sms dispatch completed for match job #(\\d+) with (\\d+) sends\\.",
-                "키워드 문자 알림 발송 완료 - 매칭 작업 #$1, 발송 $2건"
-        );
-        detail = detail.replaceAll(
-                "Keyword notification SMS dispatch completed for match job #(\\d+) with (\\d+) sends\\.",
-                "키워드 문자 알림 발송 완료 - 매칭 작업 #$1, 발송 $2건"
-        );
-        detail = detail.replaceAll(
-                "Keyword match job #(\\d+) completed with (\\d+) matches\\.",
-                "키워드 매칭 작업 #$1 완료, 매칭 $2건"
-        );
-        detail = detail.replace("Exported XLSX applications (", "지원서 XLSX 내보내기 완료 (");
-        detail = detail.replace("Exported TXT applications (", "지원서 TXT 내보내기 완료 (");
-        detail = detail.replace("Exported XLSX blacklist entries (", "블랙리스트 XLSX 내보내기 완료 (");
-        detail = detail.replace("Exported TXT blacklist entries (", "블랙리스트 TXT 내보내기 완료 (");
-        detail = detail.replace(" rows)", "행)");
-        detail = detail.replace("RECEIVED", "접수");
-        detail = detail.replace("REVIEWING", "검토중");
-        detail = detail.replace("APPROVED", "승인");
-        detail = detail.replace("REJECTED", "반려");
-        detail = detail.replace("BLOCKED", "차단");
-        detail = detail.replace("RECRUITING", "모집중");
-        detail = detail.replace("WAITING", "대기");
-        detail = detail.replace("CLOSED", "마감");
-        detail = detail.replace("SCHEDULED", "예약중");
-        detail = detail.replace("RUNNING", "실행중");
-        detail = detail.replace("SENT", "발송완료");
-        detail = detail.replace("FAILED", "실패");
-        detail = detail.replace("CANCELLED", "취소");
-        detail = detail.replace("MANUAL", "수동");
-        detail = detail.replace("THRESHOLD", "임계치");
-        return detail;
+        return value
+                .replace("RECEIVED", "접수")
+                .replace("REVIEWING", "검토중")
+                .replace("APPROVED", "승인")
+                .replace("REJECTED", "반려")
+                .replace("BLOCKED", "차단")
+                .replace("SCHEDULED", "예약중")
+                .replace("RUNNING", "실행중")
+                .replace("SENT", "발송완료")
+                .replace("FAILED", "실패")
+                .replace("CANCELLED", "취소")
+                .replace("MANUAL", "수동")
+                .replace("THRESHOLD", "임계치");
     }
 
     public String failReason(String value) {
@@ -295,6 +235,67 @@ public class UiLabelHelper {
         text = text.replaceAll("[ \\t\\x0B\\f\\r]+", " ");
         text = text.replaceAll(" *\\n+ *", "\n").trim();
         return text.isBlank() ? "-" : text;
+    }
+
+    public String searchCondition(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        return value
+                .replace("\"scope\"", "\"검색 범위\"")
+                .replace("\"keyword\"", "\"검색어\"")
+                .replace("\"status\"", "\"상태\"")
+                .replace("\"datePreset\"", "\"날짜 조건\"")
+                .replace("\"specificDate\"", "\"특정 날짜\"")
+                .replace("\"dateFrom\"", "\"시작일\"")
+                .replace("\"dateTo\"", "\"종료일\"");
+    }
+
+    public String dateTime(LocalDateTime value) {
+        return value == null ? "-" : value.format(DISPLAY_DATE_TIME);
+    }
+
+    public String date(LocalDate value) {
+        return value == null ? "-" : value.format(DISPLAY_DATE);
+    }
+
+    public String time(LocalTime value) {
+        return value == null ? "-" : value.format(DISPLAY_TIME);
+    }
+
+    public String xeDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String normalized = value.trim();
+        if (!normalized.matches("\\d{14}")) {
+            return normalized;
+        }
+        try {
+            return LocalDateTime.parse(normalized, COMPACT_DATE_TIME).format(DISPLAY_DATE_TIME);
+        } catch (DateTimeParseException ex) {
+            return normalized;
+        }
+    }
+
+    public String triggerToneClass(String value) {
+        return switch (normalize(value)) {
+            case "MANUAL", "LEGACY_MANUAL" -> "trigger-badge--manual";
+            case "THRESHOLD", "LEGACY_THRESHOLD" -> "trigger-badge--threshold";
+            case "SCHEDULED", "SCHEDULED_DAILY", "LEGACY_SCHEDULED", "LEGACY_SCHEDULED_DAILY" -> "trigger-badge--scheduled";
+            default -> "trigger-badge--default";
+        };
+    }
+
+    public String sendStatusToneClass(String value) {
+        return switch (normalize(value)) {
+            case "SCHEDULED" -> "send-status-badge--scheduled";
+            case "RUNNING" -> "send-status-badge--running";
+            case "SENT" -> "send-status-badge--sent";
+            case "FAILED" -> "send-status-badge--failed";
+            case "CANCELLED" -> "send-status-badge--cancelled";
+            default -> "send-status-badge--default";
+        };
     }
 
     private String decodeHtmlEntities(String value) {
@@ -322,98 +323,6 @@ public class UiLabelHelper {
         } catch (IllegalArgumentException ex) {
             return "&#" + value + ";";
         }
-    }
-
-    public String searchCondition(String value) {
-        if (value == null || value.isBlank()) {
-            return "-";
-        }
-        return value
-                .replace("\"scope\"", "\"검색 범위\"")
-                .replace("\"keyword\"", "\"검색어\"")
-                .replace("\"documentSrl\"", "\"공고 번호\"")
-                .replace("\"status\"", "\"상태\"")
-                .replace("\"datePreset\"", "\"날짜 조건\"")
-                .replace("\"specificDate\"", "\"특정 날짜\"")
-                .replace("\"dateFrom\"", "\"시작일\"")
-                .replace("\"dateTo\"", "\"종료일\"")
-                .replace("\"APPLICATION\"", "\"지원서\"")
-                .replace("\"MAIL\"", "\"메일\"")
-                .replace("\"ACTION\"", "\"액션 로그\"")
-                .replace("\"NOTIFICATION\"", "\"알림 로그\"")
-                .replace("\"TODAY\"", "\"오늘\"")
-                .replace("\"THIS_WEEK\"", "\"이번 주\"")
-                .replace("\"SPECIFIC_DAY\"", "\"특정 날짜\"")
-                .replace("\"CUSTOM\"", "\"직접 지정\"")
-                .replace("\"RECEIVED\"", "\"접수\"")
-                .replace("\"REVIEWING\"", "\"검토중\"")
-                .replace("\"APPROVED\"", "\"승인\"")
-                .replace("\"REJECTED\"", "\"반려\"")
-                .replace("\"BLOCKED\"", "\"차단\"")
-                .replace("\"SENT\"", "\"발송완료\"")
-                .replace("\"FAILED\"", "\"실패\"")
-                .replace("\"SCHEDULED\"", "\"예약중\"");
-    }
-
-    public String dateTime(LocalDateTime value) {
-        if (value == null) {
-            return "-";
-        }
-        return value.format(DISPLAY_DATE_TIME);
-    }
-
-    public String date(LocalDate value) {
-        if (value == null) {
-            return "-";
-        }
-        return value.format(DISPLAY_DATE);
-    }
-
-    public String time(LocalTime value) {
-        if (value == null) {
-            return "-";
-        }
-        return value.format(DISPLAY_TIME);
-    }
-
-    public String xeDateTime(String value) {
-        if (value == null || value.isBlank()) {
-            return "-";
-        }
-        String normalized = value.trim();
-        if (!normalized.matches("\\d{14}")) {
-            return normalized;
-        }
-        try {
-            return LocalDateTime.parse(normalized, XE_DATE_TIME).format(DISPLAY_XE_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            return normalized;
-        }
-    }
-
-    public String triggerToneClass(String value) {
-        return switch (normalize(value)) {
-            case "MANUAL" -> "trigger-badge--manual";
-            case "LEGACY_MANUAL" -> "trigger-badge--manual";
-            case "THRESHOLD" -> "trigger-badge--threshold";
-            case "LEGACY_THRESHOLD" -> "trigger-badge--threshold";
-            case "SCHEDULED" -> "trigger-badge--scheduled";
-            case "SCHEDULED_DAILY" -> "trigger-badge--scheduled";
-            case "LEGACY_SCHEDULED" -> "trigger-badge--scheduled";
-            case "LEGACY_SCHEDULED_DAILY" -> "trigger-badge--scheduled";
-            default -> "trigger-badge--default";
-        };
-    }
-
-    public String sendStatusToneClass(String value) {
-        return switch (normalize(value)) {
-            case "SCHEDULED" -> "send-status-badge--scheduled";
-            case "RUNNING" -> "send-status-badge--running";
-            case "SENT" -> "send-status-badge--sent";
-            case "FAILED" -> "send-status-badge--failed";
-            case "CANCELLED" -> "send-status-badge--cancelled";
-            default -> "send-status-badge--default";
-        };
     }
 
     private String normalize(String value) {

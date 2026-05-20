@@ -246,6 +246,73 @@ body.admin-body {
     text-align: center;
 }
 
+.login-shell {
+    align-items: center;
+    min-height: calc(100vh - 2rem);
+}
+
+.login-panel {
+    width: min(100%, 460px);
+    padding: 2.25rem;
+    border-radius: 14px;
+}
+
+.login-heading {
+    display: grid;
+    gap: 0.35rem;
+    margin-bottom: 1.4rem;
+}
+
+.login-eyebrow {
+    margin: 0;
+    color: var(--admin-primary);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.login-heading h2 {
+    margin: 0;
+    color: #172638;
+    font-size: 1.55rem;
+    font-weight: 800;
+}
+
+.login-heading p:last-child {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.93rem;
+    line-height: 1.55;
+}
+
+.login-form {
+    gap: 0.9rem;
+    margin-top: 1.2rem;
+}
+
+.login-form label {
+    gap: 0.35rem;
+}
+
+.login-form span {
+    color: #0076ad;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.login-form input {
+    height: 3rem;
+    border-radius: 10px;
+}
+
+.login-form button {
+    width: 100%;
+    height: 3rem;
+    margin-top: 0.35rem;
+    border-radius: 10px;
+    font-weight: 800;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -264,6 +331,177 @@ body.admin-body {
     display: block;
     margin-bottom: 0.4rem;
     font-size: 0.95rem;
+}
+
+.dashboard-usage-metrics {
+    margin-bottom: 1.25rem;
+}
+
+.dashboard-usage-metric span {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--admin-accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.dashboard-usage-metric strong {
+    color: var(--admin-text);
+    font-size: 2rem;
+    line-height: 1.1;
+}
+
+.dashboard-usage-metric p {
+    margin: 0.5rem 0 0;
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+}
+
+.usage-chart {
+    padding: 1.25rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: var(--admin-surface);
+}
+
+.usage-cost-panel {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: var(--admin-surface-soft);
+}
+
+.usage-cost-panel__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.usage-cost-panel__items span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgba(15, 118, 110, 0.18);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--admin-primary);
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.usage-chart__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.usage-chart__legend {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+}
+
+.usage-chart__legend span {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.usage-chart__dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+}
+
+.usage-chart__dot--mail {
+    background: #087f73;
+}
+
+.usage-chart__dot--sms {
+    background: #d97706;
+}
+
+.usage-chart__rows {
+    display: grid;
+    gap: 0.85rem;
+    padding-top: 1rem;
+}
+
+.usage-chart__row {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr) 4rem;
+    gap: 0.85rem;
+    align-items: center;
+}
+
+.usage-chart__row--with-cost {
+    grid-template-columns: 5rem minmax(0, 1fr) 4rem 8.5rem;
+}
+
+.usage-chart__month,
+.usage-chart__total {
+    font-size: 0.9rem;
+}
+
+.usage-chart__month {
+    color: var(--admin-muted);
+}
+
+.usage-chart__total {
+    text-align: right;
+}
+
+.usage-chart__cost {
+    color: var(--admin-muted);
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.usage-chart__bars {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.usage-chart__bar {
+    min-width: 2.75rem;
+    max-width: 100%;
+    height: 1.6rem;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.6rem;
+    text-align: right;
+    transition: width 0.2s ease;
+}
+
+.usage-chart__bar span {
+    display: inline-block;
+    padding: 0 0.65rem;
+}
+
+.usage-chart__bar--mail {
+    background: #087f73;
+}
+
+.usage-chart__bar--sms {
+    background: #d97706;
 }
 
 .dashboard-head,
@@ -1086,6 +1324,116 @@ textarea {
     padding-top: 0.25rem;
 }
 
+.client-search-grid {
+    grid-template-columns: minmax(140px, 0.25fr) minmax(280px, 1fr) auto;
+}
+
+.client-search-grid__wide {
+    min-width: 0;
+}
+
+.client-search-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.client-table-wrap {
+    overflow-x: auto;
+}
+
+.client-data-table {
+    width: 100%;
+    min-width: 880px;
+    table-layout: fixed;
+}
+
+.client-data-table th,
+.client-data-table td {
+    padding-inline: 0.65rem;
+    overflow-wrap: anywhere;
+}
+
+.client-col-no {
+    width: 4rem;
+}
+
+.client-col-name {
+    width: 16%;
+}
+
+.client-col-department {
+    width: 13%;
+}
+
+.client-col-contact {
+    width: 13%;
+}
+
+.client-col-phone {
+    width: 15%;
+}
+
+.client-col-email {
+    width: 23%;
+}
+
+.client-col-status {
+    width: 7rem;
+}
+
+.client-col-actions {
+    width: 7rem;
+}
+
+.client-name-cell {
+    font-weight: 700;
+    color: var(--admin-text);
+}
+
+.client-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.4rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.client-status-badge--active {
+    color: #047857;
+    background: #dff8ec;
+}
+
+.client-status-badge--inactive {
+    color: #64748b;
+    background: #eef2f7;
+}
+
+.client-edit-form {
+    margin-top: 0.75rem;
+}
+
+.client-impact-section {
+    margin-top: 1rem;
+}
+
+.client-delete-form {
+    display: none;
+}
+
+.client-delete-form button {
+    background: #b91c1c;
+}
+
+.client-delete-form span {
+    color: #7f1d1d;
+    font-size: 0.92rem;
+}
+
 @media (max-width: 991.98px) {
     .form-layout,
     .form-grid,
@@ -1097,6 +1445,14 @@ textarea {
     .research-edit-grid,
     .legacy-mail-summary {
         grid-template-columns: 1fr;
+    }
+
+    .client-search-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .client-search-actions {
+        justify-content: flex-start;
     }
 
     .research-edit-grid__wide {
@@ -1159,6 +1515,16 @@ textarea {
     .dashboard-head.dashboard-head--row {
         flex-direction: row;
         align-items: center;
+    }
+
+    .usage-chart__row,
+    .usage-chart__row--with-cost {
+        grid-template-columns: 1fr;
+    }
+
+    .usage-chart__total,
+    .usage-chart__cost {
+        text-align: left;
     }
 
     .admin-navbar {

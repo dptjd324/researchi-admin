@@ -1,12 +1,9 @@
 package com.researchi.admin.client.web;
 
 import com.researchi.admin.client.domain.ClientImpactSummary;
-import com.researchi.admin.client.domain.ClientMigrationPreview;
-import com.researchi.admin.client.domain.ClientMigrationResult;
+import com.researchi.admin.client.domain.ClientSummary;
 import com.researchi.admin.client.service.ClientImpactService;
-import com.researchi.admin.client.service.ClientMigrationService;
 import com.researchi.admin.client.service.ClientService;
-import com.researchi.admin.common.web.PaginationSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -20,36 +17,55 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+import java.util.Locale;
+
 @Controller
 @RequestMapping("/clients")
 public class ClientController {
 
     private final ClientService clientService;
     private final ClientImpactService clientImpactService;
-    private final ClientMigrationService clientMigrationService;
 
     public ClientController(
             ClientService clientService,
-            ClientImpactService clientImpactService,
-            ClientMigrationService clientMigrationService
+            ClientImpactService clientImpactService
     ) {
         this.clientService = clientService;
         this.clientImpactService = clientImpactService;
-        this.clientMigrationService = clientMigrationService;
     }
 
     @GetMapping
     public String clients(
             @RequestParam(name = "clientId", required = false) Long clientId,
-            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "active", required = false) String active,
             Model model,
             HttpServletRequest request,
             CsrfToken csrfToken
     ) {
         request.getSession(true);
-        ClientForm form = clientId == null ? new ClientForm() : clientService.toForm(clientId);
-        populateModel(model, form, clientId, csrfToken, null, request, page);
+        if (clientId != null) {
+            return "redirect:/clients/" + clientId + "/edit";
+        }
+        populateListModel(model, keyword, active, csrfToken);
         return "clients/list";
+    }
+
+    @GetMapping("/new")
+    public String createForm(Model model, CsrfToken csrfToken) {
+        populateFormModel(model, new ClientForm(), "거래처 등록", null, csrfToken);
+        return "clients/form";
+    }
+
+    @GetMapping("/{clientId}/edit")
+    public String editForm(
+            @PathVariable Long clientId,
+            Model model,
+            CsrfToken csrfToken
+    ) {
+        populateFormModel(model, clientService.toForm(clientId), "거래처 수정", clientImpactService.summarize(clientId), csrfToken);
+        return "clients/form";
     }
 
     @PostMapping
@@ -60,78 +76,81 @@ public class ClientController {
             HttpServletRequest request
     ) {
         ClientImpactSummary impactSummary = form.getId() == null
-                ? new ClientImpactSummary(null, 0, java.util.List.of())
+                ? new ClientImpactSummary(null, 0, List.of())
                 : clientImpactService.summarize(form.getId());
-        if (Boolean.FALSE.equals(form.getActive()) && impactSummary.hasImpact() && !Boolean.TRUE.equals(form.getConfirmImpact())) {
-            bindingResult.reject("clientImpact", "변경되지 않았습니다. 연결된 공고가 있어 미사용 처리 전 영향 확인이 필요합니다.");
-            bindingResult.rejectValue("confirmImpact", "clientImpact.confirmRequired", "연결된 공고 영향을 확인 후 다시 저장해 주세요.");
-        }
         if (bindingResult.hasErrors()) {
-            populateModel(model, form, form.getId(), resolveCsrfToken(request), impactSummary, request, null);
-            return "clients/list";
+            populateFormModel(model, form, form.getId() == null ? "거래처 등록" : "거래처 수정", impactSummary, resolveCsrfToken(request));
+            return "clients/form";
         }
         try {
             Long clientId = clientService.save(form);
-            return "redirect:/clients?clientId=" + clientId + "&saved";
+            return "redirect:/clients/" + clientId + "/edit?saved";
         } catch (IllegalArgumentException ex) {
             bindingResult.reject("clientError", ex.getMessage());
-            populateModel(model, form, form.getId(), resolveCsrfToken(request), impactSummary, request, null);
-            return "clients/list";
+            populateFormModel(model, form, form.getId() == null ? "거래처 등록" : "거래처 수정", impactSummary, resolveCsrfToken(request));
+            return "clients/form";
         }
     }
 
     @PostMapping("/{clientId}/delete")
-    public String delete(
-            @PathVariable Long clientId,
-            Model model,
-            HttpServletRequest request
-    ) {
-        ClientImpactSummary impactSummary = clientImpactService.summarize(clientId);
-        if (impactSummary.hasImpact()) {
-            ClientForm form = clientService.toForm(clientId);
-            model.addAttribute("deleteError", "연결된 공고가 있어 삭제할 수 없습니다. 먼저 공고의 거래처 연결을 변경하세요.");
-            populateModel(model, form, clientId, resolveCsrfToken(request), impactSummary, request, null);
-            return "clients/list";
-        }
+    public String delete(@PathVariable Long clientId) {
         clientService.deleteClient(clientId);
         return "redirect:/clients?deleted";
     }
 
-    @PostMapping("/migrations/legacy-jobs")
-    public String migrateLegacyJobs() {
-        ClientMigrationResult result = clientMigrationService.migrateLegacyJobClients();
-        return "redirect:/clients?migratedJobs=" + result.migratedJobCount()
-                + "&createdClients=" + result.createdClientCount()
-                + "&reusedClients=" + result.reusedClientCount();
-    }
-
-    private void populateModel(
-            Model model,
-            ClientForm form,
-            Long selectedClientId,
-            CsrfToken csrfToken,
-            ClientImpactSummary explicitImpactSummary,
-            HttpServletRequest request,
-            Integer page
-    ) {
-        ClientImpactSummary impactSummary = explicitImpactSummary != null
-                ? explicitImpactSummary
-                : (selectedClientId == null ? new ClientImpactSummary(null, 0, java.util.List.of()) : clientImpactService.summarize(selectedClientId));
-        ClientMigrationPreview migrationPreview = clientMigrationService.previewLegacyJobMigration();
-
-        model.addAttribute("pageTitle", "거래처 관리");
-        model.addAttribute("pageDescription", "공고에 연결할 거래처와 메일 수신 담당자 정보를 관리합니다.");
-        model.addAttribute("clientForm", form);
-        model.addAttribute(
-                "clients",
-                PaginationSupport.apply(model, request, clientService.getAllClientSummaries(), page, PaginationSupport.DEFAULT_PAGE_SIZE)
-        );
-        model.addAttribute("selectedClientId", selectedClientId);
-        model.addAttribute("impactSummary", impactSummary);
-        model.addAttribute("migrationPreview", migrationPreview);
+    private void populateListModel(Model model, String keyword, String active, CsrfToken csrfToken) {
+        List<ClientSummary> clients = filterClients(clientService.getAllClientSummaries(), keyword, active);
+        model.addAttribute("pageTitle", "거래처");
+        model.addAttribute("pageDescription", "거래처를 조회, 등록하며 관리합니다.");
+        model.addAttribute("clients", clients);
+        model.addAttribute("totalItemCount", clients.size());
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("active", active == null || active.isBlank() ? "ALL" : active);
         if (csrfToken != null) {
             model.addAttribute("_csrf", csrfToken);
         }
+    }
+
+    private void populateFormModel(
+            Model model,
+            ClientForm form,
+            String title,
+            ClientImpactSummary impactSummary,
+            CsrfToken csrfToken
+    ) {
+        model.addAttribute("pageTitle", title);
+        model.addAttribute("pageDescription", "거래처 기본 정보와 수신 이메일을 관리합니다.");
+        model.addAttribute("clientForm", form);
+        model.addAttribute("impactSummary", impactSummary == null ? new ClientImpactSummary(form.getId(), 0, List.of()) : impactSummary);
+        if (csrfToken != null) {
+            model.addAttribute("_csrf", csrfToken);
+        }
+    }
+
+    private List<ClientSummary> filterClients(List<ClientSummary> clients, String keyword, String active) {
+        String normalizedKeyword = normalize(keyword);
+        String activeFilter = active == null || active.isBlank() ? "ALL" : active.trim().toUpperCase(Locale.ROOT);
+        return clients.stream()
+                .filter(client -> "ALL".equals(activeFilter)
+                        || ("Y".equals(activeFilter) && client.active())
+                        || ("N".equals(activeFilter) && !client.active()))
+                .filter(client -> normalizedKeyword == null || contains(client.clientName(), normalizedKeyword)
+                        || contains(client.departmentName(), normalizedKeyword)
+                        || contains(client.primaryContactName(), normalizedKeyword)
+                        || contains(client.primaryContactNo(), normalizedKeyword)
+                        || contains(client.primaryEmail(), normalizedKeyword))
+                .toList();
+    }
+
+    private boolean contains(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     private CsrfToken resolveCsrfToken(HttpServletRequest request) {

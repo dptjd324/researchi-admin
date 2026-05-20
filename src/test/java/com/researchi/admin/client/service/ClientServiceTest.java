@@ -125,6 +125,6 @@ class ClientServiceTest {
 
         assertThatThrownBy(() -> clientService.save(form))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("변경되지 않았습니다");
+                .hasMessageContaining("변경되지 않았습니다.");
     }
 }

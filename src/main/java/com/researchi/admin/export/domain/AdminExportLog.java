@@ -11,7 +11,7 @@ import lombok.Setter;
 public class AdminExportLog {
 
     private Long id;
-    private Long documentSrl;
+    private Long researchNo;
     private String exportType;
     private String fileName;
     private Integer exportedCount;

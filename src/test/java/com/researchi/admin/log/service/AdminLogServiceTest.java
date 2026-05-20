@@ -39,7 +39,7 @@ class AdminLogServiceTest {
     void getMailLogsUsesMailSubjectSnapshotAsDisplayTitle() {
         AdminMailSendJob mailJob = new AdminMailSendJob();
         mailJob.setId(71L);
-        mailJob.setDocumentSrl(9L);
+        mailJob.setResearchNo(9L);
         mailJob.setMailSubjectSnapshot("Survey Job");
         mailJob.setSentAt(LocalDateTime.now());
         when(adminMailSendJobMapper.findAll()).thenReturn(List.of(mailJob));

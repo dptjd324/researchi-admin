@@ -11,7 +11,7 @@ import lombok.Setter;
 public class AdminMailSendJob {
 
     private Long id;
-    private Long documentSrl;
+    private Long researchNo;
     private String sendType;
     private String triggerType;
     private Long templateId;
