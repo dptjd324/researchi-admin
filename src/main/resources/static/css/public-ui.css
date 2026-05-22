@@ -372,6 +372,22 @@ body.public-body {
     gap: 10px;
 }
 
+.public-extra-group-select {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.public-extra-item__group {
+    width: fit-content;
+    border-radius: 999px;
+    background: rgba(0, 207, 126, 0.12);
+    color: var(--public-green);
+    font-size: 0.82rem;
+    font-weight: 800;
+    padding: 3px 9px;
+}
+
 .public-extra-item__text {
     color: #dfe9ec;
     overflow-wrap: anywhere;

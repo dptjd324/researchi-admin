@@ -41,6 +41,7 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminLegacyRevisionLogTable(connection);
             ensureAdminLegacyApplicationExtraAnswerTable(connection);
             ensureAdminLegacyApplicationKeywordTable(connection);
+            ensureAdminLegacyApplicationSearchIndexTable(connection);
             ensureAdminLegacyMatchingTables(connection);
             ensureAdminManualPublishLogTable(connection);
             ensureAdminLegacyMailRuleTable(connection);
@@ -218,12 +219,19 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     research_no BIGINT NOT NULL,
                     research_app_seq BIGINT NOT NULL,
                     answer_order INT NOT NULL,
+                    question_group VARCHAR(255) NULL,
                     question_label VARCHAR(500) NOT NULL,
                     answer_text TEXT NOT NULL,
                     raw_answer_text LONGTEXT NULL,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_legacy_application_extra_answer",
+                "question_group",
+                "ALTER TABLE admin_legacy_application_extra_answer ADD COLUMN question_group VARCHAR(255) NULL AFTER answer_order"
         );
     }
 
@@ -249,6 +257,64 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "admin_legacy_application_keyword",
                 "application_regist_dt",
                 "ALTER TABLE admin_legacy_application_keyword ADD COLUMN application_regist_dt VARCHAR(30) NULL AFTER research_app_seq"
+        );
+    }
+
+    private void ensureAdminLegacyApplicationSearchIndexTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_application_search_index",
+                """
+                CREATE TABLE admin_legacy_application_search_index (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    research_app_seq BIGINT NOT NULL,
+                    app_name VARCHAR(100) NULL,
+                    app_sex VARCHAR(20) NULL,
+                    app_birth VARCHAR(30) NULL,
+                    app_age VARCHAR(30) NULL,
+                    app_job VARCHAR(100) NULL,
+                    app_company VARCHAR(255) NULL,
+                    app_hphone VARCHAR(50) NULL,
+                    app_tele VARCHAR(50) NULL,
+                    app_email VARCHAR(255) NULL,
+                    app_addr VARCHAR(500) NULL,
+                    add_comment LONGTEXT NULL,
+                    attend_research VARCHAR(500) NULL,
+                    provide_yn CHAR(1) NULL,
+                    regist_dt VARCHAR(30) NULL,
+                    modify_dt VARCHAR(30) NULL,
+                    normalized_hphone VARCHAR(50) NULL,
+                    normalized_tele VARCHAR(50) NULL,
+                    normalized_birth VARCHAR(30) NULL,
+                    blacklist_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    search_text LONGTEXT NULL,
+                    indexed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_admin_legacy_app_search_research_app (research_no, research_app_seq)
+                )
+                """
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_legacy_application_search_index",
+                "app_email",
+                "ALTER TABLE admin_legacy_application_search_index ADD COLUMN app_email VARCHAR(255) NULL AFTER app_tele"
+        );
+        createTableIfMissing(
+                connection,
+                "admin_legacy_application_search_index_state",
+                """
+                CREATE TABLE admin_legacy_application_search_index_state (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    index_name VARCHAR(100) NOT NULL,
+                    status VARCHAR(30) NOT NULL,
+                    indexed_count INT NOT NULL DEFAULT 0,
+                    started_at DATETIME NULL,
+                    finished_at DATETIME NULL,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_admin_legacy_app_search_state_name (index_name)
+                )
+                """
         );
     }
 
@@ -412,6 +478,34 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "idx_admin_legacy_keyword_app",
                 List.of("research_no", "research_app_seq"),
                 "CREATE INDEX idx_admin_legacy_keyword_app ON admin_legacy_application_keyword (research_no, research_app_seq)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_application_search_index",
+                "idx_admin_legacy_app_search_sort",
+                List.of("regist_dt", "research_app_seq", "research_no"),
+                "CREATE INDEX idx_admin_legacy_app_search_sort ON admin_legacy_application_search_index (regist_dt, research_app_seq, research_no)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_application_search_index",
+                "idx_admin_legacy_app_search_provide",
+                List.of("provide_yn", "regist_dt", "research_app_seq"),
+                "CREATE INDEX idx_admin_legacy_app_search_provide ON admin_legacy_application_search_index (provide_yn, regist_dt, research_app_seq)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_application_search_index",
+                "idx_admin_legacy_app_search_email",
+                List.of("app_email", "research_no", "research_app_seq"),
+                "CREATE INDEX idx_admin_legacy_app_search_email ON admin_legacy_application_search_index (app_email, research_no, research_app_seq)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_legacy_application_search_index_state",
+                "idx_admin_legacy_app_search_state",
+                List.of("index_name", "status"),
+                "CREATE INDEX idx_admin_legacy_app_search_state ON admin_legacy_application_search_index_state (index_name, status)"
         );
         createIndexIfMissing(
                 connection,

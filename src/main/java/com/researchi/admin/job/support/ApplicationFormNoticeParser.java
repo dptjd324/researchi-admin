@@ -22,11 +22,48 @@ public final class ApplicationFormNoticeParser {
         if (rawValue == null || rawValue.isBlank()) {
             return List.of();
         }
+        if (rawValue.contains("[") || rawValue.lines().anyMatch(ApplicationFormNoticeParser::isNumberedLine)) {
+            return parseStructuredItems(rawValue);
+        }
+        return parseLegacyItems(rawValue);
+    }
+
+    private static List<ApplicationFormNoticeItem> parseLegacyItems(String rawValue) {
         return SPLIT_PATTERN.splitAsStream(rawValue)
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
                 .map(ApplicationFormNoticeParser::parseItem)
                 .toList();
+    }
+
+    private static List<ApplicationFormNoticeItem> parseStructuredItems(String rawValue) {
+        List<ApplicationFormNoticeItem> items = new ArrayList<>();
+        String groupLabel = null;
+        for (String rawLine : rawValue.split("\\R")) {
+            String line = rawLine.trim();
+            if (line.isBlank()) {
+                continue;
+            }
+            if (line.startsWith("[") && line.endsWith("]") && line.length() > 2) {
+                groupLabel = line.substring(1, line.length() - 1).trim();
+                continue;
+            }
+            boolean numbered = isNumberedLine(line);
+            String itemText = stripNumberPrefix(line);
+            List<ApplicationFormNoticeItem> lineItems = numbered ? List.of(parseItem(itemText)) : parseLegacyItems(itemText);
+            for (ApplicationFormNoticeItem item : lineItems) {
+                items.add(new ApplicationFormNoticeItem(item.label(), item.type(), item.options(), groupLabel));
+            }
+        }
+        return List.copyOf(items);
+    }
+
+    private static boolean isNumberedLine(String line) {
+        return stripNumberPrefix(line.trim()).length() < line.trim().length();
+    }
+
+    private static String stripNumberPrefix(String value) {
+        return value.replaceFirst("^\\d+[.)]\\s*", "");
     }
 
     public static String serializeItem(String label, String type, List<ApplicationFormNoticeOption> options) {

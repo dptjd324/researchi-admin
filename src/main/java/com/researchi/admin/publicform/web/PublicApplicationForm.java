@@ -1,6 +1,7 @@
 package com.researchi.admin.publicform.web;
 
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -48,6 +49,7 @@ public class PublicApplicationForm {
     private String address;
 
     @Size(max = 150, message = "이메일 주소는 150자 이하여야 합니다.")
+    @Email(message = "올바른 이메일 주소를 입력해 주세요.")
     private String emailAddress;
 
     @Size(max = 1000, message = "기존 조사 경험은 1000자 이하여야 합니다.")
@@ -56,6 +58,7 @@ public class PublicApplicationForm {
     @Size(max = 4000, message = "추가기재사항 요약은 4000자 이하여야 합니다.")
     private String extraComment;
 
+    private String selectedExtraGroup;
     private List<String> extraAnswers = new ArrayList<>();
 
     private Boolean notifyEmailYn = Boolean.FALSE;
@@ -167,6 +170,14 @@ public class PublicApplicationForm {
 
     public void setExtraComment(String extraComment) {
         this.extraComment = extraComment;
+    }
+
+    public String getSelectedExtraGroup() {
+        return selectedExtraGroup;
+    }
+
+    public void setSelectedExtraGroup(String selectedExtraGroup) {
+        this.selectedExtraGroup = selectedExtraGroup;
     }
 
     public List<String> getExtraAnswers() {
