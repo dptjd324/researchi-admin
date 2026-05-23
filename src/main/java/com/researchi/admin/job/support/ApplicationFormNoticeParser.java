@@ -22,7 +22,9 @@ public final class ApplicationFormNoticeParser {
         if (rawValue == null || rawValue.isBlank()) {
             return List.of();
         }
-        if (rawValue.contains("[") || rawValue.lines().anyMatch(ApplicationFormNoticeParser::isNumberedLine)) {
+        if (rawValue.contains("[")
+                || rawValue.lines().anyMatch(ApplicationFormNoticeParser::isNumberedLine)
+                || rawValue.lines().anyMatch(ApplicationFormNoticeParser::isGroupHeadingLine)) {
             return parseStructuredItems(rawValue);
         }
         return parseLegacyItems(rawValue);
@@ -48,6 +50,10 @@ public final class ApplicationFormNoticeParser {
                 groupLabel = line.substring(1, line.length() - 1).trim();
                 continue;
             }
+            if (isGroupHeadingLine(line)) {
+                groupLabel = stripGroupHeadingPrefix(line);
+                continue;
+            }
             boolean numbered = isNumberedLine(line);
             String itemText = stripNumberPrefix(line);
             List<ApplicationFormNoticeItem> lineItems = numbered ? List.of(parseItem(itemText)) : parseLegacyItems(itemText);
@@ -64,6 +70,15 @@ public final class ApplicationFormNoticeParser {
 
     private static String stripNumberPrefix(String value) {
         return value.replaceFirst("^\\d+[.)]\\s*", "");
+    }
+
+    private static boolean isGroupHeadingLine(String line) {
+        String trimmed = line == null ? "" : line.trim();
+        return trimmed.startsWith("*") && stripGroupHeadingPrefix(trimmed).length() > 0;
+    }
+
+    private static String stripGroupHeadingPrefix(String value) {
+        return value.replaceFirst("^\\*+\\s*", "").trim();
     }
 
     public static String serializeItem(String label, String type, List<ApplicationFormNoticeOption> options) {

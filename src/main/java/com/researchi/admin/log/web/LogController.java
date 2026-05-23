@@ -6,8 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequestMapping("/logs")
@@ -85,7 +85,7 @@ public class LogController {
             Model model
     ) {
         model.addAttribute("pageTitle", "알림 로그");
-        model.addAttribute("pageDescription", "이메일과 SMS 지원자 알림 발송 결과를 확인합니다.");
+        model.addAttribute("pageDescription", "이메일과 문자 신청자 알림 발송 결과를 확인합니다.");
         PaginationSupport.PageWindow pageWindow = PaginationSupport.applyMetadata(
                 model,
                 request,
