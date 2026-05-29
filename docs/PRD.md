@@ -1,33 +1,51 @@
-# PRD.md
+# 제품 요구사항 문서
 
-## Product Direction
+## 제품 방향
 
-Researchi Admin is an old-admin-DB-first manager program.
+Researchi Admin은 리서치/좌담회 운영 업무를 통합 관리하기 위한 관리자 전용 백오피스입니다.
 
-The old admin DB is the operational source of truth:
+핵심 방향은 **old-admin-DB-first**입니다. 기존 운영 DB를 전면 교체하지 않고, 이미 운영 중인 데이터를 기준으로 관리자 기능을 확장합니다.
 
-- `TB_RESEARCH_MST`: focus group/survey postings
-- `TB_RESEARCH_APP`: applicants
-- `TB_BLACKLIST_MST`: blacklist
+기존 운영 DB의 source of truth는 다음 테이블입니다.
 
-## Core Features
+- `TB_RESEARCH_MST`: 리서치/좌담회 공고
+- `TB_RESEARCH_APP`: 신청자 정보
+- `TB_BLACKLIST_MST`: 블랙리스트
 
-- Manage focus group/survey rows from `TB_RESEARCH_MST`
-- Generate copy-ready homepage posting content
-- Manage public application forms at `/research/{researchNo}/apply`
-- Store applications in `TB_RESEARCH_APP`
-- Search applicants per focus group/survey
-- Prevent duplicate applications by name, phone, and birth date
-- Manage `PROVIDE_YN` as whether applicant information was provided to the client
-- Export all/provided applicant information as XLSX or TXT
-- Send manual, scheduled, and threshold emails
-- Mark sent applicants as provided
-- Manage old-admin blacklist rows in `TB_BLACKLIST_MST`
-- Run keyword matching manually and send SMS notifications
-- Track monthly mail/SMS usage and estimated cost on the dashboard
-- Manage clients and client contacts independently
-- Keep action/search/mail/SMS/export logs
+## 문제 정의
 
-## Data Policy
+기존 운영 과정에서는 공고 등록, 신청자 확인, 고객사 전달, 블랙리스트 관리, 메일/SMS 발송, 로그 확인이 분산되어 있거나 수작업에 의존했습니다.
 
-Old tables may be MyISAM, so update flows must write revision logs before changing old DB rows. Supplemental tables should not replace old admin source data.
+또한 약 400만 건 규모의 운영 데이터를 다루기 때문에 단순 전체 조회 방식은 속도와 안정성 측면에서 적합하지 않았습니다.
+
+## 핵심 요구사항
+
+- 기존 운영 DB 구조를 유지하면서 관리자 기능 제공
+- `RESEARCH_NO` 기준으로 공고, 신청자, 메일, SMS, export 흐름 통일
+- 공고별 신청자 목록, 상세, 중복 여부 확인
+- `/research/{researchNo}/apply` 기반 공개 신청 폼 제공
+- 신청자 정보를 `TB_RESEARCH_APP`에 저장
+- 이름, 휴대폰 번호, 생년월일 기준 중복 신청 방지
+- `PROVIDE_YN`을 고객사 제공 여부로 관리
+- 전체/제공 대상 신청자 정보를 XLSX 또는 TXT로 내보내기
+- 수동, 예약, 임계치 기반 메일 발송
+- 발송 완료 신청자를 고객사 제공 상태로 처리
+- 기존 `TB_BLACKLIST_MST` 기반 블랙리스트 관리
+- 키워드 매칭 실행과 SMS 알림 발송
+- 월별 메일/SMS 사용량과 예상 비용 대시보드 제공
+- 고객사와 고객사 담당자를 기존 게시판 데이터와 분리해 관리
+- 액션, 검색, 메일, SMS, export 로그 보관
+
+## 데이터 정책
+
+기존 운영 테이블은 일부 MyISAM일 가능성이 있으므로, 레거시 테이블을 수정하기 전 revision log를 남깁니다.
+
+신규 `admin_*` 테이블은 기존 운영 데이터를 대체하지 않습니다. 로그, 메일, SMS, 고객사, export, 매칭처럼 기존 DB가 제공하지 않는 보조 기능만 담당합니다.
+
+## 품질 기준
+
+- 대용량 데이터 조회 시 필요한 범위만 조회
+- 목록/상세/검색/export 흐름 분리
+- 개인정보 처리 작업은 로그로 추적 가능해야 함
+- 메일/SMS는 simulation mode로 실발송 리스크를 줄여야 함
+- 운영 secret은 코드와 JAR에 포함하지 않아야 함
