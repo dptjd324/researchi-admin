@@ -33,7 +33,7 @@ public class AuthController {
     public String login(Model model, HttpServletRequest request, CsrfToken csrfToken) {
         HttpSession session = request.getSession(true);
         model.addAttribute("pageTitle", "관리자 로그인");
-        model.addAttribute("pageDescription", "Researchi 관리자 계정으로 로그인해 공고 운영 화면에 접근합니다.");
+        model.addAttribute("pageDescription", "Researchi 관리자 계정으로 로그인해 운영 화면에 접근합니다.");
         model.addAttribute("hideNavigation", true);
         model.addAttribute("hidePageHeader", true);
         model.addAttribute("hideStatusDock", true);
@@ -49,7 +49,7 @@ public class AuthController {
     public String passwordChange(Model model, HttpServletRequest request, CsrfToken csrfToken) {
         request.getSession(true);
         model.addAttribute("pageTitle", "비밀번호 변경");
-        model.addAttribute("pageDescription", "관리자 비밀번호를 변경하면 다음 로그인부터 새 BCrypt 해시가 적용됩니다.");
+        model.addAttribute("pageDescription", "관리자 비밀번호를 변경합니다.");
         model.addAttribute("passwordChangeForm", new PasswordChangeForm());
         model.addAttribute("_csrf", csrfToken);
         return "auth/password-change";
@@ -65,7 +65,7 @@ public class AuthController {
             Model model
     ) {
         model.addAttribute("pageTitle", "비밀번호 변경");
-        model.addAttribute("pageDescription", "관리자 비밀번호를 변경하면 다음 로그인부터 새 BCrypt 해시가 적용됩니다.");
+        model.addAttribute("pageDescription", "관리자 비밀번호를 변경합니다.");
 
         if (!form.getNewPassword().equals(form.getConfirmPassword())) {
             bindingResult.rejectValue("confirmPassword", "mismatch", "새 비밀번호 확인이 일치하지 않습니다.");

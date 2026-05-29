@@ -7,6 +7,7 @@ import com.researchi.admin.client.mapper.AdminClientContactMapper;
 import com.researchi.admin.client.mapper.AdminClientMapper;
 import com.researchi.admin.client.mapper.AdminResearchClientLinkMapper;
 import com.researchi.admin.client.web.ClientForm;
+import com.researchi.admin.common.support.PhoneNumberFormatter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -162,7 +163,7 @@ public class ClientService {
         seeds.add(new ContactSeed(
                 trimToNull(form.getPrimaryContactName()),
                 primaryEmail,
-                trimToNull(form.getPrimaryContactNo())
+                PhoneNumberFormatter.formatForDisplay(form.getPrimaryContactNo())
         ));
         return seeds;
     }

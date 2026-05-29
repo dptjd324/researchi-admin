@@ -93,6 +93,7 @@ test-data/
 fixtures/private/
 
 # Generated files
+*.class
 *.xlsx
 *.xls
 *.csv

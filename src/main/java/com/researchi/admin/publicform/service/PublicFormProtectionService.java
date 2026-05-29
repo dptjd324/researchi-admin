@@ -1,5 +1,6 @@
 package com.researchi.admin.publicform.service;
 
+import com.researchi.admin.common.support.PhoneNumberFormatter;
 import com.researchi.admin.publicform.config.PublicFormProperties;
 import jakarta.servlet.http.HttpSession;
 
@@ -109,11 +110,11 @@ public class PublicFormProtectionService {
     }
 
     public String normalizePhone(String value) {
-        if (value == null) {
-            return null;
-        }
-        String digits = value.replaceAll("[^0-9]", "");
-        return digits.isBlank() ? null : digits;
+        return PhoneNumberFormatter.digitsOnly(value);
+    }
+
+    public String formatPhoneForDisplay(String value) {
+        return PhoneNumberFormatter.formatForDisplay(value);
     }
 
     public String normalizeEmail(String value) {

@@ -369,7 +369,7 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     exclude_keyword_text TEXT NULL,
                     applied_years INT NOT NULL DEFAULT 2,
                     index_limit INT NOT NULL DEFAULT 5000,
-                    batch_size INT NOT NULL DEFAULT 500,
+                    batch_size INT NOT NULL DEFAULT 1000,
                     require_contact_yn CHAR(1) NOT NULL DEFAULT 'Y',
                     exclude_blacklist_yn CHAR(1) NOT NULL DEFAULT 'Y',
                     reset_before_run_yn CHAR(1) NOT NULL DEFAULT 'N',

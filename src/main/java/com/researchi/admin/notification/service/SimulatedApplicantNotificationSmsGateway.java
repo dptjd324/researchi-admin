@@ -1,5 +1,6 @@
 package com.researchi.admin.notification.service;
 
+import com.researchi.admin.common.support.PhoneNumberFormatter;
 import com.researchi.admin.notification.config.SmsProperties;
 import com.researchi.admin.notification.domain.NotificationSmsRequest;
 import org.springframework.stereotype.Component;
@@ -56,7 +57,7 @@ public class SimulatedApplicantNotificationSmsGateway implements ApplicantNotifi
 
         HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("SMS 발송 요청이 실패했습니다. 상태 코드: " + response.statusCode());
+            throw new IllegalStateException("SMS 발송 요청이 실패했습니다. 상태 코드: " + response.statusCode() + ", 응답: " + response.body());
         }
     }
 
@@ -90,7 +91,7 @@ public class SimulatedApplicantNotificationSmsGateway implements ApplicantNotifi
     }
 
     private String normalizePhone(String value) {
-        return trimToEmpty(value).replaceAll("[^0-9]", "");
+        return blankToDefault(PhoneNumberFormatter.digitsOnly(value), "");
     }
 
     private String trimTrailingSlash(String value) {
