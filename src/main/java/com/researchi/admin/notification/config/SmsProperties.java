@@ -16,6 +16,8 @@ public class SmsProperties {
     private String fromNumber;
     private String baseUrl = "https://sens.apigw.ntruss.com";
     private String messageType = "LMS";
+    private int dailySendLimit = 500;
+    private int monthlySendLimit = 10000;
 
     public boolean isSimulateSend() {
         return simulateSend;
@@ -87,5 +89,21 @@ public class SmsProperties {
 
     public void setMessageType(String messageType) {
         this.messageType = messageType;
+    }
+
+    public int getDailySendLimit() {
+        return dailySendLimit;
+    }
+
+    public void setDailySendLimit(int dailySendLimit) {
+        this.dailySendLimit = dailySendLimit;
+    }
+
+    public int getMonthlySendLimit() {
+        return monthlySendLimit;
+    }
+
+    public void setMonthlySendLimit(int monthlySendLimit) {
+        this.monthlySendLimit = monthlySendLimit;
     }
 }

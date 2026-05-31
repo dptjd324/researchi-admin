@@ -120,6 +120,38 @@
             bindDateInputs(document);
         });
     }());
+
+    (function initializeAutoDismissNotifications() {
+        const AUTO_DISMISS_MS = 10000;
+
+        function dismiss(element) {
+            if (!element || element.dataset.autoDismiss === 'false') {
+                return;
+            }
+            element.classList.add(element.classList.contains('alert') ? 'alert--dismissed' : 'notice--dismissed');
+            window.setTimeout(function () {
+                element.style.display = 'none';
+            }, 260);
+        }
+
+        window.researchiAutoDismissNotice = function (element) {
+            if (!element || element.dataset.autoDismiss === 'false') {
+                return;
+            }
+            if (element.__researchiAutoDismissTimer) {
+                window.clearTimeout(element.__researchiAutoDismissTimer);
+            }
+            element.dataset.autoDismissBound = 'true';
+            element.__researchiAutoDismissTimer = window.setTimeout(function () {
+                dismiss(element);
+                element.__researchiAutoDismissTimer = null;
+            }, AUTO_DISMISS_MS);
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.notice, .alert').forEach(window.researchiAutoDismissNotice);
+        });
+    }());
 </script>
 </body>
 </html>

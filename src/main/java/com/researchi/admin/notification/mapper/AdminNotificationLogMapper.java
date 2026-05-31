@@ -25,6 +25,12 @@ public interface AdminNotificationLogMapper {
 
     List<MonthlyMessageCount> countSentSmsByMonth(@Param("startDate") java.time.LocalDate startDate);
 
+    int countSentByChannelBetween(
+            @Param("channelType") String channelType,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
+
     int countSuccessfulDuplicate(
             @Param("researchNo") Long researchNo,
             @Param("applicationId") Long applicationId,

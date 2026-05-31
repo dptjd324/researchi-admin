@@ -46,11 +46,16 @@ public class SpringMailDispatchGateway implements MailDispatchGateway {
         }
         helper.setSubject(request.subject());
         helper.setText(request.body(), false);
-        helper.addAttachment(
-                request.attachmentFileName(),
-                new ByteArrayResource(request.attachmentContent()),
-                request.attachmentContentType()
-        );
+        if (request.attachmentFileName() != null
+                && !request.attachmentFileName().isBlank()
+                && request.attachmentContent() != null
+                && request.attachmentContent().length > 0) {
+            helper.addAttachment(
+                    request.attachmentFileName(),
+                    new ByteArrayResource(request.attachmentContent()),
+                    request.attachmentContentType()
+            );
+        }
         try {
             javaMailSender.send(message);
         } catch (Exception ex) {

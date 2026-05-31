@@ -852,6 +852,7 @@ button:focus,
 
 .notice {
     background: #fff;
+    transition: opacity 0.24s ease, transform 0.24s ease;
 }
 
 .notice.success {
@@ -864,6 +865,13 @@ button:focus,
     background: var(--admin-danger-soft);
     border-color: rgba(220, 38, 38, 0.18);
     color: #991b1b;
+}
+
+.notice--dismissed,
+.alert--dismissed {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+    pointer-events: none;
 }
 
 .note {

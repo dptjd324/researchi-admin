@@ -106,6 +106,15 @@
         ORDER BY monthKey ASC
     </select>
 
+    <select id="countSentByChannelBetween" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_notification_log
+        WHERE channel_type = #{channelType}
+          AND send_status = 'SENT'
+          AND created_at &gt;= #{startAt}
+          AND created_at &lt; #{endAt}
+    </select>
+
     <select id="countSuccessfulDuplicate" resultType="int">
         SELECT COUNT(*)
         FROM admin_notification_log

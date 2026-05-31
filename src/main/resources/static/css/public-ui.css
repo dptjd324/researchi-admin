@@ -140,9 +140,15 @@ body.public-body {
 .public-description {
     margin: 0;
     color: var(--public-muted);
+    font-weight: 400;
     white-space: pre-line;
     line-height: 1.75;
     overflow-wrap: anywhere;
+}
+
+.public-description span[style*="font-size"] {
+    color: inherit !important;
+    font-weight: inherit !important;
 }
 
 .public-inline-note {
