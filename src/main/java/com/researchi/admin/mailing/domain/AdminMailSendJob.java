@@ -29,6 +29,13 @@ public class AdminMailSendJob {
     private String duplicatePreventKey;
     private String repeatYn;
     private String repeatUnit;
+    private String mailProvider;
+    private String providerRequestId;
+    private String providerStatusCode;
+    private String providerStatusLabel;
+    private String providerRawResponse;
+    private LocalDateTime providerRequestedAt;
+    private LocalDateTime providerCheckedAt;
     private Long createdBy;
     private LocalDateTime createdAt;
     private String templateName;

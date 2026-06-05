@@ -15,6 +15,8 @@ public interface AdminMailSendJobMapper {
 
     void updateStatus(AdminMailSendJob sendJob);
 
+    void updateProviderResult(AdminMailSendJob sendJob);
+
     AdminMailSendJob findByDuplicatePreventKey(@Param("duplicatePreventKey") String duplicatePreventKey);
 
     AdminMailSendJob findById(@Param("id") Long id);

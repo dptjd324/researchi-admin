@@ -1558,19 +1558,31 @@ textarea {
 .client-data-table th,
 .client-data-table td {
     padding-inline: 0.65rem;
-    overflow-wrap: anywhere;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.client-data-table th:nth-child(n + 2):nth-child(-n + 6),
+.client-data-table td:nth-child(n + 2):nth-child(-n + 6) {
+    text-align: left;
+}
+
+.client-data-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .client-col-no {
-    width: 4rem;
+    width: 4.5rem;
 }
 
 .client-col-name {
-    width: 16%;
+    width: 18%;
 }
 
 .client-col-department {
-    width: 13%;
+    width: 12%;
 }
 
 .client-col-contact {
@@ -1578,19 +1590,19 @@ textarea {
 }
 
 .client-col-phone {
-    width: 15%;
+    width: 14%;
 }
 
 .client-col-email {
-    width: 23%;
+    width: auto;
 }
 
 .client-col-status {
-    width: 7rem;
+    width: 6.5rem;
 }
 
 .client-col-actions {
-    width: 7rem;
+    width: 6.5rem;
 }
 
 .client-name-cell {

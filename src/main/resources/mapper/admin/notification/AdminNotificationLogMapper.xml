@@ -84,6 +84,20 @@
         OFFSET #{offset}
     </select>
 
+    <select id="findMatchingSummariesByResearchNo" resultType="com.researchi.admin.legacy.matching.domain.LegacyMatchingNotificationSummary">
+        SELECT
+            channel_type AS channelType,
+            SUM(CASE WHEN send_status = 'SENT' THEN 1 ELSE 0 END) AS sentCount,
+            SUM(CASE WHEN send_status = 'SKIPPED_DUPLICATE' THEN 1 ELSE 0 END) AS skippedDuplicateCount,
+            SUM(CASE WHEN send_status = 'FAILED' THEN 1 ELSE 0 END) AS failedCount,
+            MAX(created_at) AS latestCreatedAt
+        FROM admin_notification_log
+        WHERE research_no = #{researchNo}
+          AND channel_type IN ('LEGACY_SMS', 'LEGACY_EMAIL')
+        GROUP BY channel_type
+        ORDER BY latestCreatedAt DESC
+    </select>
+
     <select id="countAll" resultType="long">
         SELECT COUNT(*)
         FROM admin_notification_log

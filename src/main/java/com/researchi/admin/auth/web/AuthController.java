@@ -32,7 +32,7 @@ public class AuthController {
     @GetMapping("/login")
     public String login(Model model, HttpServletRequest request, CsrfToken csrfToken) {
         HttpSession session = request.getSession(true);
-        model.addAttribute("pageTitle", "관리자 로그인");
+        model.addAttribute("pageTitle", "researchi admin");
         model.addAttribute("pageDescription", "Researchi 관리자 계정으로 로그인해 운영 화면에 접근합니다.");
         model.addAttribute("hideNavigation", true);
         model.addAttribute("hidePageHeader", true);

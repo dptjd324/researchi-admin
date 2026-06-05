@@ -37,6 +37,72 @@ body.public-body {
     font-family: "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
 }
 
+body.public-body--naver {
+    --public-bg: #f7fafc;
+    --public-bg-soft: #eef6f8;
+    --public-surface: #ffffff;
+    --public-surface-strong: #ffffff;
+    --public-border: #c9dce5;
+    --public-border-soft: rgba(15, 39, 66, 0.12);
+    --public-text: #102235;
+    --public-muted: #5d6f7f;
+    --public-placeholder: #8a9aaa;
+    --public-green-soft: rgba(0, 132, 92, 0.09);
+    --public-shadow: 0 16px 42px rgba(15, 39, 66, 0.08);
+    background:
+        linear-gradient(180deg, #eef5f7 0%, #e7f0f3 100%);
+    color: var(--public-text);
+}
+
+.public-body--naver .public-header__title {
+    color: #102235;
+}
+
+.public-body--naver .public-period__item,
+.public-body--naver .public-card {
+    border-color: var(--public-border-soft);
+    background: #ffffff;
+}
+
+.public-body--naver .public-card__title,
+.public-body--naver .public-field__label,
+.public-body--naver .public-choice,
+.public-body--naver .public-extra-item {
+    color: var(--public-text);
+}
+
+.public-body--naver .public-description,
+.public-body--naver .public-header__copy,
+.public-body--naver .public-header__meta,
+.public-body--naver .public-period__value,
+.public-body--naver .public-field__hint,
+.public-body--naver .public-date-selectors__label,
+.public-body--naver .public-extra-item__text {
+    color: var(--public-muted);
+}
+
+.public-body--naver .public-input,
+.public-body--naver .public-choice--block {
+    background: #ffffff;
+    color: var(--public-text);
+}
+
+.public-body--naver .public-input:focus,
+.public-body--naver .public-input--date:hover,
+.public-body--naver .public-input--date:focus {
+    background: #ffffff;
+}
+
+.public-body--naver .public-inline-note,
+.public-body--naver .public-extra-item__group {
+    color: #087f5b;
+}
+
+.public-body--naver .public-consent-box,
+.public-body--naver .public-extra-item {
+    background: #f8fbfd;
+}
+
 .public-page {
     width: min(100%, 760px);
     margin: 0 auto;
@@ -140,6 +206,7 @@ body.public-body {
 .public-description {
     margin: 0;
     color: var(--public-muted);
+    font-size: 16px;
     font-weight: 400;
     white-space: pre-line;
     line-height: 1.75;

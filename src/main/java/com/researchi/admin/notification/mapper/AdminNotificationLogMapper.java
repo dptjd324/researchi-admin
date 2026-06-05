@@ -1,6 +1,7 @@
 package com.researchi.admin.notification.mapper;
 
 import com.researchi.admin.dashboard.domain.MonthlyMessageCount;
+import com.researchi.admin.legacy.matching.domain.LegacyMatchingNotificationSummary;
 import com.researchi.admin.notification.domain.AdminNotificationLog;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -18,6 +19,8 @@ public interface AdminNotificationLogMapper {
     List<AdminNotificationLog> findAll();
 
     List<AdminNotificationLog> findPage(@Param("limit") int limit, @Param("offset") int offset);
+
+    List<LegacyMatchingNotificationSummary> findMatchingSummariesByResearchNo(@Param("researchNo") Long researchNo);
 
     long countAll();
 

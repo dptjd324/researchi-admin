@@ -48,8 +48,17 @@ app:
     rate-limit-count: 5
     rate-limit-window-seconds: 300
   mail:
+    provider: ${APP_MAIL_PROVIDER:smtp}
     simulate-send: ${APP_MAIL_SIMULATE_SEND:true}
     from-address: ${APP_MAIL_FROM_ADDRESS:no-reply@your-verified-domain.example}
+    from-name: ${APP_MAIL_FROM_NAME:Researchi}
+    naver:
+      base-url: ${APP_MAIL_NAVER_BASE_URL:https://mail.apigw.ntruss.com/api/v1}
+      access-key: ${APP_MAIL_NAVER_ACCESS_KEY:}
+      secret-key: ${APP_MAIL_NAVER_SECRET_KEY:}
+      max-file-size-bytes: ${APP_MAIL_NAVER_MAX_FILE_SIZE_BYTES:10485760}
+      max-total-attachment-size-bytes: ${APP_MAIL_NAVER_MAX_TOTAL_ATTACHMENT_SIZE_BYTES:20971520}
+      max-body-size-bytes: ${APP_MAIL_NAVER_MAX_BODY_SIZE_BYTES:512000}
   keyword:
     min-length: 2
     max-length: 40

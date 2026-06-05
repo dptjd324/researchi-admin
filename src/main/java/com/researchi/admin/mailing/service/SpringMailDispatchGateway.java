@@ -2,6 +2,7 @@ package com.researchi.admin.mailing.service;
 
 import com.researchi.admin.mailing.config.MailProperties;
 import com.researchi.admin.mailing.domain.MailDispatchRequest;
+import com.researchi.admin.mailing.domain.MailDispatchResult;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 
 @Component
-public class SpringMailDispatchGateway implements MailDispatchGateway {
+public class SpringMailDispatchGateway {
 
     private static final Logger log = LoggerFactory.getLogger(SpringMailDispatchGateway.class);
 
@@ -30,10 +31,9 @@ public class SpringMailDispatchGateway implements MailDispatchGateway {
         this.smtpConfigurationValidator = smtpConfigurationValidator;
     }
 
-    @Override
-    public void dispatch(MailDispatchRequest request) throws Exception {
+    public MailDispatchResult dispatch(MailDispatchRequest request) throws Exception {
         if (mailProperties.isSimulateSend()) {
-            return;
+            return MailDispatchResult.simulated();
         }
         smtpConfigurationValidator.validateForRealDelivery();
 
@@ -58,6 +58,7 @@ public class SpringMailDispatchGateway implements MailDispatchGateway {
         }
         try {
             javaMailSender.send(message);
+            return MailDispatchResult.smtp();
         } catch (Exception ex) {
             log.error("SMTP dispatch failed for {} recipient(s).", request.recipients().size(), ex);
             throw ex;

@@ -36,6 +36,7 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
             ensureAdminClientTables(connection);
             ensureAdminResearchClientLinkTable(connection);
             ensureAdminMailSendJobColumns(connection);
+            ensureAdminMailApplicationClaimTable(connection);
             ensureAdminExportLogColumns(connection);
             ensureAdminNotificationLogColumns(connection);
             ensureAdminLegacyRevisionLogTable(connection);
@@ -163,6 +164,67 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "admin_mail_send_job",
                 "repeat_unit",
                 "ALTER TABLE admin_mail_send_job ADD COLUMN repeat_unit VARCHAR(20) NULL AFTER repeat_yn"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "mail_provider",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN mail_provider VARCHAR(50) NULL AFTER repeat_unit"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "provider_request_id",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN provider_request_id VARCHAR(100) NULL AFTER mail_provider"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "provider_status_code",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN provider_status_code VARCHAR(50) NULL AFTER provider_request_id"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "provider_status_label",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN provider_status_label VARCHAR(100) NULL AFTER provider_status_code"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "provider_raw_response",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN provider_raw_response TEXT NULL AFTER provider_status_label"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "provider_requested_at",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN provider_requested_at DATETIME NULL AFTER provider_raw_response"
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_mail_send_job",
+                "provider_checked_at",
+                "ALTER TABLE admin_mail_send_job ADD COLUMN provider_checked_at DATETIME NULL AFTER provider_requested_at"
+        );
+    }
+
+    private void ensureAdminMailApplicationClaimTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_mail_application_claim",
+                """
+                CREATE TABLE admin_mail_application_claim (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    application_id BIGINT NOT NULL,
+                    send_job_id BIGINT NOT NULL,
+                    claimed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_admin_mail_app_claim_research_app (research_no, application_id),
+                    KEY idx_admin_mail_app_claim_send_job (send_job_id),
+                    KEY idx_admin_mail_app_claim_claimed_at (claimed_at)
+                )
+                """
         );
     }
 

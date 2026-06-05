@@ -24,6 +24,13 @@
         <result property="duplicatePreventKey" column="duplicate_prevent_key"/>
         <result property="repeatYn" column="repeat_yn"/>
         <result property="repeatUnit" column="repeat_unit"/>
+        <result property="mailProvider" column="mail_provider"/>
+        <result property="providerRequestId" column="provider_request_id"/>
+        <result property="providerStatusCode" column="provider_status_code"/>
+        <result property="providerStatusLabel" column="provider_status_label"/>
+        <result property="providerRawResponse" column="provider_raw_response"/>
+        <result property="providerRequestedAt" column="provider_requested_at"/>
+        <result property="providerCheckedAt" column="provider_checked_at"/>
         <result property="createdBy" column="created_by"/>
         <result property="createdAt" column="created_at"/>
         <result property="templateName" column="template_name"/>
@@ -80,6 +87,19 @@
         SET
             send_status = #{sendStatus},
             sent_at = #{sentAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateProviderResult" parameterType="com.researchi.admin.mailing.domain.AdminMailSendJob">
+        UPDATE admin_mail_send_job
+        SET
+            mail_provider = #{mailProvider},
+            provider_request_id = #{providerRequestId},
+            provider_status_code = #{providerStatusCode},
+            provider_status_label = #{providerStatusLabel},
+            provider_raw_response = #{providerRawResponse},
+            provider_requested_at = #{providerRequestedAt},
+            provider_checked_at = #{providerCheckedAt}
         WHERE id = #{id}
     </update>
 

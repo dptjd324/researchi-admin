@@ -1,8 +1,9 @@
 package com.researchi.admin.mailing.service;
 
 import com.researchi.admin.mailing.domain.MailDispatchRequest;
+import com.researchi.admin.mailing.domain.MailDispatchResult;
 
 public interface MailDispatchGateway {
 
-    void dispatch(MailDispatchRequest request) throws Exception;
+    MailDispatchResult dispatch(MailDispatchRequest request) throws Exception;
 }
