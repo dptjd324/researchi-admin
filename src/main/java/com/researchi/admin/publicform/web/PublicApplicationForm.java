@@ -48,6 +48,7 @@ public class PublicApplicationForm {
     @Size(max = 255, message = "주소는 255자 이하여야 합니다.")
     private String address;
 
+    @NotBlank(message = "이메일 주소를 입력해 주세요.")
     @Size(max = 150, message = "이메일 주소는 150자 이하여야 합니다.")
     @Email(message = "올바른 이메일 주소를 입력해 주세요.")
     private String emailAddress;
