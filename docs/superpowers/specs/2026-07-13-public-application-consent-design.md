@@ -6,18 +6,18 @@ Public research applications must collect auditable consent for the current rese
 
 ## Consent UI
 
-The public application page displays one section titled `10. 개인정보 수집·이용 및 리서치 안내 수신 동의` with a single explanatory panel and four independent checkboxes:
+The public application page displays one section titled `10. 개인정보 수집·이용 및 리서치 안내 수신 동의` with a single explanatory panel. The current-research consent is independent and required. Future recruitment is an optional parent consent with two child channel choices:
 
 1. Current research personal-information collection and use: required.
 2. Future research matching and recruitment: optional.
-3. Future research SMS messages: optional.
-4. Future research email messages: optional.
+3. Future research SMS messages: optional child channel.
+4. Future research email messages: optional child channel.
 
 The notice identifies the operator as `리서치아이` and the withdrawal contact as `spirit2@naver.com`. It lists the application fields and survey answers as collected data. It explains current-research administration, future matching, and channel-specific notifications as separate purposes.
 
 The required consent data is retained until two years after the applicable research ends. Future recruitment consent remains valid until two years after consent or until withdrawal, whichever occurs first. Statutory retention exceptions remain stated in the notice.
 
-Only the current-research checkbox blocks form submission. Optional checkboxes default to unchecked and refusing them does not prevent the current application.
+Optional checkboxes default to unchecked and refusing them does not prevent the current application. Selecting future recruitment enables the two channel choices and requires at least one of SMS or email. Clearing future recruitment also clears both child channels. Selecting a child channel automatically selects future recruitment.
 
 ## Persistence
 
@@ -53,6 +53,7 @@ Matching candidate generation accepts only applications with an active future-re
 - `future_recruitment_yn = 'Y'`
 - no withdrawal timestamp
 - the expiration timestamp is later than the current server time
+- at least one of `sms_yn` or `email_yn` is `Y`
 
 This check is performed before results are stored, so an ineligible applicant does not appear in the matching result window or exports.
 
@@ -67,19 +68,31 @@ Consent is checked again immediately before dispatch because consent can expire 
 
 An ineligible selected row is skipped without calling the provider. The notification log records a consent-related skipped result so the administrator can distinguish it from missing contact details or duplicate sends. Bulk and per-row dispatch use the same server-side checks.
 
+## Matching Result UI
+
+Every matching row carries `smsAllowed` and `emailAllowed` independently from the sent-state flags. A row displays only the channel buttons that the applicant currently allows:
+
+- SMS only: display the SMS button only.
+- Email only: display the email button only.
+- Both channels: display both buttons.
+- Neither channel: exclude the applicant from matching results.
+
+The shared selection checkbox remains channel-neutral. For a mixed selection, the bulk SMS command targets only selected rows with active SMS consent and the bulk email command targets only selected rows with active email consent. Each bulk button displays its current eligible count, such as `SMS 발송 3명` and `이메일 발송 5명`, and is disabled when that channel has zero eligible selected rows. The confirmation dialog uses the same eligible count. Server-side dispatch rechecks consent and does not trust the browser count.
+
 ## Withdrawal Readiness
 
 This change stores `withdrawn_at` and defines active-consent queries, but it does not add a public withdrawal page or an administrator mutation control. A later withdrawal workflow can mark the record withdrawn without changing matching or notification logic. Until that workflow exists, withdrawal requests received at `spirit2@naver.com` require a controlled database or maintenance operation.
 
 ## Tests
 
-- Form validation rejects missing required consent and accepts every combination of optional choices.
+- Form validation rejects missing required consent and rejects future recruitment with neither channel selected. It accepts future recruitment with SMS only, email only, or both channels.
 - Submission stores all consent flags, version, and expiration data.
 - Schema bootstrap includes the consent table and unique/index constraints.
 - Matching excludes missing, expired, withdrawn, and future-recruitment-denied consent records.
 - SMS and email dispatch independently enforce their channel consent immediately before provider dispatch.
+- Matching rows expose channel eligibility, hide disallowed per-row buttons, and calculate mixed-selection bulk counts per channel.
 - Existing matching restrictions and duplicate prevention tests continue to pass.
-- The rendered form contains the final Korean notice, four independent checkboxes, and visible required/optional labels.
+- The rendered form contains the final Korean notice, the required current-research checkbox, and the optional parent-and-channel checkbox group with visible required/optional labels.
 
 ## Deployment
 
