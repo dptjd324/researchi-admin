@@ -1,99 +1,109 @@
-# Public Application Consent Design
+# 공개 신청서 개인정보 동의 설계
 
-## Goal
+## 목표
 
-Public research applications must collect auditable consent for the current research and optional future recruitment. Matching and notification behavior must enforce that consent instead of relying on the existing `PROVIDE_YN` delivery-state column.
+공개 신청서에서 현재 리서치 운영을 위한 필수 동의와 향후 모집을 위한 선택 동의를 구분해 기록한다. 매칭과 알림 발송은 기존 `PROVIDE_YN` 제공 상태가 아니라 실제 동의 기록을 기준으로 허용하거나 차단한다.
 
-## Consent UI
+## 동의 화면
 
-The public application page displays one section titled `10. 개인정보 수집·이용 및 리서치 안내 수신 동의` with a single explanatory panel. The current-research consent is independent and required. Future recruitment is an optional parent consent with two child channel choices:
+공개 신청서에는 `10. 개인정보 수집·이용 및 리서치 안내 수신 동의`라는 하나의 영역을 표시한다. 현재 리서치 동의는 독립된 필수 항목으로 두고, 향후 모집 동의는 SMS와 이메일을 하위 선택 항목으로 갖는 선택 항목으로 구성한다.
 
-1. Current research personal-information collection and use: required.
-2. Future research matching and recruitment: optional.
-3. Future research SMS messages: optional child channel.
-4. Future research email messages: optional child channel.
+1. 현재 리서치 개인정보 수집·이용 동의: 필수
+2. 향후 리서치 매칭·모집 동의: 선택
+3. 향후 리서치 SMS 수신 동의: 향후 모집의 하위 선택 항목
+4. 향후 리서치 이메일 수신 동의: 향후 모집의 하위 선택 항목
 
-The notice identifies the operator as `리서치아이` and the withdrawal contact as `spirit2@naver.com`. It lists the application fields and survey answers as collected data. It explains current-research administration, future matching, and channel-specific notifications as separate purposes.
+고지문에는 운영자를 `리서치아이`, 동의 철회 연락처를 `spirit2@naver.com`으로 표시한다. 신청서 입력 항목과 설문 답변을 수집 항목으로 명시하고, 현재 리서치 운영, 향후 매칭, 채널별 알림 발송 목적을 구분해 설명한다.
 
-The required consent data is retained until two years after the applicable research ends. Future recruitment consent remains valid until two years after consent or until withdrawal, whichever occurs first. Statutory retention exceptions remain stated in the notice.
+필수 동의 정보는 해당 리서치 종료 후 2년까지 보유한다. 향후 모집 동의는 동의일로부터 2년 또는 동의 철회일까지 유지하며, 두 시점 중 먼저 도래한 시점에 만료한다. 관계 법령에 따른 별도 보존 예외도 고지문에 포함한다.
 
-Optional checkboxes default to unchecked and refusing them does not prevent the current application. Selecting future recruitment enables the two channel choices and requires at least one of SMS or email. Clearing future recruitment also clears both child channels. Selecting a child channel automatically selects future recruitment.
+선택 항목은 기본적으로 선택하지 않은 상태로 표시하며, 선택 동의를 거부해도 현재 리서치 신청은 제한하지 않는다. 향후 모집 동의를 선택하면 SMS와 이메일 선택 항목을 활성화하고, 두 채널 중 최소 하나를 선택해야 한다. 향후 모집 동의를 해제하면 두 채널 선택도 함께 해제한다. SMS 또는 이메일을 직접 선택하면 향후 모집 동의도 자동으로 선택한다.
 
-## Persistence
+## 동의 기록 저장
 
-Create `admin_legacy_application_consent` in the admin database through `AdminSchemaBootstrap`. Each submitted application has one immutable consent record keyed by `(research_no, research_app_seq)` with:
+`AdminSchemaBootstrap`을 통해 admin DB에 `admin_legacy_application_consent` 테이블을 생성한다. 각 신청서에는 `(research_no, research_app_seq)`를 고유키로 하는 변경 불가능한 동의 기록 한 건을 저장한다.
 
-- required privacy consent status
-- future recruitment consent status
-- SMS consent status
-- email consent status
-- consent text version
-- consent timestamp
-- future-consent expiration timestamp
-- optional withdrawal timestamp
+저장 항목은 다음과 같다.
 
-The consent version is a code constant so the exact deployed wording can be traced. No existing application is backfilled as consented. Existing records without a consent row remain visible in ordinary applicant administration but are ineligible for future matching and recruitment notifications.
+- 필수 개인정보 동의 여부
+- 향후 모집 동의 여부
+- SMS 수신 동의 여부
+- 이메일 수신 동의 여부
+- 동의 문구 버전
+- 동의 시각
+- 향후 모집 동의 만료 시각
+- 동의 철회 시각
 
-The legacy `TB_RESEARCH_APP.PROVIDE_YN` column remains exclusively the delivery/provision state and is not reused for privacy consent.
+동의 문구 버전은 코드 상수로 관리해 실제 배포 당시의 문구를 추적할 수 있게 한다. 기존 신청자를 동의 상태로 일괄 변환하지 않는다. 동의 기록이 없는 기존 신청자는 일반 신청자 조회에서는 계속 확인할 수 있지만 향후 매칭과 모집 알림 대상에서는 제외한다.
 
-## Submission Flow
+기존 `TB_RESEARCH_APP.PROVIDE_YN`은 신청자 정보 제공 상태 전용으로 유지하며 개인정보 동의 여부로 재사용하지 않는다.
 
-1. Validate the required application fields and required current-research consent.
-2. Insert the legacy application and its structured answers.
-3. Insert the consent record using the submitted optional choices.
-4. Index the application for search.
-5. Return the success response only when the application and consent operations succeed.
+## 신청서 제출 흐름
 
-The consent write uses the admin database and must not be swallowed as a best-effort operation. A consent persistence failure produces an application error and is logged with the research and application identifiers.
+1. 신청서 필수 입력값과 현재 리서치 필수 동의를 검증한다.
+2. 향후 모집에 동의한 경우 SMS 또는 이메일 중 최소 한 채널이 선택됐는지 검증한다.
+3. 기존 DB에 신청서와 구조화된 추가 답변을 저장한다.
+4. 제출된 선택값으로 동의 기록을 저장한다.
+5. 신청서를 검색 인덱스에 반영한다.
+6. 신청서와 동의 기록이 모두 정상적으로 저장된 경우에만 성공 화면을 반환한다.
 
-## Matching Enforcement
+동의 기록 저장은 선택적인 후처리로 취급하지 않는다. 저장 실패 시 리서치 번호와 신청 번호를 로그에 남기고 신청 오류로 처리한다. 기존 DB 트랜잭션을 사용해 동의 기록 저장 실패 시 기존 신청 데이터도 롤백되도록 한다.
 
-Matching candidate generation accepts only applications with an active future-recruitment consent record. Active means:
+## 매칭 대상 제한
+
+매칭 후보에는 활성 상태의 향후 모집 동의 기록이 있는 신청자만 포함한다. 활성 동의의 기준은 다음과 같다.
 
 - `future_recruitment_yn = 'Y'`
-- no withdrawal timestamp
-- the expiration timestamp is later than the current server time
-- at least one of `sms_yn` or `email_yn` is `Y`
+- 동의 철회 시각이 없음
+- 동의 만료 시각이 현재 서버 시각보다 이후임
+- `sms_yn` 또는 `email_yn` 중 하나 이상이 `Y`
 
-This check is performed before results are stored, so an ineligible applicant does not appear in the matching result window or exports.
+매칭 결과를 저장하기 전에 이 조건을 확인하므로 자격이 없는 신청자는 매칭 결과 화면과 다운로드 결과에 나타나지 않는다.
 
-The existing two-year application-age limit, blacklist exclusion, successful-notification exclusion, duplicate handling, and keyword filters remain unchanged.
+기존의 최근 2년 이내 신청자 제한, 블랙리스트 제외, 발송 성공 신청자 제외, 동일인 중복 제거 및 키워드 검색 조건은 변경하지 않는다.
 
-## Notification Enforcement
+## 발송 제한
 
-Consent is checked again immediately before dispatch because consent can expire or be withdrawn after a matching result was created.
+매칭 결과 생성 이후 동의가 만료되거나 철회될 수 있으므로 실제 발송 직전에 동의를 다시 확인한다.
 
-- SMS requires active future-recruitment consent and `sms_yn = 'Y'`.
-- Email requires active future-recruitment consent and `email_yn = 'Y'`.
+- SMS 발송은 활성 향후 모집 동의와 `sms_yn = 'Y'`가 모두 필요하다.
+- 이메일 발송은 활성 향후 모집 동의와 `email_yn = 'Y'`가 모두 필요하다.
 
-An ineligible selected row is skipped without calling the provider. The notification log records a consent-related skipped result so the administrator can distinguish it from missing contact details or duplicate sends. Bulk and per-row dispatch use the same server-side checks.
+동의 조건을 충족하지 못한 선택 행은 외부 발송 서비스에 요청하지 않는다. 알림 로그에는 동의로 인한 발송 제외 상태를 기록해 연락처 누락이나 중복 발송 제외와 구분한다. 개별 발송과 선택 대량 발송은 동일한 서버 검증을 사용한다.
 
-## Matching Result UI
+## 매칭 결과 화면
 
-Every matching row carries `smsAllowed` and `emailAllowed` independently from the sent-state flags. A row displays only the channel buttons that the applicant currently allows:
+각 매칭 결과 행에는 발송 완료 여부와 별개로 `smsAllowed`, `emailAllowed` 상태를 포함한다. 신청자가 현재 허용한 채널의 버튼만 표시한다.
 
-- SMS only: display the SMS button only.
-- Email only: display the email button only.
-- Both channels: display both buttons.
-- Neither channel: exclude the applicant from matching results.
+- SMS만 동의: SMS 발송 버튼만 표시
+- 이메일만 동의: 이메일 발송 버튼만 표시
+- 두 채널 모두 동의: SMS와 이메일 발송 버튼 모두 표시
+- 두 채널 모두 미동의: 매칭 결과에서 제외
 
-The shared selection checkbox remains channel-neutral. For a mixed selection, the bulk SMS command targets only selected rows with active SMS consent and the bulk email command targets only selected rows with active email consent. Each bulk button displays its current eligible count, such as `SMS 발송 3명` and `이메일 발송 5명`, and is disabled when that channel has zero eligible selected rows. The confirmation dialog uses the same eligible count. Server-side dispatch rechecks consent and does not trust the browser count.
+공통 선택 체크박스는 특정 채널에 종속되지 않는다. SMS와 이메일 동의자가 섞여 선택된 경우 SMS 대량 발송은 선택된 행 중 SMS 동의자에게만 발송하고, 이메일 대량 발송은 이메일 동의자에게만 발송한다.
 
-## Withdrawal Readiness
+대량 발송 버튼에는 `SMS 발송 3명`, `이메일 발송 5명`과 같이 현재 선택된 행 중 실제 발송 가능한 인원을 표시한다. 해당 채널의 발송 가능 인원이 0명이면 버튼을 비활성화한다. 발송 확인 창에도 동일한 인원을 표시한다. 브라우저에서 계산한 인원을 신뢰하지 않고 서버에서 동의를 다시 확인한다.
 
-This change stores `withdrawn_at` and defines active-consent queries, but it does not add a public withdrawal page or an administrator mutation control. A later withdrawal workflow can mark the record withdrawn without changing matching or notification logic. Until that workflow exists, withdrawal requests received at `spirit2@naver.com` require a controlled database or maintenance operation.
+## 동의 철회 준비
 
-## Tests
+이번 변경에서는 `withdrawn_at`을 저장하고 활성 동의 조회 조건을 구현하지만 공개 동의 철회 화면이나 관리자 변경 기능은 추가하지 않는다. 이후 철회 기능을 추가할 때 기존 매칭·발송 로직을 변경하지 않고 철회 시각만 기록할 수 있도록 구성한다.
 
-- Form validation rejects missing required consent and rejects future recruitment with neither channel selected. It accepts future recruitment with SMS only, email only, or both channels.
-- Submission stores all consent flags, version, and expiration data.
-- Schema bootstrap includes the consent table and unique/index constraints.
-- Matching excludes missing, expired, withdrawn, and future-recruitment-denied consent records.
-- SMS and email dispatch independently enforce their channel consent immediately before provider dispatch.
-- Matching rows expose channel eligibility, hide disallowed per-row buttons, and calculate mixed-selection bulk counts per channel.
-- Existing matching restrictions and duplicate prevention tests continue to pass.
-- The rendered form contains the final Korean notice, the required current-research checkbox, and the optional parent-and-channel checkbox group with visible required/optional labels.
+철회 화면이 추가되기 전까지 `spirit2@naver.com`으로 접수된 요청은 정해진 유지보수 절차를 통해 동의 기록에 철회 시각을 반영한다.
 
-## Deployment
+## 테스트
 
-The admin schema bootstrap creates the consent table at application startup. After deployment, only newly submitted applications with active optional consent enter future matching. There is no migration that marks prior applicants as consented.
+- 필수 개인정보 동의가 없으면 신청서 검증에 실패한다.
+- 향후 모집에 동의하고 SMS와 이메일을 모두 선택하지 않으면 검증에 실패한다.
+- 향후 모집 동의와 함께 SMS만, 이메일만 또는 두 채널 모두 선택한 경우에는 검증을 통과한다.
+- 제출 시 모든 동의 여부, 문구 버전, 동의 시각과 만료 시각이 저장된다.
+- 서버 시작 시 동의 테이블과 고유키·조회 인덱스가 생성된다.
+- 동의 기록이 없거나, 만료됐거나, 철회됐거나, 향후 모집에 동의하지 않은 신청자는 매칭에서 제외된다.
+- SMS와 이메일은 실제 발송 직전에 각각의 채널 동의를 독립적으로 확인한다.
+- 매칭 결과 행에서 허용되지 않은 채널 버튼은 표시하지 않는다.
+- 혼합 선택 시 SMS와 이메일 대량 발송 가능 인원을 채널별로 계산한다.
+- 기존 매칭 제한과 중복 방지 테스트는 계속 통과해야 한다.
+- 신청서에는 최종 한글 고지문, 현재 리서치 필수 동의, 향후 모집 상위 동의와 채널별 하위 선택 항목이 올바르게 표시돼야 한다.
+
+## 배포
+
+애플리케이션 시작 시 admin DB에 동의 테이블을 자동으로 생성한다. 배포 이후 새 신청서를 통해 유효한 선택 동의를 남긴 신청자만 향후 매칭 대상에 포함한다. 기존 신청자를 동의 상태로 변경하는 데이터 마이그레이션은 실행하지 않는다.
