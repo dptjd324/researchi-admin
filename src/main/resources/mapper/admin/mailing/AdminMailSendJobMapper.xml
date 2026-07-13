@@ -178,7 +178,7 @@
         SELECT MAX(sent_at)
         FROM admin_mail_send_job
         WHERE research_no = #{researchNo}
-          AND trigger_type = 'THRESHOLD'
+          AND trigger_type IN ('THRESHOLD', 'LEGACY_THRESHOLD')
           AND send_status = 'SENT'
           AND sent_at IS NOT NULL
     </select>
@@ -210,7 +210,10 @@
         FROM admin_mail_send_job job
         LEFT JOIN admin_mail_template template ON template.id = job.template_id
         WHERE job.research_no = #{researchNo}
-          AND job.trigger_type LIKE 'LEGACY_%'
+          AND (
+              job.trigger_type LIKE 'LEGACY_%'
+              OR job.trigger_type IN ('MANUAL', 'THRESHOLD', 'SCHEDULED', 'SCHEDULED_DAILY')
+          )
         ORDER BY COALESCE(job.sent_at, job.scheduled_at, job.created_at) DESC, job.id DESC
     </select>
 

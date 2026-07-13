@@ -134,7 +134,7 @@ public class UiLabelHelper {
             case "FAILED" -> "실패";
             case "CANCELLED" -> "취소";
             case "SKIPPED_DUPLICATE" -> "중복 제외";
-            case "NO_TARGETS" -> "발송 대상 없음";
+            case "NO_TARGETS" -> "발송 실패";
             case "" -> "-";
             default -> value;
         };
@@ -215,7 +215,8 @@ public class UiLabelHelper {
                 .replace("Legacy scheduled mail job #", "예약 메일 작업 #")
                 .replace("Legacy threshold mail job #", "임계치 메일 작업 #")
                 .replace("Legacy mail send job #", "수동 메일 작업 #")
-                .replace("Recipient email was not found in the old research row.", "구 DB 좌담회/설문 행에서 수신 이메일을 찾을 수 없습니다.")
+                .replace("Recipient email was not found in the old research row.", "수신 이메일을 찾을 수 없습니다. 수신 이메일을 등록해주세요.")
+                .replace("구 DB 좌담회/설문 행에서 수신 이메일을 찾을 수 없습니다.", "수신 이메일을 찾을 수 없습니다. 수신 이메일을 등록해주세요.")
                 .replace(" completed: ", " 처리 결과: ")
                 .replace(" failed: ", " 실패: ")
                 .replace(" registered", " 등록")
@@ -318,7 +319,7 @@ public class UiLabelHelper {
             case "SCHEDULED" -> "send-status-badge--scheduled";
             case "RUNNING" -> "send-status-badge--running";
             case "SENT" -> "send-status-badge--sent";
-            case "FAILED" -> "send-status-badge--failed";
+            case "FAILED", "NO_TARGETS" -> "send-status-badge--failed";
             case "CANCELLED" -> "send-status-badge--cancelled";
             default -> "send-status-badge--default";
         };

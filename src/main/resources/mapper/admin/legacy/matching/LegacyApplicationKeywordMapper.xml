@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.matching.mapper.LegacyApplicationKeywordMapper">
+
+    <resultMap id="legacyMatchingCandidateResultMap" type="com.researchi.admin.legacy.matching.domain.LegacyMatchingCandidate">
+        <id property="researchNo" column="research_no"/>
+        <id property="researchAppSeq" column="research_app_seq"/>
+        <result property="matchScore" column="match_score"/>
+    </resultMap>
+
+    <select id="countIndexedApplications" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            SELECT research_no, research_app_seq
+            FROM admin_legacy_application_keyword
+            WHERE LEFT(REGEXP_REPLACE(COALESCE(application_regist_dt, ''), '[^0-9]', ''), 8) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 YEAR), '%Y%m%d')
+            GROUP BY research_no, research_app_seq
+        ) indexed_application
+    </select>
+
+    <select id="findIndexedApplications" resultMap="legacyMatchingCandidateResultMap">
+        SELECT
+            research_no,
+            research_app_seq,
+            0 AS match_score
+        FROM admin_legacy_application_keyword
+        WHERE LEFT(REGEXP_REPLACE(COALESCE(application_regist_dt, ''), '[^0-9]', ''), 8) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 YEAR), '%Y%m%d')
+        GROUP BY research_no, research_app_seq
+        ORDER BY MAX(indexed_at) DESC
+        LIMIT #{limit}
+    </select>
+
+    <delete id="deleteByApplication">
+        DELETE FROM admin_legacy_application_keyword
+        WHERE research_no = #{researchNo}
+          AND research_app_seq = #{researchAppSeq}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM admin_legacy_application_keyword
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO admin_legacy_application_keyword (
+            research_no,
+            research_app_seq,
+            application_regist_dt,
+            keyword_normalized,
+            keyword,
+            source_type,
+            indexed_at
+        ) VALUES
+        <foreach collection="keywords" item="keyword" separator=",">
+            (
+                #{keyword.researchNo},
+                #{keyword.researchAppSeq},
+                #{keyword.applicationRegistDt},
+                #{keyword.keywordNormalized},
+                #{keyword.keyword},
+                #{keyword.sourceType},
+                CURRENT_TIMESTAMP
+            )
+        </foreach>
+    </insert>
+
+    <select id="findCandidates" resultMap="legacyMatchingCandidateResultMap">
+        SELECT
+            keyword.research_no,
+            keyword.research_app_seq,
+            COUNT(DISTINCT keyword.keyword_normalized) AS match_score
+        FROM admin_legacy_application_keyword keyword
+        WHERE keyword.keyword_normalized IN
+        <foreach collection="includeKeywords" item="includeKeyword" open="(" separator="," close=")">
+            #{includeKeyword}
+        </foreach>
+          AND keyword.research_no != #{currentResearchNo}
+          AND LEFT(REGEXP_REPLACE(COALESCE(keyword.application_regist_dt, ''), '[^0-9]', ''), 8) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 YEAR), '%Y%m%d')
+          <if test="excludeKeywords != null and excludeKeywords.size() > 0">
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM admin_legacy_application_keyword excluded
+                  WHERE excluded.research_no = keyword.research_no
+                    AND excluded.research_app_seq = keyword.research_app_seq
+                    AND excluded.keyword_normalized IN
+                    <foreach collection="excludeKeywords" item="excludeKeyword" open="(" separator="," close=")">
+                        #{excludeKeyword}
+                    </foreach>
+              )
+          </if>
+        GROUP BY keyword.research_no, keyword.research_app_seq
+        ORDER BY match_score DESC, keyword.research_app_seq DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

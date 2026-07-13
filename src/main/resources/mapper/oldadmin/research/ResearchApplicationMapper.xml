@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.research.mapper.ResearchApplicationMapper">
+
+    <resultMap id="researchApplicationResultMap" type="com.researchi.admin.legacy.research.domain.ResearchApplication">
+        <id property="researchNo" column="RESEARCH_NO"/>
+        <id property="researchAppSeq" column="RESEARCH_APP_SEQ"/>
+        <result property="appName" column="APP_NAME"/>
+        <result property="appSex" column="APP_SEX"/>
+        <result property="appBirth" column="APP_BIRTH"/>
+        <result property="appAge" column="APP_AGE"/>
+        <result property="appJob" column="APP_JOB"/>
+        <result property="appCompany" column="APP_COMPANY"/>
+        <result property="appHphone" column="APP_HPHONE"/>
+        <result property="appTele" column="APP_TELE"/>
+        <result property="appAddr" column="APP_ADDR"/>
+        <result property="addComment" column="ADD_COMMENT"/>
+        <result property="attendResearch" column="ATTEND_RESEARCH"/>
+        <result property="provideYn" column="PROVIDE_YN"/>
+        <result property="registDt" column="REGIST_DT"/>
+        <result property="modifyDt" column="MODIFY_DT"/>
+        <result property="blacklistYn" column="BLACKLIST_YN"/>
+    </resultMap>
+
+    <resultMap id="researchApplicationDuplicateGroupResultMap" type="com.researchi.admin.legacy.research.domain.ResearchApplicationDuplicateGroup">
+        <id property="researchNo" column="RESEARCH_NO"/>
+        <id property="researchAppSeq" column="RESEARCH_APP_SEQ"/>
+        <result property="duplicateCount" column="DUPLICATE_COUNT"/>
+        <result property="appNames" column="APP_NAMES"/>
+        <result property="appHphones" column="APP_HPHONES"/>
+        <result property="appBirths" column="APP_BIRTHS"/>
+        <result property="provideYns" column="PROVIDE_YNS"/>
+        <result property="firstRegistDt" column="FIRST_REGIST_DT"/>
+        <result property="lastModifyDt" column="LAST_MODIFY_DT"/>
+    </resultMap>
+
+    <resultMap id="applicantResearchHistoryResultMap" type="com.researchi.admin.legacy.research.domain.ApplicantResearchHistoryItem">
+        <id property="researchNo" column="RESEARCH_NO"/>
+        <id property="researchAppSeq" column="RESEARCH_APP_SEQ"/>
+        <result property="researchTitle" column="RESEARCH_TITLE"/>
+        <result property="appName" column="APP_NAME"/>
+        <result property="appBirth" column="APP_BIRTH"/>
+        <result property="appHphone" column="APP_HPHONE"/>
+        <result property="appJob" column="APP_JOB"/>
+        <result property="appCompany" column="APP_COMPANY"/>
+        <result property="provideYn" column="PROVIDE_YN"/>
+        <result property="registDt" column="REGIST_DT"/>
+    </resultMap>
+
+    <sql id="researchApplicationColumns">
+        RESEARCH_NO,
+        RESEARCH_APP_SEQ,
+        APP_NAME,
+        APP_SEX,
+        APP_BIRTH,
+        APP_AGE,
+        APP_JOB,
+        APP_COMPANY,
+        APP_HPHONE,
+        APP_TELE,
+        APP_ADDR,
+        ADD_COMMENT,
+        ATTEND_RESEARCH,
+        PROVIDE_YN,
+        REGIST_DT,
+        MODIFY_DT
+    </sql>
+
+    <sql id="blacklistYnColumn">
+        CASE WHEN EXISTS (
+            SELECT 1
+            FROM TB_BLACKLIST_MST blacklist
+            WHERE blacklist.BLACK_YN = 'Y'
+              AND (
+                  (
+                      COALESCE(REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', ''), '') != ''
+                      AND COALESCE(REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_HPHONE, '-', ''), ' ', ''), '.', ''), '') != ''
+                      AND REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_HPHONE, '-', ''), ' ', ''), '.', '')
+                  )
+                  OR (
+                      COALESCE(REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', ''), '') != ''
+                      AND COALESCE(REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_TELE, '-', ''), ' ', ''), '.', ''), '') != ''
+                      AND REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_TELE, '-', ''), ' ', ''), '.', '')
+                  )
+                  OR (
+                      COALESCE(blacklist.BLACK_USER_NAME, '') != ''
+                      AND COALESCE(TB_RESEARCH_APP.APP_NAME, '') != ''
+                      AND COALESCE(REPLACE(REPLACE(blacklist.BLACK_USER_BIRTH, '-', ''), '.', ''), '') != ''
+                      AND COALESCE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_BIRTH, '-', ''), '.', ''), '') != ''
+                      AND blacklist.BLACK_USER_NAME = TB_RESEARCH_APP.APP_NAME
+                      AND REPLACE(REPLACE(blacklist.BLACK_USER_BIRTH, '-', ''), '.', '') = REPLACE(REPLACE(TB_RESEARCH_APP.APP_BIRTH, '-', ''), '.', '')
+                  )
+              )
+        ) THEN 'Y' ELSE 'N' END AS BLACKLIST_YN
+    </sql>
+
+    <sql id="searchCondition">
+        <if test="search.appName != null and search.appName != ''">
+            AND APP_NAME LIKE CONCAT('%', #{search.appName}, '%')
+        </if>
+        <if test="search.appSex != null and search.appSex != ''">
+            AND APP_SEX = #{search.appSex}
+        </if>
+        <if test="search.appBirth != null and search.appBirth != ''">
+            AND APP_BIRTH LIKE CONCAT('%', #{search.appBirth}, '%')
+        </if>
+        <if test="search.appAge != null and search.appAge != ''">
+            AND APP_AGE LIKE CONCAT('%', #{search.appAge}, '%')
+        </if>
+        <if test="search.appJob != null and search.appJob != ''">
+            AND APP_JOB LIKE CONCAT('%', #{search.appJob}, '%')
+        </if>
+        <if test="search.appCompany != null and search.appCompany != ''">
+            AND APP_COMPANY LIKE CONCAT('%', #{search.appCompany}, '%')
+        </if>
+        <if test="search.appHphone != null and search.appHphone != ''">
+            AND APP_HPHONE LIKE CONCAT('%', #{search.appHphone}, '%')
+        </if>
+        <if test="search.appTele != null and search.appTele != ''">
+            AND APP_TELE LIKE CONCAT('%', #{search.appTele}, '%')
+        </if>
+        <if test="search.appAddr != null and search.appAddr != ''">
+            AND APP_ADDR LIKE CONCAT('%', #{search.appAddr}, '%')
+        </if>
+        <if test="search.addComment != null and search.addComment != ''">
+            AND ADD_COMMENT LIKE CONCAT('%', #{search.addComment}, '%')
+        </if>
+        <if test="search.attendResearch != null and search.attendResearch != ''">
+            AND ATTEND_RESEARCH LIKE CONCAT('%', #{search.attendResearch}, '%')
+        </if>
+        <if test="search.provideYn != null and search.provideYn != ''">
+            AND PROVIDE_YN = #{search.provideYn}
+        </if>
+    </sql>
+
+    <select id="findByResearchNoAndSeq" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND RESEARCH_APP_SEQ = #{researchAppSeq}
+        ORDER BY MODIFY_DT DESC, REGIST_DT DESC
+        LIMIT 1
+    </select>
+
+    <select id="findPageByResearchNo" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+        <include refid="searchCondition"/>
+        ORDER BY RESEARCH_APP_SEQ DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findPage" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE 1 = 1
+        <include refid="searchCondition"/>
+        ORDER BY REGIST_DT DESC, RESEARCH_APP_SEQ DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findAllByResearchNo" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+        ORDER BY RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findAll" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        ORDER BY REGIST_DT DESC, RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findAllPage" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE LEFT(REGEXP_REPLACE(CAST(REGIST_DT AS CHAR), '[^0-9]', ''), 8) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 YEAR), '%Y%m%d')
+        ORDER BY REGIST_DT DESC, RESEARCH_APP_SEQ DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findMatchingIndexCandidatePage" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE LEFT(REGEXP_REPLACE(CAST(REGIST_DT AS CHAR), '[^0-9]', ''), 8) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 YEAR), '%Y%m%d')
+          AND (
+              COALESCE(REPLACE(REPLACE(REPLACE(APP_HPHONE, '-', ''), ' ', ''), '.', ''), '') != ''
+              OR COALESCE(REPLACE(REPLACE(REPLACE(APP_TELE, '-', ''), ' ', ''), '.', ''), '') != ''
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM TB_BLACKLIST_MST blacklist
+              WHERE blacklist.BLACK_YN = 'Y'
+                AND (
+                    (
+                        COALESCE(REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND COALESCE(REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_HPHONE, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_HPHONE, '-', ''), ' ', ''), '.', '')
+                    )
+                    OR (
+                        COALESCE(REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND COALESCE(REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_TELE, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_TELE, '-', ''), ' ', ''), '.', '')
+                    )
+                    OR (
+                        COALESCE(blacklist.BLACK_USER_NAME, '') != ''
+                        AND COALESCE(TB_RESEARCH_APP.APP_NAME, '') != ''
+                        AND COALESCE(REPLACE(REPLACE(blacklist.BLACK_USER_BIRTH, '-', ''), '.', ''), '') != ''
+                        AND COALESCE(REPLACE(REPLACE(TB_RESEARCH_APP.APP_BIRTH, '-', ''), '.', ''), '') != ''
+                        AND blacklist.BLACK_USER_NAME = TB_RESEARCH_APP.APP_NAME
+                        AND REPLACE(REPLACE(blacklist.BLACK_USER_BIRTH, '-', ''), '.', '') = REPLACE(REPLACE(TB_RESEARCH_APP.APP_BIRTH, '-', ''), '.', '')
+                    )
+                )
+          )
+          <if test="condition.appSexCodes != null and condition.appSexCodes.size() > 0">
+              AND (
+              <foreach collection="condition.appSexCodes" item="appSexCode" separator=" OR ">
+                  APP_SEX = #{appSexCode}
+              </foreach>
+              )
+          </if>
+          <if test="(condition.appBirthYears != null and condition.appBirthYears.size() > 0) or (condition.appBirthTerms != null and condition.appBirthTerms.size() > 0)">
+              AND (
+              <trim suffixOverrides="OR">
+                  <foreach collection="condition.appBirthYears" item="appBirthYear">
+                      LEFT(REGEXP_REPLACE(COALESCE(APP_BIRTH, ''), '[^0-9]', ''), 4) = #{appBirthYear} OR
+                  </foreach>
+                  <foreach collection="condition.appBirthYearSuffixes" item="appBirthYearSuffix">
+                      (
+                          CHAR_LENGTH(REGEXP_REPLACE(COALESCE(APP_BIRTH, ''), '[^0-9]', '')) = 6
+                          AND LEFT(REGEXP_REPLACE(COALESCE(APP_BIRTH, ''), '[^0-9]', ''), 2) = #{appBirthYearSuffix}
+                      ) OR
+                  </foreach>
+                  <foreach collection="condition.appBirthTerms" item="appBirthTerm">
+                      APP_BIRTH LIKE CONCAT('%', #{appBirthTerm}, '%') OR
+                  </foreach>
+              </trim>
+              )
+          </if>
+          <if test="condition.appJobTerms != null and condition.appJobTerms.size() > 0">
+              AND (
+              <foreach collection="condition.appJobTerms" item="appJobTerm" separator=" OR ">
+                  APP_JOB LIKE CONCAT('%', #{appJobTerm}, '%')
+              </foreach>
+              )
+          </if>
+          <if test="condition.appCompanyTerms != null and condition.appCompanyTerms.size() > 0">
+              AND (
+              <foreach collection="condition.appCompanyTerms" item="appCompanyTerm" separator=" OR ">
+                  APP_COMPANY LIKE CONCAT('%', #{appCompanyTerm}, '%')
+              </foreach>
+              )
+          </if>
+          <if test="condition.appAddrTerms != null and condition.appAddrTerms.size() > 0">
+              AND (
+              <foreach collection="condition.appAddrTerms" item="appAddrTerm" separator=" OR ">
+                  APP_ADDR LIKE CONCAT('%', #{appAddrTerm}, '%')
+              </foreach>
+              )
+          </if>
+          <if test="condition.addCommentTerms != null and condition.addCommentTerms.size() > 0">
+              AND (
+              <trim prefixOverrides="OR">
+                  <foreach collection="condition.addCommentTerms" item="addCommentTerm">
+                      OR ADD_COMMENT LIKE CONCAT('%', #{addCommentTerm}, '%')
+                  </foreach>
+                  <if test="condition.additionalAnswerResearchAppSeqs != null and condition.additionalAnswerResearchAppSeqs.size() > 0">
+                      OR RESEARCH_APP_SEQ IN
+                      <foreach collection="condition.additionalAnswerResearchAppSeqs" item="researchAppSeq" open="(" separator="," close=")">
+                          #{researchAppSeq}
+                      </foreach>
+                  </if>
+              </trim>
+              )
+          </if>
+        ORDER BY REGIST_DT DESC, RESEARCH_APP_SEQ DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findUnprovidedByResearchNo" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND COALESCE(PROVIDE_YN, 'N') = 'N'
+        ORDER BY RESEARCH_APP_SEQ ASC
+    </select>
+
+    <select id="findBlacklistedUnprovidedSeqsByResearchNo" resultType="long">
+        SELECT app.RESEARCH_APP_SEQ
+        FROM TB_RESEARCH_APP app
+        WHERE app.RESEARCH_NO = #{researchNo}
+          AND COALESCE(app.PROVIDE_YN, 'N') = 'N'
+          AND EXISTS (
+              SELECT 1
+              FROM TB_BLACKLIST_MST blacklist
+              WHERE blacklist.BLACK_YN = 'Y'
+                AND (
+                    (
+                        COALESCE(REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND COALESCE(REPLACE(REPLACE(REPLACE(app.APP_HPHONE, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(app.APP_HPHONE, '-', ''), ' ', ''), '.', '')
+                    )
+                    OR (
+                        COALESCE(REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND COALESCE(REPLACE(REPLACE(REPLACE(app.APP_TELE, '-', ''), ' ', ''), '.', ''), '') != ''
+                        AND REPLACE(REPLACE(REPLACE(blacklist.BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(app.APP_TELE, '-', ''), ' ', ''), '.', '')
+                    )
+                    OR (
+                        COALESCE(blacklist.BLACK_USER_NAME, '') != ''
+                        AND COALESCE(app.APP_NAME, '') != ''
+                        AND COALESCE(REPLACE(REPLACE(blacklist.BLACK_USER_BIRTH, '-', ''), '.', ''), '') != ''
+                        AND COALESCE(REPLACE(REPLACE(app.APP_BIRTH, '-', ''), '.', ''), '') != ''
+                        AND blacklist.BLACK_USER_NAME = app.APP_NAME
+                        AND REPLACE(REPLACE(blacklist.BLACK_USER_BIRTH, '-', ''), '.', '') = REPLACE(REPLACE(app.APP_BIRTH, '-', ''), '.', '')
+                    )
+                )
+          )
+        ORDER BY app.RESEARCH_APP_SEQ ASC
+    </select>
+
+    <select id="findDuplicateGroupsByResearchNo" resultMap="researchApplicationDuplicateGroupResultMap">
+        SELECT
+            RESEARCH_NO,
+            RESEARCH_APP_SEQ,
+            COUNT(*) AS DUPLICATE_COUNT,
+            GROUP_CONCAT(DISTINCT COALESCE(APP_NAME, '') ORDER BY APP_NAME SEPARATOR ', ') AS APP_NAMES,
+            GROUP_CONCAT(DISTINCT COALESCE(APP_HPHONE, '') ORDER BY APP_HPHONE SEPARATOR ', ') AS APP_HPHONES,
+            GROUP_CONCAT(DISTINCT COALESCE(APP_BIRTH, '') ORDER BY APP_BIRTH SEPARATOR ', ') AS APP_BIRTHS,
+            GROUP_CONCAT(DISTINCT COALESCE(PROVIDE_YN, '') ORDER BY PROVIDE_YN SEPARATOR ', ') AS PROVIDE_YNS,
+            MIN(REGIST_DT) AS FIRST_REGIST_DT,
+            MAX(MODIFY_DT) AS LAST_MODIFY_DT
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+        GROUP BY RESEARCH_NO, RESEARCH_APP_SEQ
+        HAVING COUNT(*) &gt; 1
+        ORDER BY DUPLICATE_COUNT DESC, RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findByResearchNoAndSeqs" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND RESEARCH_APP_SEQ IN
+        <foreach collection="researchAppSeqs" item="researchAppSeq" open="(" separator="," close=")">
+            #{researchAppSeq}
+        </foreach>
+        ORDER BY RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findUnprovidedByResearchNoAndSeqs" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND COALESCE(PROVIDE_YN, 'N') = 'N'
+          AND RESEARCH_APP_SEQ IN
+        <foreach collection="researchAppSeqs" item="researchAppSeq" open="(" separator="," close=")">
+            #{researchAppSeq}
+        </foreach>
+        ORDER BY RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findByResearchNoAndRegistDate" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="researchApplicationColumns"/>,
+        <include refid="blacklistYnColumn"/>
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND LEFT(REGEXP_REPLACE(CAST(REGIST_DT AS CHAR), '[^0-9]', ''), 8) = #{registDate}
+        ORDER BY RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findDuplicateSeqByNameAndPhone" resultType="long">
+        SELECT RESEARCH_APP_SEQ
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND APP_NAME = #{appName}
+          AND REPLACE(REPLACE(REPLACE(COALESCE(APP_HPHONE, ''), '-', ''), ' ', ''), '.', '')
+              = REPLACE(REPLACE(REPLACE(COALESCE(#{appHphone}, ''), '-', ''), ' ', ''), '.', '')
+        ORDER BY RESEARCH_APP_SEQ DESC
+        LIMIT 1
+    </select>
+
+    <select id="findApplicantResearchHistory" resultMap="applicantResearchHistoryResultMap">
+        SELECT
+            app.RESEARCH_NO,
+            app.RESEARCH_APP_SEQ,
+            research.RESEARCH_TITLE,
+            app.APP_NAME,
+            app.APP_BIRTH,
+            app.APP_HPHONE,
+            app.APP_JOB,
+            app.APP_COMPANY,
+            app.PROVIDE_YN,
+            app.REGIST_DT
+        FROM TB_RESEARCH_APP app
+        LEFT JOIN TB_RESEARCH_MST research
+               ON research.RESEARCH_NO = app.RESEARCH_NO
+        WHERE COALESCE(#{appName}, '') != ''
+          AND COALESCE(REPLACE(REPLACE(#{appBirth}, '-', ''), '.', ''), '') != ''
+          AND app.APP_NAME = #{appName}
+          AND REPLACE(REPLACE(COALESCE(app.APP_BIRTH, ''), '-', ''), '.', '')
+              = REPLACE(REPLACE(COALESCE(#{appBirth}, ''), '-', ''), '.', '')
+          AND (
+              (
+                  COALESCE(REPLACE(REPLACE(REPLACE(#{appHphone}, '-', ''), ' ', ''), '.', ''), '') != ''
+                  AND REPLACE(REPLACE(REPLACE(COALESCE(app.APP_HPHONE, ''), '-', ''), ' ', ''), '.', '')
+                      = REPLACE(REPLACE(REPLACE(COALESCE(#{appHphone}, ''), '-', ''), ' ', ''), '.', '')
+              )
+              OR (
+                  COALESCE(REPLACE(REPLACE(REPLACE(#{appTele}, '-', ''), ' ', ''), '.', ''), '') != ''
+                  AND REPLACE(REPLACE(REPLACE(COALESCE(app.APP_TELE, ''), '-', ''), ' ', ''), '.', '')
+                      = REPLACE(REPLACE(REPLACE(COALESCE(#{appTele}, ''), '-', ''), ' ', ''), '.', '')
+              )
+          )
+        ORDER BY app.REGIST_DT DESC, app.RESEARCH_NO DESC, app.RESEARCH_APP_SEQ DESC
+    </select>
+
+    <select id="findNextResearchAppSeq" resultType="long">
+        SELECT COALESCE(MAX(RESEARCH_APP_SEQ), 0) + 1
+        FROM TB_RESEARCH_APP
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.legacy.research.domain.ResearchApplication">
+        INSERT INTO TB_RESEARCH_APP (
+            RESEARCH_NO,
+            RESEARCH_APP_SEQ,
+            APP_NAME,
+            APP_SEX,
+            APP_BIRTH,
+            APP_AGE,
+            APP_JOB,
+            APP_COMPANY,
+            APP_HPHONE,
+            APP_TELE,
+            APP_ADDR,
+            ADD_COMMENT,
+            ATTEND_RESEARCH,
+            PROVIDE_YN,
+            REGIST_DT,
+            MODIFY_DT
+        ) VALUES (
+            #{researchNo},
+            #{researchAppSeq},
+            #{appName},
+            #{appSex},
+            #{appBirth},
+            #{appAge},
+            #{appJob},
+            #{appCompany},
+            #{appHphone},
+            #{appTele},
+            #{appAddr},
+            #{addComment},
+            #{attendResearch},
+            #{provideYn},
+            DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'),
+            DATE_FORMAT(NOW(), '%Y%m%d')
+        )
+    </insert>
+
+    <update id="incrementCounts">
+        UPDATE TB_RESEARCH_MST
+        SET
+            APP_CNT = COALESCE(APP_CNT, 0) + 1,
+            APP_NEW_CNT = COALESCE(APP_NEW_CNT, 0) + 1,
+            MODIFY_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        WHERE RESEARCH_NO = #{researchNo}
+    </update>
+
+    <select id="countByResearchNo" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+        <include refid="searchCondition"/>
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_RESEARCH_APP
+        WHERE 1 = 1
+        <include refid="searchCondition"/>
+    </select>
+
+    <select id="countAllByResearchNo" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+    </select>
+
+    <select id="countUnprovidedByResearchNo" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_RESEARCH_APP
+        WHERE RESEARCH_NO = #{researchNo}
+          AND COALESCE(PROVIDE_YN, 'N') = 'N'
+    </select>
+
+    <update id="updateProvideYn">
+        UPDATE TB_RESEARCH_APP
+        SET
+            PROVIDE_YN = #{provideYn},
+            MODIFY_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        WHERE RESEARCH_NO = #{researchNo}
+          AND RESEARCH_APP_SEQ = #{researchAppSeq}
+    </update>
+
+</mapper>

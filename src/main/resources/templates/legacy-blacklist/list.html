@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel legacy-blacklist-page admin-data-page">
+            <div class="dashboard-head">
+                <div>
+                    <h2 class="h3 mb-2">블랙리스트 조회</h2>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/legacy-blacklist/new}" class="secondary-link">등록</a>
+                </div>
+            </div>
+
+            <div th:if="${param.saved}" class="notice success">저장했습니다.</div>
+            <div th:if="${param.statusUpdated}" class="notice success">상태를 변경했습니다.</div>
+            <div th:if="${param.deleted}" class="notice success">삭제했습니다.</div>
+
+            <form method="get" th:action="@{/legacy-blacklist}" class="legacy-blacklist-search admin-data-search admin-data-search--blacklist">
+                <label>
+                    <span>생년월일</span>
+                    <input type="text" name="birth" th:value="${birth}" />
+                </label>
+                <label>
+                    <span>성명</span>
+                    <input type="text" name="name" th:value="${name}" />
+                </label>
+                <label>
+                    <span>상태</span>
+                    <select name="blackYn">
+                        <option value="">ALL</option>
+                        <option value="Y" th:selected="${blackYn == 'Y'}">Y</option>
+                        <option value="N" th:selected="${blackYn == 'N'}">N</option>
+                    </select>
+                </label>
+                <label class="legacy-blacklist-search__wide">
+                    <span>통합 검색</span>
+                    <input type="text" name="keyword" th:value="${keyword}" placeholder="contact, comment, no" />
+                </label>
+                <div class="legacy-blacklist-search__actions">
+                    <button type="submit">조회</button>
+                </div>
+            </form>
+
+            <div class="legacy-blacklist-count admin-data-count">
+                <span class="legacy-blacklist-count__label">조회 결과</span>
+                <strong th:text="${totalItemCount}">0</strong>
+                <span>건</span>
+            </div>
+
+            <div class="table-responsive legacy-blacklist-table-wrap">
+                <table class="table align-middle legacy-blacklist-table admin-data-table">
+                    <colgroup>
+                        <col class="col-no" />
+                        <col class="col-birth" />
+                        <col class="col-name" />
+                        <col class="col-contact" />
+                        <col class="col-status" />
+                        <col class="col-comment" />
+                        <col class="col-actions" />
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>생년월일</th>
+                        <th>성명</th>
+                        <th>연락처</th>
+                        <th>블랙여부</th>
+                        <th>기타</th>
+                        <th>관리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="entry, entryStat : ${entries}">
+                        <td class="number-cell" th:text="${entryStat.count}">1</td>
+                        <td class="mono-cell" th:text="${entry.blackUserBirth}">Birth</td>
+                        <td class="legacy-blacklist-name">
+                            <a th:href="@{/legacy-blacklist/{blacklistNo}/edit(blacklistNo=${entry.blacklistNo})}"
+                               th:text="${entry.blackUserName}"
+                               class="job-title-link">Name</a>
+                        </td>
+                        <td class="mono-cell" th:text="${entry.blackUserContact}">Contact</td>
+                        <td>
+                            <span class="blacklist-status-chip"
+                                  th:classappend="${entry.blackYn == 'Y'} ? ' blacklist-status-chip--active' : ' blacklist-status-chip--inactive'"
+                                  th:text="${entry.blackYn == 'Y'} ? '차단' : '해제'">차단</span>
+                        </td>
+                        <td>
+                            <p class="legacy-blacklist-comment" th:text="${entry.blackUserComment ?: '-'}">Comment</p>
+                        </td>
+                        <td class="legacy-blacklist-actions-cell">
+                            <form th:action="@{/legacy-blacklist/{blacklistNo}/status(blacklistNo=${entry.blacklistNo})}" method="post" class="inline-form">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <select name="blackYn">
+                                    <option value="Y" th:selected="${entry.blackYn == 'Y'}">차단</option>
+                                    <option value="N" th:selected="${entry.blackYn == 'N'}">해제</option>
+                                </select>
+                                <button type="submit" class="blacklist-action-button blacklist-action-button--save">변경</button>
+                            </form>
+                            <form th:action="@{/legacy-blacklist/{blacklistNo}/delete(blacklistNo=${entry.blacklistNo})}" method="post" class="inline-form">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <button type="submit" class="blacklist-action-button blacklist-action-button--delete" onclick="return confirm('이 블랙리스트 정보를 삭제할까요?');">삭제</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <style>
+            .legacy-blacklist-page {
+                padding: 1.35rem;
+            }
+
+            .legacy-blacklist-search {
+                display: grid;
+                grid-template-columns: minmax(130px, 180px) minmax(130px, 180px) minmax(110px, 140px) minmax(240px, 1fr) 64px;
+                gap: 0.55rem;
+                align-items: end;
+                border-top: 2px solid #9fd1ec;
+                border-bottom: 2px solid #9fd1ec;
+                padding: 0.65rem 0;
+                margin: 1rem 0 0.45rem;
+            }
+
+            .legacy-blacklist-search label {
+                display: grid;
+                gap: 0.25rem;
+                margin: 0;
+            }
+
+            .legacy-blacklist-search span {
+                color: #1490be;
+                font-weight: 700;
+                padding: 0;
+                border-right: 0;
+            }
+
+            .legacy-blacklist-search input,
+            .legacy-blacklist-search select {
+                min-height: 38px;
+                border: 1px solid #c8d8ea;
+                border-radius: 8px;
+                background: #fff;
+            }
+
+            .legacy-blacklist-search__wide {
+                min-width: 0;
+            }
+
+            .legacy-blacklist-search__actions {
+                display: flex;
+                gap: 0.35rem;
+                justify-content: flex-end;
+                align-items: center;
+                padding-left: 0;
+                white-space: nowrap;
+            }
+
+            .legacy-blacklist-search__actions button,
+            .legacy-blacklist-search__actions .secondary-link {
+                min-height: 38px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .legacy-blacklist-count {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                margin: 0.55rem 0 0.55rem;
+                padding: 0.45rem 0.65rem;
+                border: 1px solid #d8e7ef;
+                border-radius: 8px;
+                color: #1f3345;
+                background: #f8fbff;
+            }
+
+            .legacy-blacklist-count__label {
+                color: #526477;
+                font-weight: 700;
+            }
+
+            .legacy-blacklist-count strong {
+                color: #d23b4d;
+            }
+
+            .legacy-blacklist-table-wrap {
+                border: 1px solid #d8e7ef;
+                border-radius: 8px;
+                overflow: auto;
+                max-height: calc(100vh - 330px);
+                min-height: 360px;
+                background: #fff;
+            }
+
+            .legacy-blacklist-table {
+                table-layout: fixed;
+                min-width: 1180px;
+                margin-bottom: 0;
+            }
+
+            .legacy-blacklist-table .col-no { width: 58px; }
+            .legacy-blacklist-table .col-birth { width: 110px; }
+            .legacy-blacklist-table .col-name { width: 120px; }
+            .legacy-blacklist-table .col-contact { width: 150px; }
+            .legacy-blacklist-table .col-status { width: 92px; }
+            .legacy-blacklist-table .col-comment { width: auto; }
+            .legacy-blacklist-table .col-actions { width: 156px; }
+
+            .legacy-blacklist-table th {
+                position: sticky;
+                top: 0;
+                z-index: 1;
+                color: #1490be;
+                white-space: nowrap;
+                text-align: center;
+                border-bottom: 1px solid #cfdfeb;
+                background: #f3f9fc;
+            }
+
+            .legacy-blacklist-table td {
+                vertical-align: top;
+                border-bottom: 1px solid #d9e3ec;
+                padding: 0.8rem 0.65rem;
+                line-height: 1.5;
+            }
+
+            .legacy-blacklist-table tbody tr:hover > td {
+                background: #f8fbff;
+            }
+
+            .legacy-blacklist-table td:nth-child(1),
+            .legacy-blacklist-table td:nth-child(2),
+            .legacy-blacklist-table td:nth-child(3),
+            .legacy-blacklist-table td:nth-child(4),
+            .legacy-blacklist-table td:nth-child(5) {
+                text-align: center;
+                white-space: nowrap;
+            }
+
+            .legacy-blacklist-table td:nth-child(6) {
+                line-height: 1.55;
+                color: #172638;
+            }
+
+            .legacy-blacklist-table td:nth-child(7) {
+                text-align: center;
+            }
+
+            .legacy-blacklist-name {
+                font-weight: 700;
+            }
+
+            .mono-cell {
+                color: #24384d;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .number-cell {
+                color: #64748b;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .blacklist-status-chip {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 3.2rem;
+                min-height: 1.65rem;
+                padding: 0.15rem 0.5rem;
+                border-radius: 999px;
+                font-size: 0.84rem;
+                font-weight: 700;
+            }
+
+            .blacklist-status-chip--active {
+                color: #8a3b00;
+                border: 1px solid #f3bd75;
+                background: #fff3dc;
+            }
+
+            .blacklist-status-chip--inactive {
+                color: #475569;
+                border: 1px solid #d8e1eb;
+                background: #f1f5f9;
+            }
+
+            .legacy-blacklist-comment {
+                max-width: 100%;
+                margin: 0;
+                color: #172638;
+                word-break: keep-all;
+                overflow-wrap: anywhere;
+                white-space: pre-wrap;
+            }
+
+            .legacy-blacklist-actions-cell {
+                background: #fbfdff;
+            }
+
+            .legacy-blacklist-table .inline-form {
+                display: flex;
+                flex-direction: row;
+                align-items: stretch;
+                justify-content: center;
+                gap: 0.4rem;
+                margin: 0 0 0.45rem;
+            }
+
+            .legacy-blacklist-table .inline-form:last-child {
+                margin-bottom: 0;
+            }
+
+            .legacy-blacklist-table .inline-form select {
+                width: 76px;
+                min-height: 36px;
+                border-radius: 8px;
+            }
+
+            .blacklist-action-button {
+                min-height: 36px;
+                padding: 0 0.8rem;
+                border: 0;
+                border-radius: 10px;
+                color: #fff;
+                font-weight: 800;
+                white-space: nowrap;
+            }
+
+            .blacklist-action-button--save {
+                background: #0f766e;
+            }
+
+            .blacklist-action-button--save:hover {
+                background: #115e59;
+            }
+
+            .blacklist-action-button--delete {
+                background: #dc2626;
+            }
+
+            .blacklist-action-button--delete:hover {
+                background: #b91c1c;
+            }
+
+            @media (max-width: 900px) {
+                .legacy-blacklist-search {
+                    grid-template-columns: 1fr;
+                    gap: 0.35rem;
+                    padding: 0.5rem 0;
+                }
+
+                .legacy-blacklist-search label,
+                .legacy-blacklist-search__wide {
+                    display: grid;
+                    grid-template-columns: 100px minmax(0, 1fr);
+                    align-items: center;
+                }
+
+                .legacy-blacklist-search__actions {
+                    justify-content: flex-start;
+                    padding-left: 0;
+                }
+            }
+        </style>
+    </th:block>
+</th:block>
+</html>

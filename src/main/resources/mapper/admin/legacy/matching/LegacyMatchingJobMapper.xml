@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.matching.mapper.LegacyMatchingJobMapper">
+
+    <resultMap id="legacyMatchingJobResultMap" type="com.researchi.admin.legacy.matching.domain.LegacyMatchingJob">
+        <id property="id" column="id"/>
+        <result property="researchNo" column="research_no"/>
+        <result property="includeKeywordText" column="include_keyword_text"/>
+        <result property="excludeKeywordText" column="exclude_keyword_text"/>
+        <result property="activeKeywordText" column="active_keyword_text"/>
+        <result property="status" column="status"/>
+        <result property="candidatePoolCount" column="candidate_pool_count"/>
+        <result property="matchedCount" column="matched_count"/>
+        <result property="blacklistedExcludedCount" column="blacklisted_excluded_count"/>
+        <result property="failReason" column="fail_reason"/>
+        <result property="requestedAt" column="requested_at"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="finishedAt" column="finished_at"/>
+    </resultMap>
+
+    <resultMap id="legacyStoredMatchingResultMap" type="com.researchi.admin.legacy.matching.domain.LegacyStoredMatchingResult">
+        <id property="matchingJobId" column="matching_job_id"/>
+        <id property="researchNo" column="research_no"/>
+        <id property="researchAppSeq" column="research_app_seq"/>
+        <result property="rowNo" column="row_no"/>
+        <result property="matchScore" column="match_score"/>
+        <result property="matchedKeywordText" column="matched_keyword_text"/>
+    </resultMap>
+
+    <insert id="insertJob" parameterType="com.researchi.admin.legacy.matching.domain.LegacyMatchingJob" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_legacy_matching_job (
+            research_no,
+            include_keyword_text,
+            exclude_keyword_text,
+            use_auto_keywords,
+            status
+        ) VALUES (
+            #{researchNo},
+            #{includeKeywordText},
+            #{excludeKeywordText},
+            'N',
+            #{status}
+        )
+    </insert>
+
+    <select id="findById" resultMap="legacyMatchingJobResultMap">
+        SELECT *
+        FROM admin_legacy_matching_job
+        WHERE id = #{id}
+    </select>
+
+    <update id="markStarted">
+        UPDATE admin_legacy_matching_job
+        SET status = 'RUNNING',
+            started_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="markCompleted" parameterType="com.researchi.admin.legacy.matching.domain.LegacyMatchingJob">
+        UPDATE admin_legacy_matching_job
+        SET status = 'COMPLETED',
+            active_keyword_text = #{activeKeywordText},
+            candidate_pool_count = #{candidatePoolCount},
+            matched_count = #{matchedCount},
+            blacklisted_excluded_count = #{blacklistedExcludedCount},
+            fail_reason = NULL,
+            finished_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="markFailed">
+        UPDATE admin_legacy_matching_job
+        SET status = 'FAILED',
+            fail_reason = #{failReason},
+            finished_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="findLatestForCriteria" resultMap="legacyMatchingJobResultMap">
+        SELECT *
+        FROM admin_legacy_matching_job
+        WHERE research_no = #{researchNo}
+          AND COALESCE(include_keyword_text, '') = COALESCE(#{includeKeywordText}, '')
+          AND COALESCE(exclude_keyword_text, '') = COALESCE(#{excludeKeywordText}, '')
+          AND COALESCE(use_auto_keywords, 'N') = 'N'
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findRecentByResearchNo" resultMap="legacyMatchingJobResultMap">
+        SELECT *
+        FROM admin_legacy_matching_job
+        WHERE research_no = #{researchNo}
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insertResults">
+        INSERT INTO admin_legacy_matching_result (
+            matching_job_id,
+            research_no,
+            research_app_seq,
+            row_no,
+            match_score,
+            matched_keyword_text
+        ) VALUES
+        <foreach collection="results" item="result" separator=",">
+            (
+                #{result.matchingJobId},
+                #{result.researchNo},
+                #{result.researchAppSeq},
+                #{result.rowNo},
+                #{result.matchScore},
+                #{result.matchedKeywordText}
+            )
+        </foreach>
+    </insert>
+
+    <select id="findResultsByJobId" resultMap="legacyStoredMatchingResultMap">
+        SELECT
+            matching_job_id,
+            research_no,
+            research_app_seq,
+            row_no,
+            match_score,
+            matched_keyword_text
+        FROM admin_legacy_matching_result
+        WHERE matching_job_id = #{matchingJobId}
+        ORDER BY row_no ASC
+        LIMIT #{limit}
+    </select>
+
+    <delete id="deleteResultsByResearchNos">
+        DELETE FROM admin_legacy_matching_result
+        WHERE research_no IN
+        <foreach collection="researchNos" item="researchNo" open="(" separator="," close=")">
+            #{researchNo}
+        </foreach>
+    </delete>
+
+    <delete id="deleteJobsByResearchNos">
+        DELETE FROM admin_legacy_matching_job
+        WHERE research_no IN
+        <foreach collection="researchNos" item="researchNo" open="(" separator="," close=")">
+            #{researchNo}
+        </foreach>
+    </delete>
+</mapper>

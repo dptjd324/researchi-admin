@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.research.mapper.ResearchMasterMapper">
+    <resultMap id="researchMasterResultMap" type="com.researchi.admin.legacy.research.domain.ResearchMaster">
+        <id property="researchNo" column="RESEARCH_NO"/>
+        <result property="researchTitle" column="RESEARCH_TITLE"/>
+        <result property="researchContents" column="RESEARCH_CONTENTS"/>
+        <result property="addComment" column="ADD_COMMENT"/>
+        <result property="appCnt" column="APP_CNT"/>
+        <result property="appNewCnt" column="APP_NEW_CNT"/>
+        <result property="companyName" column="COMPANY_NAME"/>
+        <result property="serverName" column="SERVER_NAME"/>
+        <result property="contactNo" column="CONTACT_NO"/>
+        <result property="brokerageAmt" column="BROKERAGE_AMT"/>
+        <result property="calculateYn" column="CALCULATE_YN"/>
+        <result property="remark" column="REMARK"/>
+        <result property="registDt" column="REGIST_DT"/>
+        <result property="modifyDt" column="MODIFY_DT"/>
+        <result property="closeDate" column="CLOSE_DATE"/>
+    </resultMap>
+    <sql id="researchMasterColumns"> RESEARCH_NO, RESEARCH_TITLE, RESEARCH_CONTENTS, ADD_COMMENT, APP_CNT, APP_NEW_CNT, COMPANY_NAME, SERVER_NAME, CONTACT_NO, BROKERAGE_AMT, CALCULATE_YN, REMARK, REGIST_DT, MODIFY_DT, CLOSE_DATE </sql>
+    <sql id="researchListCondition">
+        <if test="keyword != null and keyword != ''"> AND ( r.RESEARCH_TITLE LIKE CONCAT('%', #{keyword}, '%') OR r.COMPANY_NAME LIKE CONCAT('%', #{keyword}, '%') OR r.SERVER_NAME LIKE CONCAT('%', #{keyword}, '%') OR r.CONTACT_NO LIKE CONCAT('%', #{keyword}, '%') OR r.REMARK LIKE CONCAT('%', #{keyword}, '%') OR r.ADD_COMMENT LIKE CONCAT('%', #{keyword}, '%') ) </if>
+        <if test="registStart != null and registStart != ''"> AND LEFT(REGEXP_REPLACE(CAST(r.REGIST_DT AS CHAR), '[^0-9]', ''), 8) >= #{registStart} </if>
+        <if test="registEnd != null and registEnd != ''"> AND LEFT(REGEXP_REPLACE(CAST(r.REGIST_DT AS CHAR), '[^0-9]', ''), 8) &lt;= #{registEnd} </if>
+        <if test="title != null and title != ''"> AND r.RESEARCH_TITLE LIKE CONCAT('%', #{title}, '%') </if>
+        <if test="companyName != null and companyName != ''"> AND r.COMPANY_NAME LIKE CONCAT('%', #{companyName}, '%') </if>
+        <if test="serverName != null and serverName != ''"> AND r.SERVER_NAME LIKE CONCAT('%', #{serverName}, '%') </if>
+        <choose>
+            <when test="hiddenOnly">
+                <choose>
+                    <when test="hiddenResearchNos != null and hiddenResearchNos.size() > 0">
+                        AND r.RESEARCH_NO IN
+                        <foreach collection="hiddenResearchNos" item="hiddenResearchNo" open="(" separator="," close=")"> #{hiddenResearchNo} </foreach>
+                    </when>
+                    <otherwise> AND 1 = 0 </otherwise>
+                </choose>
+            </when>
+            <otherwise>
+                <if test="hiddenResearchNos != null and hiddenResearchNos.size() > 0">
+                    AND r.RESEARCH_NO NOT IN
+                    <foreach collection="hiddenResearchNos" item="hiddenResearchNo" open="(" separator="," close=")"> #{hiddenResearchNo} </foreach>
+                </if>
+            </otherwise>
+        </choose>
+    </sql>
+    <select id="findByResearchNo" resultMap="researchMasterResultMap">
+        SELECT
+        <include refid="researchMasterColumns"/>
+        FROM TB_RESEARCH_MST WHERE RESEARCH_NO = #{researchNo}
+    </select>
+    <select id="findByResearchNos" resultMap="researchMasterResultMap">
+        SELECT
+        <include refid="researchMasterColumns"/>
+        FROM TB_RESEARCH_MST WHERE RESEARCH_NO IN
+        <foreach collection="researchNos" item="researchNo" open="(" separator="," close=")"> #{researchNo} </foreach>
+    </select>
+    <select id="findByCompanyName" resultMap="researchMasterResultMap">
+        SELECT
+        <include refid="researchMasterColumns"/>
+        FROM TB_RESEARCH_MST WHERE COMPANY_NAME = #{companyName} ORDER BY RESEARCH_NO DESC
+    </select>
+    <select id="findPage" resultMap="researchMasterResultMap">
+        <choose>
+            <when test="sort == 'appNewCnt'">
+                SELECT r.RESEARCH_NO, r.RESEARCH_TITLE, r.RESEARCH_CONTENTS, r.ADD_COMMENT, COUNT(a.RESEARCH_NO) AS APP_CNT, COALESCE( SUM( CASE WHEN a.PROVIDE_YN IS NULL OR a.PROVIDE_YN != 'Y' THEN 1 ELSE 0 END ), 0 ) AS APP_NEW_CNT, r.COMPANY_NAME, r.SERVER_NAME, r.CONTACT_NO, r.BROKERAGE_AMT, r.CALCULATE_YN, r.REMARK, r.REGIST_DT, r.MODIFY_DT, r.CLOSE_DATE FROM ( SELECT r.RESEARCH_NO, r.RESEARCH_TITLE, r.RESEARCH_CONTENTS, r.ADD_COMMENT, r.COMPANY_NAME, r.SERVER_NAME, r.CONTACT_NO, r.BROKERAGE_AMT, r.CALCULATE_YN, r.REMARK, r.REGIST_DT, r.MODIFY_DT, r.CLOSE_DATE FROM TB_RESEARCH_MST r WHERE 1 = 1
+                <include refid="researchListCondition"/>
+                ORDER BY r.RESEARCH_NO DESC LIMIT 2000 ) r LEFT JOIN TB_RESEARCH_APP a ON a.RESEARCH_NO = r.RESEARCH_NO GROUP BY r.RESEARCH_NO, r.RESEARCH_TITLE, r.RESEARCH_CONTENTS, r.ADD_COMMENT, r.COMPANY_NAME, r.SERVER_NAME, r.CONTACT_NO, r.BROKERAGE_AMT, r.CALCULATE_YN, r.REMARK, r.REGIST_DT, r.MODIFY_DT, r.CLOSE_DATE ORDER BY CASE WHEN APP_NEW_CNT > 0 THEN 0 ELSE 1 END ASC, APP_NEW_CNT DESC, APP_CNT DESC, r.RESEARCH_NO DESC LIMIT #{limit} OFFSET #{offset}
+            </when>
+            <otherwise>
+                SELECT page.RESEARCH_NO, page.RESEARCH_TITLE, page.RESEARCH_CONTENTS, page.ADD_COMMENT, COALESCE( ( SELECT COUNT(*) FROM TB_RESEARCH_APP a WHERE a.RESEARCH_NO = page.RESEARCH_NO ), 0 ) AS APP_CNT, COALESCE( ( SELECT COUNT(*) FROM TB_RESEARCH_APP a WHERE a.RESEARCH_NO = page.RESEARCH_NO AND (a.PROVIDE_YN IS NULL OR a.PROVIDE_YN != 'Y') ), 0 ) AS APP_NEW_CNT, page.COMPANY_NAME, page.SERVER_NAME, page.CONTACT_NO, page.BROKERAGE_AMT, page.CALCULATE_YN, page.REMARK, page.REGIST_DT, page.MODIFY_DT, page.CLOSE_DATE FROM ( SELECT r.RESEARCH_NO, r.RESEARCH_TITLE, r.RESEARCH_CONTENTS, r.ADD_COMMENT, r.COMPANY_NAME, r.SERVER_NAME, r.CONTACT_NO, r.BROKERAGE_AMT, r.CALCULATE_YN, r.REMARK, r.REGIST_DT, r.MODIFY_DT, r.CLOSE_DATE FROM TB_RESEARCH_MST r WHERE 1 = 1
+                <include refid="researchListCondition"/>
+                <choose>
+                    <when test="sort == 'closeDate'">
+                        <choose>
+                            <when test="sortDirection == 'asc'"> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(r.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(r.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) ASC, r.RESEARCH_NO DESC </when>
+                            <otherwise> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(r.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(r.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) DESC, r.RESEARCH_NO DESC </otherwise>
+                        </choose>
+                    </when>
+                    <when test="sort == 'registDt'">
+                        <choose>
+                            <when test="sortDirection == 'asc'"> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(r.REGIST_DT AS CHAR), '[^0-9]', ''), 14) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(r.REGIST_DT AS CHAR), '[^0-9]', ''), 14) ASC, r.RESEARCH_NO DESC </when>
+                            <otherwise> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(r.REGIST_DT AS CHAR), '[^0-9]', ''), 14) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(r.REGIST_DT AS CHAR), '[^0-9]', ''), 14) DESC, r.RESEARCH_NO DESC </otherwise>
+                        </choose>
+                    </when>
+                    <otherwise> ORDER BY r.RESEARCH_NO DESC </otherwise>
+                </choose>
+                LIMIT #{limit} OFFSET #{offset} ) page
+                <choose>
+                    <when test="sort == 'closeDate'">
+                        <choose>
+                            <when test="sortDirection == 'asc'"> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(page.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(page.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) ASC, page.RESEARCH_NO DESC </when>
+                            <otherwise> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(page.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(page.CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) DESC, page.RESEARCH_NO DESC </otherwise>
+                        </choose>
+                    </when>
+                    <when test="sort == 'registDt'">
+                        <choose>
+                            <when test="sortDirection == 'asc'"> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(page.REGIST_DT AS CHAR), '[^0-9]', ''), 14) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(page.REGIST_DT AS CHAR), '[^0-9]', ''), 14) ASC, page.RESEARCH_NO DESC </when>
+                            <otherwise> ORDER BY CASE WHEN LEFT(REGEXP_REPLACE(CAST(page.REGIST_DT AS CHAR), '[^0-9]', ''), 14) = '' THEN 1 ELSE 0 END ASC, LEFT(REGEXP_REPLACE(CAST(page.REGIST_DT AS CHAR), '[^0-9]', ''), 14) DESC, page.RESEARCH_NO DESC </otherwise>
+                        </choose>
+                    </when>
+                    <otherwise> ORDER BY page.RESEARCH_NO DESC </otherwise>
+                </choose>
+            </otherwise>
+        </choose>
+    </select>
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM TB_RESEARCH_MST r WHERE 1 = 1
+        <include refid="researchListCondition"/>
+    </select>
+    <select id="findNextResearchNo" resultType="long"> SELECT COALESCE(MAX(RESEARCH_NO), 0) + 1 FROM TB_RESEARCH_MST </select>
+    <select id="findClosedResearchNosBefore" resultType="long"> SELECT RESEARCH_NO FROM TB_RESEARCH_MST WHERE LENGTH(LEFT(REGEXP_REPLACE(CAST(CLOSE_DATE AS CHAR), '[^0-9]', ''), 8)) = 8 AND LEFT(REGEXP_REPLACE(CAST(CLOSE_DATE AS CHAR), '[^0-9]', ''), 8) &lt; #{closeDate} </select>
+    <insert id="insert" parameterType="com.researchi.admin.legacy.research.domain.ResearchMaster"> INSERT INTO TB_RESEARCH_MST ( RESEARCH_NO, RESEARCH_TITLE, RESEARCH_CONTENTS, ADD_COMMENT, APP_CNT, APP_NEW_CNT, COMPANY_NAME, SERVER_NAME, CONTACT_NO, BROKERAGE_AMT, CALCULATE_YN, REMARK, REGIST_DT, MODIFY_DT, CLOSE_DATE ) VALUES ( #{researchNo}, #{researchTitle}, #{researchContents}, #{addComment}, 0, 0, #{companyName}, #{serverName}, #{contactNo}, #{brokerageAmt}, #{calculateYn}, #{remark}, DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), #{closeDate} ) </insert>
+    <update id="update" parameterType="com.researchi.admin.legacy.research.domain.ResearchMaster"> UPDATE TB_RESEARCH_MST SET RESEARCH_TITLE = #{researchTitle}, RESEARCH_CONTENTS = #{researchContents}, ADD_COMMENT = #{addComment}, COMPANY_NAME = #{companyName}, SERVER_NAME = #{serverName}, CONTACT_NO = #{contactNo}, BROKERAGE_AMT = #{brokerageAmt}, CALCULATE_YN = #{calculateYn}, REMARK = #{remark}, CLOSE_DATE = #{closeDate}, MODIFY_DT = DATE_FORMAT(NOW(), '%Y%m%d%H%i%s') WHERE RESEARCH_NO = #{researchNo} </update>
+</mapper>

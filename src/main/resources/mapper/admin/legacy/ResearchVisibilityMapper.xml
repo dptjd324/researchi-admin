@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.research.visibility.mapper.ResearchVisibilityMapper">
+
+    <resultMap id="researchVisibilityResultMap" type="com.researchi.admin.legacy.research.domain.ResearchVisibility">
+        <id property="researchNo" column="research_no"/>
+        <result property="hiddenYn" column="hidden_yn"/>
+        <result property="hiddenBy" column="hidden_by"/>
+        <result property="hiddenAt" column="hidden_at"/>
+        <result property="restoredBy" column="restored_by"/>
+        <result property="restoredAt" column="restored_at"/>
+    </resultMap>
+
+    <select id="findByResearchNo" resultMap="researchVisibilityResultMap">
+        SELECT *
+        FROM admin_research_visibility
+        WHERE research_no = #{researchNo}
+    </select>
+
+    <select id="findHiddenResearchNos" resultType="long">
+        SELECT research_no
+        FROM admin_research_visibility
+        WHERE hidden_yn = 'Y'
+        ORDER BY hidden_at DESC, research_no DESC
+    </select>
+
+    <insert id="hide">
+        INSERT INTO admin_research_visibility (
+            research_no,
+            hidden_yn,
+            hidden_by,
+            hidden_at,
+            restored_by,
+            restored_at
+        ) VALUES (
+            #{researchNo},
+            'Y',
+            #{hiddenBy},
+            CURRENT_TIMESTAMP,
+            NULL,
+            NULL
+        )
+        ON DUPLICATE KEY UPDATE
+            hidden_yn = 'Y',
+            hidden_by = VALUES(hidden_by),
+            hidden_at = CURRENT_TIMESTAMP,
+            restored_by = NULL,
+            restored_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <update id="restore">
+        UPDATE admin_research_visibility
+        SET hidden_yn = 'N',
+            restored_by = #{restoredBy},
+            restored_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE research_no = #{researchNo}
+    </update>
+</mapper>

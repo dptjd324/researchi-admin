@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${pageTitle}">제공 대상 미리보기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            color: #111827;
+            background: #ffffff;
+            font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+            font-size: 15px;
+            line-height: 1.55;
+        }
+
+        .preview-head {
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            margin: 0 0 0.75rem;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .summary {
+            margin: 0;
+            color: #4b5563;
+            font-size: 0.92rem;
+        }
+
+        .columns {
+            margin: 0 0 1.6rem;
+            font-weight: 700;
+        }
+
+        .applicant-line {
+            margin: 0 0 1.25rem;
+            white-space: pre-wrap;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+        }
+
+        .empty {
+            padding: 1rem;
+            border: 1px solid #d8e7ef;
+            border-radius: 8px;
+            background: #f8fbff;
+        }
+
+        .success {
+            margin: 0 0 1.5rem;
+            padding: 0.85rem 1rem;
+            border: 1px solid #b7e4c7;
+            border-radius: 8px;
+            color: #0f5132;
+            background: #eaf7ef;
+        }
+
+        .preview-actions {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #d8e7ef;
+        }
+
+        button {
+            min-height: 2.5rem;
+            padding: 0 1rem;
+            border: 0;
+            border-radius: 8px;
+            color: #ffffff;
+            background: #087f73;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="preview-head">
+        <h1 th:text="${research.researchTitle} + ' - 정보 제공 대상'">좌담회/설문 - 정보 제공 대상</h1>
+    </section>
+
+    <p th:if="${param.provided}" class="success">
+        <span th:text="${param.provided[0]}">0</span>
+        <span>건의 정보 제공 상태를 Y로 변경했습니다.</span>
+    </p>
+
+    <p class="columns">성명/성별/생년월일/나이(만)/직업/회사 학교/휴대폰/유선전화/주소/추가기재사항</p>
+
+    <section th:if="${#lists.isEmpty(applications)}" class="empty">
+        정보 제공 대상 신청자가 없습니다.
+    </section>
+
+    <section th:if="${!#lists.isEmpty(applications)}">
+        <p th:each="applicant, applicantStat : ${applications}"
+           class="applicant-line"
+           th:text="${applicantStat.count + '. ' + applicant.providePreviewLine}">1. 신청자 정보</p>
+    </section>
+
+    <form th:if="${!#lists.isEmpty(applications)}"
+          th:action="@{/research/{researchNo}/applications/provide-complete(researchNo=${research.researchNo})}"
+          method="post"
+          class="preview-actions">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button type="submit">제공 상태 변경</button>
+    </form>
+</main>
+<script>
+    (function refreshOpenerAfterProvision() {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('provided')) {
+            return;
+        }
+        if (window.opener && !window.opener.closed) {
+            const openerUrl = new URL(window.opener.location.href);
+            openerUrl.searchParams.set('provided', params.get('provided') || '0');
+            window.opener.location.href = openerUrl.toString();
+        }
+    }());
+</script>
+</body>
+</html>

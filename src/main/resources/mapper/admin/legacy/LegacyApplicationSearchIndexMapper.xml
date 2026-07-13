@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.application.mapper.LegacyApplicationSearchIndexMapper">
+
+    <resultMap id="researchApplicationResultMap" type="com.researchi.admin.legacy.research.domain.ResearchApplication">
+        <id property="researchNo" column="RESEARCH_NO"/>
+        <id property="researchAppSeq" column="RESEARCH_APP_SEQ"/>
+        <result property="appName" column="APP_NAME"/>
+        <result property="appSex" column="APP_SEX"/>
+        <result property="appBirth" column="APP_BIRTH"/>
+        <result property="appAge" column="APP_AGE"/>
+        <result property="appJob" column="APP_JOB"/>
+        <result property="appCompany" column="APP_COMPANY"/>
+        <result property="appHphone" column="APP_HPHONE"/>
+        <result property="appTele" column="APP_TELE"/>
+        <result property="appEmail" column="APP_EMAIL"/>
+        <result property="appAddr" column="APP_ADDR"/>
+        <result property="addComment" column="ADD_COMMENT"/>
+        <result property="attendResearch" column="ATTEND_RESEARCH"/>
+        <result property="provideYn" column="PROVIDE_YN"/>
+        <result property="registDt" column="REGIST_DT"/>
+        <result property="modifyDt" column="MODIFY_DT"/>
+        <result property="blacklistYn" column="BLACKLIST_YN"/>
+    </resultMap>
+
+    <sql id="searchCondition">
+        <if test="search.appName != null and search.appName != ''">
+            AND app_name LIKE CONCAT('%', #{search.appName}, '%')
+        </if>
+        <if test="search.appSex != null and search.appSex != ''">
+            AND app_sex = #{search.appSex}
+        </if>
+        <if test="search.appBirth != null and search.appBirth != ''">
+            AND app_birth LIKE CONCAT('%', #{search.appBirth}, '%')
+        </if>
+        <if test="search.appAge != null and search.appAge != ''">
+            AND app_age LIKE CONCAT('%', #{search.appAge}, '%')
+        </if>
+        <if test="search.appJob != null and search.appJob != ''">
+            AND app_job LIKE CONCAT('%', #{search.appJob}, '%')
+        </if>
+        <if test="search.appCompany != null and search.appCompany != ''">
+            AND app_company LIKE CONCAT('%', #{search.appCompany}, '%')
+        </if>
+        <if test="search.appHphone != null and search.appHphone != ''">
+            AND app_hphone LIKE CONCAT('%', #{search.appHphone}, '%')
+        </if>
+        <if test="search.appTele != null and search.appTele != ''">
+            AND app_tele LIKE CONCAT('%', #{search.appTele}, '%')
+        </if>
+        <if test="search.appEmail != null and search.appEmail != ''">
+            AND app_email LIKE CONCAT('%', #{search.appEmail}, '%')
+        </if>
+        <if test="search.appAddr != null and search.appAddr != ''">
+            AND app_addr LIKE CONCAT('%', #{search.appAddr}, '%')
+        </if>
+        <if test="search.addComment != null and search.addComment != ''">
+            AND add_comment LIKE CONCAT('%', #{search.addComment}, '%')
+        </if>
+        <if test="search.attendResearch != null and search.attendResearch != ''">
+            AND attend_research LIKE CONCAT('%', #{search.attendResearch}, '%')
+        </if>
+        <if test="search.provideYn != null and search.provideYn != ''">
+            AND provide_yn = #{search.provideYn}
+        </if>
+    </sql>
+
+    <sql id="searchIndexColumns">
+        research_no AS RESEARCH_NO,
+        research_app_seq AS RESEARCH_APP_SEQ,
+        app_name AS APP_NAME,
+        app_sex AS APP_SEX,
+        app_birth AS APP_BIRTH,
+        app_age AS APP_AGE,
+        app_job AS APP_JOB,
+        app_company AS APP_COMPANY,
+        app_hphone AS APP_HPHONE,
+        app_tele AS APP_TELE,
+        app_email AS APP_EMAIL,
+        app_addr AS APP_ADDR,
+        add_comment AS ADD_COMMENT,
+        attend_research AS ATTEND_RESEARCH,
+        provide_yn AS PROVIDE_YN,
+        regist_dt AS REGIST_DT,
+        modify_dt AS MODIFY_DT,
+        blacklist_yn AS BLACKLIST_YN
+    </sql>
+
+    <select id="findPage" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="searchIndexColumns"/>
+        FROM admin_legacy_application_search_index
+        WHERE 1 = 1
+        <if test="researchNo != null">
+            AND research_no = #{researchNo}
+        </if>
+        <include refid="searchCondition"/>
+        ORDER BY regist_dt DESC, research_app_seq DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_legacy_application_search_index
+        WHERE 1 = 1
+        <if test="researchNo != null">
+            AND research_no = #{researchNo}
+        </if>
+        <include refid="searchCondition"/>
+    </select>
+
+    <select id="findByResearchNoAndSeq" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="searchIndexColumns"/>
+        FROM admin_legacy_application_search_index
+        WHERE research_no = #{researchNo}
+          AND research_app_seq = #{researchAppSeq}
+        LIMIT 1
+    </select>
+
+    <select id="findByResearchNo" resultMap="researchApplicationResultMap">
+        SELECT
+        <include refid="searchIndexColumns"/>
+        FROM admin_legacy_application_search_index
+        WHERE research_no = #{researchNo}
+    </select>
+
+    <select id="isReady" resultType="boolean">
+        SELECT COUNT(*) &gt; 0
+        FROM admin_legacy_application_search_index_state
+        WHERE index_name = 'application_search'
+          AND status = 'COMPLETE'
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO admin_legacy_application_search_index (
+            research_no,
+            research_app_seq,
+            app_name,
+            app_sex,
+            app_birth,
+            app_age,
+            app_job,
+            app_company,
+            app_hphone,
+            app_tele,
+            app_email,
+            app_addr,
+            add_comment,
+            attend_research,
+            provide_yn,
+            regist_dt,
+            modify_dt,
+            normalized_hphone,
+            normalized_tele,
+            normalized_birth,
+            blacklist_yn,
+            search_text,
+            indexed_at
+        ) VALUES (
+            #{application.researchNo},
+            #{application.researchAppSeq},
+            #{application.appName},
+            #{application.appSex},
+            #{application.appBirth},
+            #{application.appAge},
+            #{application.appJob},
+            #{application.appCompany},
+            #{application.appHphone},
+            #{application.appTele},
+            #{application.appEmail},
+            #{application.appAddr},
+            #{application.addComment},
+            #{application.attendResearch},
+            #{application.provideYn},
+            #{application.registDt},
+            #{application.modifyDt},
+            REPLACE(REPLACE(REPLACE(COALESCE(#{application.appHphone}, ''), '-', ''), ' ', ''), '.', ''),
+            REPLACE(REPLACE(REPLACE(COALESCE(#{application.appTele}, ''), '-', ''), ' ', ''), '.', ''),
+            REPLACE(REPLACE(COALESCE(#{application.appBirth}, ''), '-', ''), '.', ''),
+            COALESCE(#{application.blacklistYn}, 'N'),
+            CONCAT_WS(' ',
+                COALESCE(#{application.appName}, ''),
+                COALESCE(#{application.appSex}, ''),
+                COALESCE(#{application.appBirth}, ''),
+                COALESCE(#{application.appAge}, ''),
+                COALESCE(#{application.appJob}, ''),
+                COALESCE(#{application.appCompany}, ''),
+                COALESCE(#{application.appHphone}, ''),
+                COALESCE(#{application.appTele}, ''),
+                COALESCE(#{application.appEmail}, ''),
+                COALESCE(#{application.appAddr}, ''),
+                COALESCE(#{application.addComment}, ''),
+                COALESCE(#{application.attendResearch}, ''),
+                COALESCE(#{application.provideYn}, '')
+            ),
+            CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+            app_name = VALUES(app_name),
+            app_sex = VALUES(app_sex),
+            app_birth = VALUES(app_birth),
+            app_age = VALUES(app_age),
+            app_job = VALUES(app_job),
+            app_company = VALUES(app_company),
+            app_hphone = VALUES(app_hphone),
+            app_tele = VALUES(app_tele),
+            app_email = COALESCE(VALUES(app_email), app_email),
+            app_addr = VALUES(app_addr),
+            add_comment = VALUES(add_comment),
+            attend_research = VALUES(attend_research),
+            provide_yn = VALUES(provide_yn),
+            regist_dt = VALUES(regist_dt),
+            modify_dt = VALUES(modify_dt),
+            normalized_hphone = VALUES(normalized_hphone),
+            normalized_tele = VALUES(normalized_tele),
+            normalized_birth = VALUES(normalized_birth),
+            blacklist_yn = VALUES(blacklist_yn),
+            search_text = VALUES(search_text),
+            indexed_at = CURRENT_TIMESTAMP
+    </insert>
+</mapper>

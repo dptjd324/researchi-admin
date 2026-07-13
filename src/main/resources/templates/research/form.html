@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel research-edit-page admin-data-page">
+            <div class="dashboard-head">
+                <div>
+                    <h2 class="h3 mb-2">좌담회/설문 등록</h2>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/research}" class="secondary-link">목록</a>
+                </div>
+            </div>
+
+            <form th:action="@{/research}" method="post" th:object="${researchForm}" class="research-edit-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" th:field="*{clientId}" data-research-client-id>
+
+                <div class="research-edit-actions">
+                    <button type="submit">저장</button>
+                    <a th:href="@{/research}" class="secondary-link">목록</a>
+                </div>
+
+                <section class="research-client-helper">
+                    <div>
+                        <span>거래처 선택</span>
+                        <select data-research-client-select>
+                            <option value="">수동 입력 유지</option>
+                            <option th:each="client : ${clientOptions}"
+                                    th:value="${client.id()}"
+                                    th:selected="${researchForm.clientId != null and researchForm.clientId == client.id()}"
+                                    th:text="${client.clientName() + (client.primaryEmail() != null ? ' · ' + client.primaryEmail() : '')}"
+                                    th:attr="data-client-name=${client.clientName()},
+                                             data-contact-name=${client.primaryContactName()},
+                                             data-contact-no=${client.primaryContactNo()},
+                                             data-primary-email=${client.primaryEmail()},
+                                             data-active-emails=${client.emailsSummary()}">거래처</option>
+                        </select>
+                    </div>
+                    <button type="button" class="secondary-link" data-research-client-apply>선택값 적용</button>
+                    <a th:href="@{/clients/new}" class="secondary-link" target="_blank" rel="noopener">거래처 등록</a>
+                    <p class="research-client-helper__message" data-research-client-message hidden>거래처가 변경 또는 등록되었습니다.</p>
+                </section>
+
+                <div class="research-edit-grid">
+                    <label class="research-edit-grid__wide">
+                        <span>좌담/설문 제목</span>
+                        <input type="text" th:field="*{researchTitle}" />
+                        <small th:if="${#fields.hasErrors('researchTitle')}" th:errors="*{researchTitle}">제목을 입력해 주세요.</small>
+                    </label>
+                    <label>
+                        <span>회사명</span>
+                        <input type="text" th:field="*{companyName}" />
+                    </label>
+                    <label>
+                        <span>담당자명</span>
+                        <input type="text" th:field="*{serverName}" />
+                    </label>
+                    <label>
+                        <span>담당자연락처</span>
+                        <input type="text" th:field="*{contactNo}" />
+                    </label>
+                    <label>
+                        <span>소개비</span>
+                        <input type="text" th:field="*{brokerageAmt}" />
+                    </label>
+                    <label>
+                        <span>정산여부</span>
+                        <select th:field="*{calculateYn}">
+                            <option value="N">미정산</option>
+                            <option value="Y">정산</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>기타(이메일)</span>
+                        <input type="text" th:field="*{remark}" />
+                    </label>
+                    <label>
+                        <span>마감일자</span>
+                        <input type="text" th:field="*{closeDate}" placeholder="20260509" class="research-date-input" />
+                        <small th:if="${#fields.hasErrors('closeDate')}" th:errors="*{closeDate}">마감일자를 입력해 주세요.</small>
+                    </label>
+                </div>
+
+                <label class="research-edit-block">
+                    <span>좌담/설문 내용</span>
+                    <textarea th:field="*{researchContents}" rows="14"></textarea>
+                </label>
+
+                <label class="research-edit-block">
+                    <span>좌담/설문 추가 기재사항</span>
+                    <textarea th:field="*{addComment}" rows="8"
+                              placeholder="[그룹명]&#10;1. 질문 내용&#10;2. 질문 내용&#10;&#10;[다른 그룹명]&#10;1. 질문 내용"></textarea>
+                    <small>그룹이 2개 이상이면 [그룹명] 아래에 번호 목록으로 작성하세요. 그룹이 하나면 번호 목록 또는 기존 / 구분 입력도 사용할 수 있습니다.</small>
+                </label>
+            </form>
+        </section>
+
+        <style>
+            .research-client-helper {
+                display: grid;
+                grid-template-columns: minmax(260px, 1fr) auto auto;
+                gap: 0.65rem;
+                align-items: end;
+                border: 1px solid #d4e1ef;
+                border-radius: 8px;
+                background: #fbfdff;
+                padding: 0.85rem;
+            }
+
+            .research-client-helper > div {
+                display: grid;
+                gap: 0.3rem;
+            }
+
+            .research-client-helper span {
+                color: #1490be;
+                font-weight: 700;
+            }
+
+            .research-client-helper select {
+                width: 100%;
+            }
+
+            .research-client-helper p {
+                grid-column: 1 / -1;
+                margin: 0;
+                color: #64748b;
+                font-size: 0.9rem;
+            }
+
+            .research-client-helper__message {
+                color: #007b72 !important;
+                font-weight: 700;
+            }
+
+            @media (max-width: 860px) {
+                .research-client-helper {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <script>
+            document.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-research-client-apply]');
+                if (!button) {
+                    return;
+                }
+                const helper = button.closest('.research-client-helper');
+                const select = helper ? helper.querySelector('[data-research-client-select]') : null;
+                const option = select ? select.options[select.selectedIndex] : null;
+                if (!option || !option.value) {
+                    return;
+                }
+                setResearchClientValue('companyName', option.dataset.clientName);
+                setResearchClientValue('serverName', option.dataset.contactName);
+                setResearchClientValue('contactNo', option.dataset.contactNo);
+                setResearchClientValue('remark', option.dataset.activeEmails || option.dataset.primaryEmail);
+                setResearchClientId(helper, option.value);
+                showResearchClientMessage(helper);
+            });
+
+            function setResearchClientId(helper, value) {
+                const form = helper ? helper.closest('form') : null;
+                const field = form ? form.querySelector('[data-research-client-id]') : null;
+                if (field) {
+                    field.value = value || '';
+                }
+            }
+
+            function setResearchClientValue(fieldId, value) {
+                const field = document.getElementById(fieldId);
+                if (field && value) {
+                    field.value = value;
+                }
+            }
+
+            function showResearchClientMessage(helper) {
+                const message = helper ? helper.querySelector('[data-research-client-message]') : null;
+                if (!message) {
+                    return;
+                }
+                message.hidden = false;
+                window.clearTimeout(message.dataset.hideTimer);
+                const timer = window.setTimeout(function () {
+                    message.hidden = true;
+                    delete message.dataset.hideTimer;
+                }, 2500);
+                message.dataset.hideTimer = String(timer);
+            }
+        </script>
+
+    </th:block>
+</th:block>
+</html>

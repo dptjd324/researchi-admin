@@ -77,6 +77,9 @@ public record  MailingHistoryItem(
         if (!summary.isBlank()) {
             return summary;
         }
+        if (sendJob != null && "NO_TARGETS".equalsIgnoreCase(sendJob.getSendStatus())) {
+            return "예약 시각에 정보 제공 상태가 N인 발송 대상 신청자가 없어 발송하지 않았습니다.";
+        }
         if (failed()) {
             return "발송 가능한 지원자(PROVIDE_YN=N)가 없거나 발송 처리 중 오류가 발생했습니다.";
         }

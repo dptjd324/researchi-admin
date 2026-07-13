@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.mail.mapper.LegacyMailRuleMapper">
+
+    <resultMap id="legacyMailRuleResultMap" type="com.researchi.admin.legacy.mail.domain.LegacyMailRule">
+        <id property="id" column="id"/>
+        <result property="researchNo" column="research_no"/>
+        <result property="thresholdCount" column="threshold_count"/>
+        <result property="templateId" column="template_id"/>
+        <result property="directMailSubject" column="direct_mail_subject"/>
+        <result property="directMailBody" column="direct_mail_body"/>
+        <result property="attachmentType" column="attachment_type"/>
+        <result property="enabledYn" column="enabled_yn"/>
+        <result property="lastTriggeredAt" column="last_triggered_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByResearchNo" resultMap="legacyMailRuleResultMap">
+        SELECT *
+        FROM admin_legacy_mail_rule
+        WHERE research_no = #{researchNo}
+        LIMIT 1
+    </select>
+
+    <select id="findEnabled" resultMap="legacyMailRuleResultMap">
+        SELECT *
+        FROM admin_legacy_mail_rule
+        WHERE enabled_yn = 'Y'
+        ORDER BY research_no DESC
+    </select>
+
+    <select id="findRuleItemById" resultMap="legacyMailRuleResultMap">
+        SELECT *
+        FROM admin_legacy_mail_rule_item
+        WHERE id = #{id}
+    </select>
+
+    <select id="findEnabledRuleItems" resultMap="legacyMailRuleResultMap">
+        SELECT *
+        FROM admin_legacy_mail_rule_item
+        WHERE enabled_yn = 'Y'
+        ORDER BY research_no DESC, threshold_count ASC, id ASC
+    </select>
+
+    <select id="findRuleItemsByResearchNo" resultMap="legacyMailRuleResultMap">
+        SELECT *
+        FROM admin_legacy_mail_rule_item
+        WHERE research_no = #{researchNo}
+          AND enabled_yn = 'Y'
+        ORDER BY threshold_count ASC, id ASC
+    </select>
+
+    <insert id="upsert" parameterType="com.researchi.admin.legacy.mail.domain.LegacyMailRule">
+        INSERT INTO admin_legacy_mail_rule (
+            research_no,
+            threshold_count,
+            template_id,
+            direct_mail_subject,
+            direct_mail_body,
+            attachment_type,
+            enabled_yn,
+            updated_at
+        ) VALUES (
+            #{researchNo},
+            #{thresholdCount},
+            #{templateId},
+            #{directMailSubject},
+            #{directMailBody},
+            #{attachmentType},
+            #{enabledYn},
+            CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+            threshold_count = VALUES(threshold_count),
+            template_id = VALUES(template_id),
+            direct_mail_subject = VALUES(direct_mail_subject),
+            direct_mail_body = VALUES(direct_mail_body),
+            attachment_type = VALUES(attachment_type),
+            enabled_yn = VALUES(enabled_yn),
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <insert id="insertRuleItem" parameterType="com.researchi.admin.legacy.mail.domain.LegacyMailRule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_legacy_mail_rule_item (
+            research_no,
+            threshold_count,
+            template_id,
+            direct_mail_subject,
+            direct_mail_body,
+            attachment_type,
+            enabled_yn,
+            updated_at
+        ) VALUES (
+            #{researchNo},
+            #{thresholdCount},
+            #{templateId},
+            #{directMailSubject},
+            #{directMailBody},
+            #{attachmentType},
+            #{enabledYn},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <delete id="deleteRuleItem">
+        DELETE FROM admin_legacy_mail_rule_item
+        WHERE id = #{id}
+          AND research_no = #{researchNo}
+    </delete>
+
+    <update id="disableByResearchNo">
+        UPDATE admin_legacy_mail_rule
+        SET
+            threshold_count = NULL,
+            enabled_yn = 'N',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE research_no = #{researchNo}
+    </update>
+
+    <update id="completeByResearchNo">
+        UPDATE admin_legacy_mail_rule
+        SET
+            threshold_count = NULL,
+            enabled_yn = 'N',
+            last_triggered_at = #{lastTriggeredAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE research_no = #{researchNo}
+    </update>
+
+    <update id="completeRuleItemById">
+        UPDATE admin_legacy_mail_rule_item
+        SET
+            enabled_yn = 'N',
+            last_triggered_at = #{lastTriggeredAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="touchLastTriggeredAt">
+        UPDATE admin_legacy_mail_rule
+        SET
+            last_triggered_at = #{lastTriggeredAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE research_no = #{researchNo}
+    </update>
+
+    <update id="touchRuleItemLastTriggeredAt">
+        UPDATE admin_legacy_mail_rule_item
+        SET
+            last_triggered_at = #{lastTriggeredAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

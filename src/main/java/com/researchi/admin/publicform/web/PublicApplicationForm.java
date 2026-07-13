@@ -14,7 +14,7 @@ import java.util.List;
 public class PublicApplicationForm {
 
     @NotBlank(message = "성명을 입력해주세요.")
-    @Size(max = 100, message = "성명은 100자 이하여야 합니다.")
+    @Size(max = 30, message = "이름은 30자 이하로 입력해주세요.")
     private String applicantName;
 
     @NotBlank(message = "성별을 입력해주세요.")
@@ -64,6 +64,7 @@ public class PublicApplicationForm {
 
     private Boolean notifyEmailYn = Boolean.FALSE;
     private Boolean notifySmsYn = Boolean.FALSE;
+    private Boolean futureRecruitmentYn = Boolean.FALSE;
     private Boolean notifyKeywordYn = Boolean.FALSE;
     private Boolean provideYn = Boolean.FALSE;
     private String captchaAnswer;
@@ -205,6 +206,14 @@ public class PublicApplicationForm {
         this.notifySmsYn = notifySmsYn;
     }
 
+    public Boolean getFutureRecruitmentYn() {
+        return futureRecruitmentYn;
+    }
+
+    public void setFutureRecruitmentYn(Boolean futureRecruitmentYn) {
+        this.futureRecruitmentYn = futureRecruitmentYn;
+    }
+
     public Boolean getNotifyKeywordYn() {
         return notifyKeywordYn;
     }
@@ -224,6 +233,13 @@ public class PublicApplicationForm {
     @AssertTrue(message = "개인정보 수집 및 이용 동의가 필요합니다.")
     public boolean isProvideYnAccepted() {
         return Boolean.TRUE.equals(provideYn);
+    }
+
+    @AssertTrue(message = "향후 모집에 동의하는 경우 SMS 또는 이메일 중 최소 한 가지 수신 방법을 선택해 주세요.")
+    public boolean isFutureRecruitmentChannelAccepted() {
+        boolean futureRecruitment = Boolean.TRUE.equals(futureRecruitmentYn);
+        boolean channelSelected = Boolean.TRUE.equals(notifySmsYn) || Boolean.TRUE.equals(notifyEmailYn);
+        return futureRecruitment == channelSelected;
     }
 
     public String getCaptchaAnswer() {

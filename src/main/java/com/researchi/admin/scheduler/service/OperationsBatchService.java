@@ -5,6 +5,8 @@ import com.researchi.admin.legacy.matching.service.LegacyMatchingService;
 import com.researchi.admin.mailing.domain.AdminMailSendJob;
 import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
 import com.researchi.admin.scheduler.config.SchedulerProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,8 @@ import java.time.LocalDateTime;
 
 @Service
 public class OperationsBatchService {
+
+    private static final Logger log = LoggerFactory.getLogger(OperationsBatchService.class);
 
     private final SchedulerProperties schedulerProperties;
     private final AdminMailSendJobMapper adminMailSendJobMapper;
@@ -44,8 +48,15 @@ public class OperationsBatchService {
                 if (legacyResearchMailService.executeScheduledSend(sendJob.getId())) {
                     executed++;
                 }
-            } catch (RuntimeException ignored) {
-                // Continue processing later due jobs even if one scheduled mail job is broken.
+            } catch (RuntimeException ex) {
+                log.warn(
+                        "Scheduled mail batch failed for sendJobId={}, researchNo={}, scheduledAt={}, triggerType={}",
+                        sendJob.getId(),
+                        sendJob.getResearchNo(),
+                        sendJob.getScheduledAt(),
+                        sendJob.getTriggerType(),
+                        ex
+                );
             }
         }
         return executed;
@@ -64,8 +75,8 @@ public class OperationsBatchService {
                 if (legacyResearchMailService.triggerThresholdAutomatically(researchNo)) {
                     executed++;
                 }
-            } catch (RuntimeException ignored) {
-                // Keep legacy threshold jobs from blocking the existing threshold batch.
+            } catch (RuntimeException ex) {
+                log.warn("Threshold mail batch failed for researchNo={}", researchNo, ex);
             }
         }
         for (Long ruleId : legacyResearchMailService.getEnabledThresholdRuleIds()) {
@@ -73,8 +84,8 @@ public class OperationsBatchService {
                 if (legacyResearchMailService.triggerThresholdRuleAutomatically(ruleId)) {
                     executed++;
                 }
-            } catch (RuntimeException ignored) {
-                // Keep additional legacy threshold rules from blocking the batch.
+            } catch (RuntimeException ex) {
+                log.warn("Threshold rule mail batch failed for ruleId={}", ruleId, ex);
             }
         }
         return executed;

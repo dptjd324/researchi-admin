@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel admin-data-page legacy-matching-history-page">
+            <div class="dashboard-head">
+                <div>
+                    <h2 class="h3 mb-2">매칭 작업 이력</h2>
+                    <p class="dashboard-copy mb-0" th:text="${research.researchTitle}">Research title</p>
+                    <p class="dashboard-copy matching-retention-copy">보관 정책: 매칭/발송 요약 이력은 유지하고, 마감된 공고의 상세 매칭 결과만 정리합니다.</p>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/research/{researchNo}/matching(researchNo=${research.researchNo})}" class="secondary-link">매칭</a>
+                    <a th:href="@{/research/{researchNo}(researchNo=${research.researchNo})}" class="secondary-link">좌담회/설문 상세</a>
+                    <a th:href="@{/research}" class="secondary-link">목록</a>
+                </div>
+            </div>
+
+            <div class="history-section">
+                <h3>매칭 결과 작업</h3>
+                <div class="table-responsive">
+                    <table class="table admin-data-table matching-history-table matching-history-table--jobs">
+                        <colgroup>
+                            <col class="col-no">
+                            <col class="col-status">
+                            <col class="col-keyword">
+                            <col class="col-keyword">
+                            <col class="col-count">
+                            <col class="col-count">
+                            <col class="col-count">
+                            <col class="col-date">
+                            <col class="col-date">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>상태</th>
+                            <th>포함 키워드</th>
+                            <th>제외 키워드</th>
+                            <th>후보</th>
+                            <th>결과</th>
+                            <th>블랙 제외</th>
+                            <th>요청</th>
+                            <th>완료</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="job : ${history.matchingJobs()}">
+                            <td class="cell-number" th:text="${job.id}">1</td>
+                            <td class="cell-status"><span class="status-chip" th:text="${job.status}">COMPLETED</span></td>
+                            <td class="cell-keyword" th:text="${job.displayIncludeKeywordText ?: '-'}">-</td>
+                            <td class="cell-keyword" th:text="${job.excludeKeywordText ?: '-'}">-</td>
+                            <td class="cell-number" th:text="${job.candidatePoolCount ?: 0}">0</td>
+                            <td class="cell-number" th:text="${job.matchedCount ?: 0}">0</td>
+                            <td class="cell-number" th:text="${job.blacklistedExcludedCount ?: 0}">0</td>
+                            <td class="cell-date" th:text="${job.requestedAt != null ? #temporals.format(job.requestedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                            <td class="cell-date" th:text="${job.finishedAt != null ? #temporals.format(job.finishedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(history.matchingJobs())}">
+                            <td colspan="9" class="empty-cell">매칭 결과 작업 이력이 없습니다.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="history-section">
+                <h3>알림 발송 이력</h3>
+                <div class="table-responsive">
+                    <table class="table admin-data-table matching-history-table matching-history-table--notifications">
+                        <colgroup>
+                            <col class="col-channel">
+                            <col class="col-count">
+                            <col class="col-count">
+                            <col class="col-count">
+                            <col class="col-date">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>발송 성공</th>
+                            <th>중복 제외</th>
+                            <th>실패</th>
+                            <th>최근 발송</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="summary : ${history.notificationSummaries()}">
+                            <td class="cell-channel" th:text="${summary.channelLabel()}">SMS</td>
+                            <td class="cell-number" th:text="${summary.sentCount ?: 0}">0</td>
+                            <td class="cell-number" th:text="${summary.skippedDuplicateCount ?: 0}">0</td>
+                            <td class="cell-number" th:text="${summary.failedCount ?: 0}">0</td>
+                            <td class="cell-date" th:text="${summary.latestCreatedAt != null ? #temporals.format(summary.latestCreatedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(history.notificationSummaries())}">
+                            <td colspan="5" class="empty-cell">알림 발송 이력이 없습니다.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="history-section">
+                <h3>회차 실행 로그</h3>
+                <div class="table-responsive">
+                    <table class="table admin-data-table matching-history-table matching-history-table--index">
+                        <colgroup>
+                            <col class="col-no">
+                            <col class="col-cycle">
+                            <col class="col-status">
+                            <col class="col-keyword">
+                            <col class="col-keyword">
+                            <col class="col-period">
+                            <col class="col-limit">
+                            <col class="col-count">
+                            <col class="col-count">
+                            <col class="col-count">
+                            <col class="col-date">
+                            <col class="col-date">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>회차</th>
+                            <th>상태</th>
+                            <th>포함 키워드</th>
+                            <th>제외 키워드</th>
+                            <th>기간</th>
+                            <th>한도</th>
+                            <th>처리</th>
+                            <th>키워드</th>
+                            <th>기존 제외</th>
+                            <th>요청</th>
+                            <th>완료</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="job : ${history.indexJobs()}">
+                            <td class="cell-number" th:text="${job.id}">1</td>
+                            <td class="cell-number" th:text="${job.cycleNo ?: '-'}">1</td>
+                            <td class="cell-status"><span class="status-chip" th:text="${job.status}">COMPLETED</span></td>
+                            <td class="cell-keyword" th:text="${job.displayIncludeKeywordText ?: '-'}">-</td>
+                            <td class="cell-keyword" th:text="${job.excludeKeywordText ?: '-'}">-</td>
+                            <td class="cell-number" th:text="|${job.appliedYears ?: 2}년|">2년</td>
+                            <td class="cell-number" th:text="${job.indexLimit ?: 0}">0</td>
+                            <td class="cell-number" th:text="${job.indexedApplicationCount ?: 0}">0</td>
+                            <td class="cell-number" th:text="${job.insertedKeywordCount ?: 0}">0</td>
+                            <td class="cell-number" th:text="${job.skippedAlreadyIndexedCount ?: 0}">0</td>
+                            <td class="cell-date" th:text="${job.requestedAt != null ? #temporals.format(job.requestedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                            <td class="cell-date" th:text="${job.finishedAt != null ? #temporals.format(job.finishedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(history.indexJobs())}">
+                            <td colspan="12" class="empty-cell">회차 실행 로그가 없습니다.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <style>
+            .legacy-matching-history-page {
+                padding: 1.35rem;
+            }
+
+            .history-section {
+                margin-top: 1rem;
+                border-top: 2px solid #9fd1ec;
+                padding-top: 0.8rem;
+            }
+
+            .matching-retention-copy {
+                margin: 0.35rem 0 0;
+                color: #64748b;
+            }
+
+            .history-section h3 {
+                margin: 0 0 0.7rem;
+                color: #003253;
+                font-size: 1.05rem;
+            }
+
+            .matching-history-table {
+                width: 100%;
+                min-width: 960px;
+                table-layout: fixed;
+            }
+
+            .matching-history-table th,
+            .matching-history-table td {
+                vertical-align: middle;
+                white-space: nowrap;
+            }
+
+            .matching-history-table th,
+            .matching-history-table td {
+                text-align: center;
+            }
+
+            .matching-history-table .cell-keyword {
+                text-align: left;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .matching-history-table .cell-date,
+            .matching-history-table .cell-number {
+                font-variant-numeric: tabular-nums;
+            }
+
+            .matching-history-table--jobs .col-no { width: 4rem; }
+            .matching-history-table--jobs .col-status { width: 8rem; }
+            .matching-history-table--jobs .col-keyword { width: 18%; }
+            .matching-history-table--jobs .col-count { width: 6.5rem; }
+            .matching-history-table--jobs .col-date { width: 14rem; }
+
+            .matching-history-table--notifications .col-channel { width: 10rem; }
+            .matching-history-table--notifications .col-count { width: 12rem; }
+            .matching-history-table--notifications .col-date { width: 22rem; }
+
+            .matching-history-table--index {
+                min-width: 1120px;
+            }
+
+            .matching-history-table--index .col-no { width: 4rem; }
+            .matching-history-table--index .col-cycle { width: 4.5rem; }
+            .matching-history-table--index .col-status { width: 8rem; }
+            .matching-history-table--index .col-keyword { width: 13%; }
+            .matching-history-table--index .col-period { width: 5rem; }
+            .matching-history-table--index .col-limit,
+            .matching-history-table--index .col-count { width: 5rem; }
+            .matching-history-table--index .col-date { width: 13.5rem; }
+
+            .status-chip {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 5.25rem;
+                min-height: 1.55rem;
+                padding: 0.15rem 0.5rem;
+                border-radius: 999px;
+                background: #eef6fb;
+                color: #075985;
+                font-weight: 700;
+                font-size: 0.82rem;
+            }
+
+            .empty-cell {
+                text-align: center;
+                color: #64748b;
+                padding: 1.2rem;
+            }
+
+            @media (max-width: 900px) {
+                .matching-history-table {
+                    min-width: 920px;
+                }
+            }
+        </style>
+    </th:block>
+</th:block>
+</html>

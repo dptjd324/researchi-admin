@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel admin-data-page duplicate-diagnostic-page">
+            <div class="dashboard-head">
+                <div>
+                    <h2 class="h3 mb-2">중복 신청자 진단</h2>
+                    <p class="dashboard-copy mb-0" th:text="${research.researchTitle}">Research title</p>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/research/{researchNo}/applications(researchNo=${research.researchNo})}" class="secondary-link">신청자</a>
+                    <a th:href="@{/research/{researchNo}(researchNo=${research.researchNo})}" class="secondary-link">좌담회/설문 상세</a>
+                    <a th:href="@{/research}" class="secondary-link">전체좌담회</a>
+                </div>
+            </div>
+
+            <div class="notice">
+                기존 DB에서 같은 <strong>RESEARCH_NO + RESEARCH_APP_SEQ</strong> 조합이 2건 이상인 항목만 표시합니다. 이 화면에서는 데이터를 삭제하거나 병합하지 않습니다.
+            </div>
+
+            <div class="applicant-summary">
+                <div class="applicant-summary__metrics">
+                    <span class="summary-metric">
+                        <strong th:text="${totalItemCount}">0</strong>
+                        <span>개 중복 키</span>
+                    </span>
+                    <span class="summary-metric">
+                        <strong th:text="${research.appNewCnt != null ? research.appNewCnt : 0}">0</strong>
+                        <span>미제공</span>
+                    </span>
+                    <span class="summary-metric">
+                        <strong th:text="${research.appCnt != null ? research.appCnt : 0}">0</strong>
+                        <span>전체 신청</span>
+                    </span>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(duplicateGroups)}" class="note">
+                현재 좌담회/설문에는 중복된 신청자 키가 없습니다.
+            </div>
+
+            <div class="table-responsive applicant-table-wrap" th:if="${!#lists.isEmpty(duplicateGroups)}">
+                <table class="table align-middle admin-data-table duplicate-diagnostic-table">
+                    <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>RESEARCH_APP_SEQ</th>
+                        <th>중복 수</th>
+                        <th>성명</th>
+                        <th>휴대폰</th>
+                        <th>생년월일</th>
+                        <th>제공</th>
+                        <th>최초 등록</th>
+                        <th>최근 수정</th>
+                        <th>확인</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="group, groupStat : ${duplicateGroups}">
+                        <td class="number-cell" th:text="${groupStat.count}">1</td>
+                        <td class="mono-cell" th:text="${group.researchAppSeq}">101</td>
+                        <td><span class="state-chip state-chip--warn" th:text="${group.duplicateCount}">2</span></td>
+                        <td th:text="${group.appNames ?: '-'}">홍길동</td>
+                        <td th:text="${group.appHphones ?: '-'}">010</td>
+                        <td th:text="${group.appBirths ?: '-'}">900101</td>
+                        <td><span class="state-chip state-chip--provide" th:text="${group.provideYns ?: '-'}">N</span></td>
+                        <td class="mono-cell" th:text="${group.firstRegistDt ?: '-'}">20260517</td>
+                        <td class="mono-cell" th:text="${group.lastModifyDt ?: '-'}">20260517</td>
+                        <td>
+                            <a th:href="@{/research/{researchNo}/applications/{researchAppSeq}(researchNo=${research.researchNo}, researchAppSeq=${group.researchAppSeq})}"
+                               class="secondary-link">상세</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <style>
+            .duplicate-diagnostic-page {
+                padding: 1.35rem;
+            }
+
+            .duplicate-diagnostic-table th,
+            .duplicate-diagnostic-table td {
+                white-space: nowrap;
+            }
+
+            .duplicate-diagnostic-table td:nth-child(4),
+            .duplicate-diagnostic-table td:nth-child(5),
+            .duplicate-diagnostic-table td:nth-child(6) {
+                white-space: normal;
+                min-width: 150px;
+            }
+
+            .state-chip--warn {
+                background: #ffe6bd;
+                color: #9a5b00;
+            }
+        </style>
+    </th:block>
+</th:block>
+</html>

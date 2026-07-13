@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel legacy-blacklist-form-page">
+            <div class="dashboard-head">
+                <div>
+                    <h2 class="h3 mb-2" th:if="${form.blacklistNo == null}">블랙리스트 등록</h2>
+                    <h2 class="h3 mb-2" th:if="${form.blacklistNo != null}">블랙리스트 수정</h2>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/legacy-blacklist}" class="secondary-link">목록</a>
+                </div>
+            </div>
+
+            <form th:action="@{/legacy-blacklist}" method="post" th:object="${form}" class="legacy-blacklist-edit-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" th:field="*{blacklistNo}" />
+
+                <div class="legacy-blacklist-edit-grid">
+                    <label>
+                        <span>성명</span>
+                        <input type="text" th:field="*{blackUserName}" />
+                        <small th:if="${#fields.hasErrors('blackUserName')}" th:errors="*{blackUserName}">Name is required.</small>
+                    </label>
+                    <label>
+                        <span>생년월일</span>
+                        <input type="text" th:field="*{blackUserBirth}" />
+                    </label>
+                    <label>
+                        <span>연락처</span>
+                        <input type="text" th:field="*{blackUserContact}" />
+                    </label>
+                    <label>
+                        <span>블랙여부</span>
+                        <select th:field="*{blackYn}">
+                            <option value="Y">Y</option>
+                            <option value="N">N</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="legacy-blacklist-edit-comment">
+                    <span>기타</span>
+                    <textarea th:field="*{blackUserComment}" rows="8"></textarea>
+                </label>
+
+                <div class="actions">
+                    <button type="submit">저장</button>
+                    <button th:if="${form.blacklistNo != null}"
+                            type="submit"
+                            th:formaction="@{/legacy-blacklist/{blacklistNo}/delete(blacklistNo=${form.blacklistNo})}"
+                            onclick="return confirm('이 블랙리스트 정보를 삭제할까요?');">삭제</button>
+                    <a th:href="@{/legacy-blacklist}" class="secondary-link">목록</a>
+                </div>
+            </form>
+        </section>
+
+        <style>
+            .legacy-blacklist-form-page {
+                padding: 1.35rem;
+            }
+
+            .legacy-blacklist-edit-form {
+                margin-top: 1rem;
+                border-top: 2px solid #9fd1ec;
+                padding-top: 1rem;
+            }
+
+            .legacy-blacklist-edit-grid {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(120px, 1fr));
+                gap: 0.75rem;
+            }
+
+            .legacy-blacklist-edit-form label {
+                display: grid;
+                gap: 0.35rem;
+            }
+
+            .legacy-blacklist-edit-form span {
+                color: #1490be;
+                font-weight: 700;
+            }
+
+            .legacy-blacklist-edit-form input,
+            .legacy-blacklist-edit-form select,
+            .legacy-blacklist-edit-form textarea {
+                border: 1px solid #c8d8ea;
+                border-radius: 8px;
+                background: #fff;
+            }
+
+            .legacy-blacklist-edit-form input,
+            .legacy-blacklist-edit-form select {
+                min-height: 40px;
+            }
+
+            .legacy-blacklist-edit-form textarea {
+                min-height: 220px;
+                resize: vertical;
+            }
+
+            .legacy-blacklist-edit-form small {
+                color: #d23b4d;
+            }
+
+            .legacy-blacklist-edit-comment {
+                margin-top: 0.9rem;
+            }
+
+            @media (max-width: 900px) {
+                .legacy-blacklist-edit-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </th:block>
+</th:block>
+</html>

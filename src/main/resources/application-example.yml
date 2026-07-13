@@ -25,12 +25,14 @@ spring:
     admin:
       driver-class-name: com.mysql.cj.jdbc.Driver
       jdbc-url: jdbc:mysql://localhost:3306/researchi_admin?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      connection-init-sql: "SET time_zone = '+09:00'"
       username: your_admin_db_username
       password: your_admin_db_password
 
     old-admin:
       driver-class-name: com.mysql.cj.jdbc.Driver
       jdbc-url: jdbc:mysql://localhost:3306/admin_copy?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      connection-init-sql: "SET time_zone = '+09:00'"
       username: your_old_admin_db_username
       password: your_old_admin_db_password
 

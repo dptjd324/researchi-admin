@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.publish.mapper.ManualPublishLogMapper">
+
+    <resultMap id="manualPublishLogResultMap" type="com.researchi.admin.legacy.publish.domain.ManualPublishLog">
+        <id property="id" column="id"/>
+        <result property="researchNo" column="research_no"/>
+        <result property="generatedTitle" column="generated_title"/>
+        <result property="generatedBody" column="generated_body"/>
+        <result property="publishStatus" column="publish_status"/>
+        <result property="publicDocumentSrl" column="public_document_srl"/>
+        <result property="publishedBy" column="published_by"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findLatestByResearchNo" resultMap="manualPublishLogResultMap">
+        SELECT
+            id,
+            research_no,
+            generated_title,
+            generated_body,
+            publish_status,
+            public_document_srl,
+            published_by,
+            published_at,
+            created_at,
+            updated_at
+        FROM admin_manual_publish_log
+        WHERE research_no = #{researchNo}
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.legacy.publish.domain.ManualPublishLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_manual_publish_log (
+            research_no,
+            generated_title,
+            generated_body,
+            publish_status,
+            public_document_srl,
+            published_by
+        ) VALUES (
+            #{researchNo},
+            #{generatedTitle},
+            #{generatedBody},
+            #{publishStatus},
+            #{publicDocumentSrl},
+            #{publishedBy}
+        )
+    </insert>
+</mapper>

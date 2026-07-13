@@ -32,4 +32,43 @@ class PublicApplicationFormValidationTest {
                         "provideYnAccepted"
                 );
     }
+
+    @Test
+    void optionalRecruitmentAndChannelConsentsDoNotCreateValidationErrors() {
+        PublicApplicationForm form = new PublicApplicationForm();
+        form.setFutureRecruitmentYn(false);
+        form.setNotifySmsYn(false);
+        form.setNotifyEmailYn(false);
+
+        Set<ConstraintViolation<PublicApplicationForm>> violations = validator.validate(form);
+
+        assertThat(violations).extracting(violation -> violation.getPropertyPath().toString())
+                .doesNotContain("futureRecruitmentYn", "notifySmsYn", "notifyEmailYn");
+    }
+
+    @Test
+    void futureRecruitmentRequiresAtLeastOneChannelAndRejectsOrphanChannelConsent() {
+        PublicApplicationForm form = new PublicApplicationForm();
+        form.setFutureRecruitmentYn(true);
+
+        assertThat(validator.validate(form)).extracting(violation -> violation.getPropertyPath().toString())
+                .contains("futureRecruitmentChannelAccepted");
+
+        form.setNotifySmsYn(true);
+        assertThat(validator.validate(form)).extracting(violation -> violation.getPropertyPath().toString())
+                .doesNotContain("futureRecruitmentChannelAccepted");
+
+        form.setNotifySmsYn(false);
+        form.setNotifyEmailYn(true);
+        assertThat(validator.validate(form)).extracting(violation -> violation.getPropertyPath().toString())
+                .doesNotContain("futureRecruitmentChannelAccepted");
+
+        form.setNotifySmsYn(true);
+        assertThat(validator.validate(form)).extracting(violation -> violation.getPropertyPath().toString())
+                .doesNotContain("futureRecruitmentChannelAccepted");
+
+        form.setFutureRecruitmentYn(false);
+        assertThat(validator.validate(form)).extracting(violation -> violation.getPropertyPath().toString())
+                .contains("futureRecruitmentChannelAccepted");
+    }
 }

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel research-edit-page admin-data-page legacy-mail-page">
+            <div class="dashboard-head">
+                <div>
+                    <h2 class="h3 mb-2">좌담회/설문 메일 발송</h2>
+                    <p class="dashboard-copy mb-0" th:text="${'CODE ' + research.researchNo + ' | ' + research.researchTitle}">CODE</p>
+                </div>
+                <div class="dashboard-actions">
+                    <a th:href="@{/research/{researchNo}/applications(researchNo=${research.researchNo})}" class="secondary-link">신청자 조회</a>
+                    <a th:href="@{/research/{researchNo}(researchNo=${research.researchNo})}" class="secondary-link">상세</a>
+                    <a th:href="@{/research}" class="secondary-link">목록</a>
+                </div>
+            </div>
+
+            <div th:if="${param.sent}" class="notice success">
+                <span>메일을 발송했습니다.</span>
+                <span th:if="${param.provided}">
+                    정보 제공 완료 처리
+                    <strong th:text="${param.provided[0]}">0</strong>건
+                </span>
+            </div>
+            <div th:if="${param.scheduled}" class="notice success">예약 메일을 등록했습니다.</div>
+            <div th:if="${param.scheduledCancelled}" class="notice success">예약 메일을 취소했습니다.</div>
+            <div th:if="${param.thresholdSaved}" class="notice success">임계치 메일 설정을 저장했습니다.</div>
+            <div th:if="${param.thresholdRuleAdded}" class="notice success">추가 임계치 규칙을 등록했습니다.</div>
+            <div th:if="${param.thresholdRuleDeleted}" class="notice success">추가 임계치 규칙을 삭제했습니다.</div>
+            <div th:if="${param.thresholdCancelled}" class="notice success">기본 임계치 발송을 취소했습니다.</div>
+            <div th:if="${param.thresholdSent}" class="notice success">
+                <span>임계치 메일을 발송했습니다.</span>
+                <span th:if="${param.provided}">
+                    정보 제공 완료 처리
+                    <strong th:text="${param.provided[0]}">0</strong>건
+                </span>
+            </div>
+            <div th:if="${errorMessage != null}" class="notice error" th:text="${errorMessage}">error</div>
+
+            <div class="research-meta-grid legacy-mail-summary" th:if="${preview != null}">
+                <div>
+                    <strong>수신</strong>
+                    <span><span th:text="${preview.recipientCount()}">0</span>명</span>
+                </div>
+                <div>
+                    <strong>발송 대상</strong>
+                    <span><span th:text="${preview.eligibleApplicationCount()}">0</span>건</span>
+                </div>
+                <div>
+                    <strong>블랙리스트 제외</strong>
+                    <span><span th:text="${preview.blacklistExcludedCount()}">0</span>건</span>
+                </div>
+                <div>
+                    <strong>제외 이메일</strong>
+                    <span><span th:text="${preview.excludedRecipientCount()}">0</span>건</span>
+                </div>
+            </div>
+
+            <div class="note legacy-mail-recipient" th:if="${preview != null}">
+                <strong>발송 예정 이메일</strong>
+                <span th:if="${#lists.isEmpty(preview.recipients())}">기업/연락처에서 이메일을 찾지 못했습니다.</span>
+                <span th:if="${!#lists.isEmpty(preview.recipients())}" th:text="${preview.recipientsSummary()}">email</span>
+            </div>
+
+            <form th:action="@{/research/{researchNo}/mail(researchNo=${research.researchNo})}" method="post" class="research-edit-form legacy-mail-section legacy-mail-section--manual">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="legacy-mail-section__head">
+                    <div>
+                        <h3>즉시 발송</h3>
+                        <p>현재 조회된 지원자 목록을 첨부하여 바로 발송합니다.</p>
+                    </div>
+                </div>
+
+                <div class="research-edit-grid">
+                    <input type="hidden" name="templateId" value="" />
+                    <label>
+                        <span>첨부 형식</span>
+                        <select name="attachmentType">
+                            <option th:each="type : ${attachmentTypes}"
+                                    th:value="${type.name()}"
+                                    th:text="${type.label}"
+                                    th:selected="${attachmentType == type.name()}">XLSX</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="research-edit-block">
+                    <span>직접 작성 제목</span>
+                    <input type="text" name="directMailSubject" th:value="${directMailSubject}" maxlength="255" readonly />
+                </label>
+                <label class="research-edit-block">
+                    <span>직접 작성 본문</span>
+                    <textarea name="directMailBody" rows="7" th:text="${directMailBody}"></textarea>
+                </label>
+
+                <div class="research-edit-actions legacy-mail-actions">
+                    <button type="submit" class="legacy-mail-submit legacy-mail-submit--manual" th:disabled="${preview == null}">즉시 발송</button>
+                </div>
+            </form>
+
+            <form th:action="@{/research/{researchNo}/mail/schedule(researchNo=${research.researchNo})}"
+                  method="post"
+                  class="research-edit-form legacy-mail-section legacy-mail-section--scheduled"
+                  th:attr="data-min-scheduled-at=${minScheduledAt}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="legacy-mail-section__head">
+                    <div>
+                        <h3>예약 발송</h3>
+                        <p>지정한 시각에 자동 발송하고, 매일 반복 시 해당일 접수분만 대상으로 발송합니다.</p>
+                    </div>
+                </div>
+
+                <div class="research-edit-grid">
+                    <input type="hidden" name="templateId" value="" />
+                    <label>
+                        <span>첨부 형식</span>
+                        <select name="attachmentType">
+                            <option th:each="type : ${attachmentTypes}"
+                                    th:value="${type.name()}"
+                                    th:text="${type.label}"
+                                    th:selected="${attachmentType == type.name()}">XLSX</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>발송 방식</span>
+                        <select name="dailyRepeat" data-schedule-repeat>
+                            <option value="false" th:selected="${dailyRepeat == false}">한 번</option>
+                            <option value="true" th:selected="${dailyRepeat == true}">매일</option>
+                        </select>
+                    </label>
+                    <label data-schedule-once>
+                        <span>예약 일시</span>
+                        <input type="datetime-local" name="scheduledAt" th:value="${scheduledAt}" th:min="${minScheduledAt}" />
+                    </label>
+                    <label data-schedule-daily>
+                        <span>매일 발송 시간</span>
+                        <input type="text"
+                               name="dailyScheduledTime"
+                               th:value="${dailyScheduledTime}"
+                               placeholder="예: 09:30"
+                               inputmode="numeric"
+                               autocomplete="off"
+                               pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                               data-daily-time-input />
+                    </label>
+                </div>
+
+                <label class="research-edit-block">
+                    <span>직접 작성 제목</span>
+                    <input type="text" name="directMailSubject" th:value="${directMailSubject}" maxlength="255" readonly />
+                </label>
+                <label class="research-edit-block">
+                    <span>직접 작성 본문</span>
+                    <textarea name="directMailBody" rows="7" th:text="${directMailBody}"></textarea>
+                </label>
+
+                <div class="note legacy-mail-help" data-schedule-once>
+                    한 번 발송은 현재 시각보다 최소 2분 뒤부터 예약할 수 있습니다.
+                </div>
+                <div class="note legacy-mail-help" data-schedule-daily>
+                    매일 발송은 시간만 선택합니다. 선택한 시간이 이미 지났거나 2분 이내면 다음 날부터 실행됩니다.
+                </div>
+
+                <div class="research-edit-actions legacy-mail-actions">
+                    <button type="submit" class="legacy-mail-submit legacy-mail-submit--scheduled" th:disabled="${preview == null}">예약 등록</button>
+                </div>
+            </form>
+
+            <section class="legacy-mail-section legacy-mail-section--scheduled-list">
+                <div class="legacy-mail-section__head">
+                    <div>
+                        <h3>예약 발송 목록</h3>
+                        <p>아직 실행되지 않은 예약 발송입니다. 같은 시각의 중복 예약 여부를 여기에서 확인합니다.</p>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(scheduledJobs)}" class="note legacy-mail-help">
+                    대기 중인 예약 발송이 없습니다.
+                </div>
+                <div th:if="${!#lists.isEmpty(scheduledJobs)}" class="legacy-mail-schedule-list">
+                    <article th:each="scheduledJob : ${scheduledJobs}" class="legacy-mail-schedule-card">
+                        <div class="legacy-mail-schedule-card__main">
+                            <span class="legacy-mail-badge legacy-mail-badge--scheduled-waiting">대기</span>
+                            <div>
+                                <strong th:if="${scheduledJob.repeatYn != 'Y'}" th:text="${@uiLabels.dateTime(scheduledJob.scheduledAt)}">예약 시각</strong>
+                                <strong th:if="${scheduledJob.repeatYn == 'Y'}" th:text="${'매일 ' + @uiLabels.time(scheduledJob.scheduledAt.toLocalTime())}">매일 10:00</strong>
+                                <span th:if="${scheduledJob.repeatYn != 'Y'}" th:text="${@uiLabels.triggerType(scheduledJob.triggerType)}">예약 발송</span>
+                                <span th:if="${scheduledJob.repeatYn == 'Y'}" th:text="${'다음 실행 ' + @uiLabels.dateTime(scheduledJob.scheduledAt)}">다음 실행</span>
+                            </div>
+                        </div>
+                        <dl class="legacy-mail-fact-list">
+                            <div>
+                                <dt>반복</dt>
+                                <dd th:text="${scheduledJob.repeatYn == 'Y' ? '매일 반복' : '한 번'}">반복</dd>
+                            </div>
+                            <div>
+                                <dt>첨부</dt>
+                                <dd th:text="${scheduledJob.attachmentType ?: 'XLSX'}">XLSX</dd>
+                            </div>
+                            <div>
+                                <dt>대상</dt>
+                                <dd th:if="${scheduledJob.repeatYn != 'Y'}"
+                                    th:text="${(scheduledJob.targetSnapshotCount != null ? scheduledJob.targetSnapshotCount : 0) + '건'}">0건</dd>
+                                <dd th:if="${scheduledJob.repeatYn == 'Y'}"
+                                    th:text="${(dailyScheduledTargetCounts.get(scheduledJob.id) != null ? dailyScheduledTargetCounts.get(scheduledJob.id) : 0) + '건'}">0건</dd>
+                            </div>
+                        </dl>
+                        <div class="legacy-mail-rule-actions legacy-mail-schedule-card__actions">
+                            <form th:action="@{/research/{researchNo}/mail/scheduled/{sendJobId}/cancel(researchNo=${research.researchNo}, sendJobId=${scheduledJob.id})}" method="post">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <button type="submit" class="secondary-link">예약 취소</button>
+                            </form>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <form th:action="@{/research/{researchNo}/mail/threshold-settings(researchNo=${research.researchNo})}" method="post" class="research-edit-form legacy-mail-section legacy-mail-section--threshold">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="legacy-mail-section__head legacy-mail-section__head--split">
+                    <div>
+                        <h3>임계치 발송</h3>
+                        <p>이미 발송된 지원자와 블랙리스트를 제외한 건수가 기준에 도달하면 실행합니다.</p>
+                    </div>
+                    <button type="submit" class="btn-like legacy-mail-submit legacy-mail-submit--threshold">임계치 설정 저장</button>
+                </div>
+
+                <div class="research-edit-grid">
+                    <label>
+                        <span>임계치</span>
+                        <input type="number" name="thresholdCount" min="1" th:value="${thresholdCount}" />
+                    </label>
+                    <label>
+                        <span>자동 실행</span>
+                        <input type="text" value="항상 사용" readonly />
+                        <input type="hidden" name="enabled" value="true" />
+                    </label>
+                    <input type="hidden" name="templateId" value="" />
+                    <label>
+                        <span>첨부 형식</span>
+                        <select name="attachmentType">
+                            <option th:each="type : ${attachmentTypes}"
+                                    th:value="${type.name()}"
+                                    th:text="${type.label}"
+                                    th:selected="${legacyMailRule.attachmentType == type.name()}">XLSX</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="research-edit-block">
+                    <span>직접 작성 제목</span>
+                    <input type="text" name="directMailSubject" th:value="${legacyMailRule.directMailSubject ?: defaultMailSubject}" maxlength="255" readonly />
+                </label>
+                <label class="research-edit-block">
+                    <span>직접 작성 본문</span>
+                    <textarea name="directMailBody" rows="7"></textarea>
+                </label>
+
+                <div class="note legacy-mail-help">
+                    임계치 발송은 항상 자동 실행됩니다. 즉시 실행은 임계치 도달 여부와 관계없이 현재 제공 대상자가 있으면 바로 발송합니다.
+                </div>
+            </form>
+
+            <section class="legacy-mail-section legacy-mail-section--threshold-list legacy-threshold-list-section">
+                <form th:action="@{/research/{researchNo}/mail/threshold-rules(researchNo=${research.researchNo})}" method="post" class="research-edit-form legacy-mail-section legacy-mail-rule-form">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <div class="legacy-mail-section__head">
+                        <div>
+                            <h3>추가 임계치 설정</h3>
+                            <p>기본 임계치 외에 별도의 감시 조건을 등록합니다.</p>
+                        </div>
+                    </div>
+                    <div class="research-edit-grid">
+                        <label>
+                            <span>임계치</span>
+                            <input type="number" name="thresholdCount" min="1" />
+                        </label>
+                        <label>
+                            <span>자동 실행</span>
+                            <input type="text" value="항상 사용" readonly />
+                            <input type="hidden" name="enabled" value="true" />
+                        </label>
+                        <input type="hidden" name="templateId" value="" />
+                        <label>
+                            <span>첨부 형식</span>
+                            <select name="attachmentType">
+                                <option th:each="type : ${attachmentTypes}"
+                                        th:value="${type.name()}"
+                                        th:text="${type.label}">XLSX</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="research-edit-block">
+                        <span>직접 작성 제목</span>
+                        <input type="text" name="directMailSubject" th:value="${defaultMailSubject}" maxlength="255" readonly />
+                    </label>
+                    <label class="research-edit-block">
+                        <span>직접 작성 본문</span>
+                        <textarea name="directMailBody" rows="5"></textarea>
+                    </label>
+                    <div class="research-edit-actions legacy-mail-actions">
+                        <button type="submit" class="legacy-mail-submit legacy-mail-submit--threshold">추가 임계치 규칙 등록</button>
+                    </div>
+                </form>
+
+                <div class="legacy-mail-section__head">
+                    <div>
+                        <h3>임계치 발송 목록</h3>
+                        <p>기본 임계치와 추가 임계치 발송 조건을 여기에서 확인하고 실행합니다.</p>
+                    </div>
+                </div>
+
+                <div th:if="${legacyMailRule.thresholdCount == null and #lists.isEmpty(legacyMailRuleItems)}" class="note legacy-mail-help legacy-mail-rule-empty">
+                    등록된 임계치 발송 조건이 없습니다.
+                </div>
+                <div th:if="${legacyMailRule.thresholdCount != null or !#lists.isEmpty(legacyMailRuleItems)}" class="legacy-mail-rule-list">
+                    <div class="legacy-mail-rule-columns">
+                        <span>구분</span>
+                        <span>임계치</span>
+                        <span>자동 실행</span>
+                        <span>첨부 형식</span>
+                        <span>최근 발송</span>
+                        <span>관리</span>
+                    </div>
+                    <article th:if="${legacyMailRule.thresholdCount != null}" class="legacy-mail-rule-card legacy-mail-rule-card--default">
+                        <div class="legacy-mail-rule-row">
+                            <strong><span class="legacy-mail-rule-dot"></span>기본 임계치</strong>
+                            <span class="legacy-mail-rule-count" th:text="${legacyMailRule.thresholdCount + '건'}">3건</span>
+                            <span class="legacy-mail-state-pill" th:classappend="${legacyMailRule.enabled ? ' legacy-mail-state-pill--on' : ' legacy-mail-state-pill--off'}" th:text="${legacyMailRule.enabled ? '사용' : '미사용'}">사용</span>
+                            <span th:text="${legacyMailRule.attachmentType ?: 'XLSX'}">XLSX</span>
+                            <span class="legacy-mail-muted" th:text="${legacyMailRule.lastTriggeredAt != null ? @uiLabels.dateTime(legacyMailRule.lastTriggeredAt) : '아직 발송 없음'}">아직 발송 없음</span>
+                            <div class="legacy-mail-rule-actions">
+                                <form th:action="@{/research/{researchNo}/mail/threshold-trigger(researchNo=${research.researchNo})}" method="post">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <button type="submit" class="secondary-link">즉시 실행</button>
+                                </form>
+                                <form th:action="@{/research/{researchNo}/mail/threshold-cancel(researchNo=${research.researchNo})}" method="post">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <button type="submit" class="secondary-link">취소</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                    <article th:each="ruleItem : ${legacyMailRuleItems}" class="legacy-mail-rule-card">
+                        <div class="legacy-mail-rule-row">
+                            <strong><span class="legacy-mail-rule-dot"></span>추가 임계치</strong>
+                            <span class="legacy-mail-rule-count" th:text="${ruleItem.thresholdCount + '건'}">3건</span>
+                            <span class="legacy-mail-state-pill" th:classappend="${ruleItem.enabled ? ' legacy-mail-state-pill--on' : ' legacy-mail-state-pill--off'}" th:text="${ruleItem.enabled ? '사용' : '미사용'}">사용</span>
+                            <span th:text="${ruleItem.attachmentType ?: 'XLSX'}">XLSX</span>
+                            <span class="legacy-mail-muted" th:text="${ruleItem.lastTriggeredAt != null ? @uiLabels.dateTime(ruleItem.lastTriggeredAt) : '아직 발송 없음'}">아직 발송 없음</span>
+                            <div class="legacy-mail-rule-actions">
+                                <form th:action="@{/research/{researchNo}/mail/threshold-rules/{ruleId}/trigger(researchNo=${research.researchNo}, ruleId=${ruleItem.id})}" method="post">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <button type="submit" class="secondary-link">즉시 실행</button>
+                                </form>
+                                <form th:action="@{/research/{researchNo}/mail/threshold-rules/{ruleId}/delete(researchNo=${research.researchNo}, ruleId=${ruleItem.id})}" method="post">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <button type="submit" class="secondary-link">삭제</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="legacy-mail-section legacy-mail-history">
+                <div class="legacy-mail-section__head">
+                    <div>
+                        <h3>발송 이력</h3>
+                        <p>이 좌담회/설문 CODE 기준으로 저장된 발송 로그와 대상 목록입니다.</p>
+                    </div>
+                </div>
+                <div th:if="${#lists.isEmpty(historyItems)}" class="note legacy-mail-help">
+                    아직 저장된 발송 이력이 없습니다.
+                </div>
+                <div th:if="${!#lists.isEmpty(historyItems)}" class="legacy-mail-history__list">
+                    <article th:each="item : ${historyItems}"
+                             th:classappend="${@uiLabels.sendStatusToneClass(item.sendJob.sendStatus) + ' ' + @uiLabels.triggerToneClass(item.sendJob.triggerType)}"
+                             class="legacy-mail-history__item">
+                        <div class="legacy-mail-history__header">
+                            <span class="legacy-mail-badge legacy-mail-badge--trigger"
+                                  th:classappend="${@uiLabels.triggerToneClass(item.sendJob.triggerType)}"
+                                  th:text="${#strings.replace(@uiLabels.triggerType(item.sendJob.triggerType), '좌담회/설문 ', '')}">발송 유형</span>
+                            <strong class="legacy-mail-history__time" th:text="${@uiLabels.dateTime(item.activityAt())}">2026-05-09</strong>
+                        </div>
+                        <div class="legacy-mail-history__meta">
+                            <span class="legacy-mail-badge legacy-mail-badge--status"
+                                  th:classappend="${@uiLabels.sendStatusToneClass(item.sendJob.sendStatus)}"
+                                  th:text="${@uiLabels.sendStatus(item.sendJob.sendStatus)}">상태</span>
+                            <span th:text="${(item.sendJob.targetSnapshotCount != null ? item.sendJob.targetSnapshotCount : 0) + '건'}">0건</span>
+                            <span th:if="${item.provisionCompletedCount() > 0}"
+                                  th:text="${'정보 제공 완료 처리 ' + item.provisionCompletedCount() + '건'}">정보 제공 완료 처리 0건</span>
+                        </div>
+                        <div th:if="${item.failed() and !#strings.isEmpty(item.failReasonSummary())}"
+                             class="legacy-mail-history__reason">
+                            <strong>실패 사유</strong>
+                            <span th:text="${@uiLabels.failReason(item.failReasonSummary())}">실패 사유</span>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </section>
+        <style>
+            .legacy-mail-page {
+                display: grid;
+                gap: 0.9rem;
+            }
+
+            .legacy-mail-page .dashboard-head {
+                margin-bottom: 0;
+            }
+
+            .legacy-mail-summary {
+                margin-top: 0.1rem;
+            }
+
+            .legacy-mail-recipient {
+                margin-top: 0;
+                border-radius: 8px;
+                background: #fbfdff;
+            }
+
+            .legacy-mail-section {
+                gap: 0.85rem;
+                margin-top: 0;
+                padding: 1rem 1rem 1.05rem;
+                border: 1px solid var(--admin-border);
+                border-left-width: 6px;
+                border-radius: 12px;
+                background: #fff;
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+            }
+
+            .legacy-mail-section--manual {
+                border-left-color: #0284c7;
+                background: linear-gradient(90deg, #f0f9ff 0, #fff 44%);
+            }
+
+            .legacy-mail-section--scheduled,
+            .legacy-mail-section--scheduled-list {
+                border-left-color: #4f46e5;
+                background: linear-gradient(90deg, #f5f3ff 0, #fff 44%);
+            }
+
+            .legacy-mail-section--threshold,
+            .legacy-mail-section--threshold-list {
+                border-left-color: #f97316;
+                background: linear-gradient(90deg, #fff7ed 0, #fff 44%);
+            }
+
+            .legacy-mail-section__head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 1rem;
+                padding-bottom: 0.15rem;
+            }
+
+            .legacy-mail-section__head h3 {
+                margin: 0 0 0.25rem;
+                color: #172638;
+                font-size: 1.08rem;
+                font-weight: 800;
+            }
+
+            .legacy-mail-section__head p {
+                margin: 0;
+                color: #6b7280;
+                font-size: 0.9rem;
+                line-height: 1.55;
+            }
+
+            .legacy-mail-section__head--split {
+                align-items: center;
+            }
+
+            .legacy-mail-section .research-edit-grid {
+                grid-template-columns: repeat(4, minmax(160px, 1fr));
+            }
+
+            .legacy-mail-section .research-edit-block {
+                gap: 0.3rem;
+            }
+
+            .legacy-mail-section textarea {
+                min-height: 9rem;
+            }
+
+            .legacy-mail-help {
+                margin-top: 0;
+                border-radius: 8px;
+                color: #526477;
+                font-size: 0.92rem;
+                line-height: 1.55;
+            }
+
+            .legacy-mail-actions {
+                align-items: center;
+            }
+
+            .legacy-mail-submit {
+                min-width: 7.5rem;
+                font-weight: 900;
+            }
+
+            .legacy-mail-submit--manual {
+                background: #0284c7;
+            }
+
+            .legacy-mail-submit--scheduled {
+                background: #4f46e5;
+            }
+
+            .legacy-mail-submit--threshold {
+                background: #f97316;
+            }
+
+            .legacy-mail-history__list {
+                display: grid;
+                gap: 0.5rem;
+            }
+
+            .legacy-mail-history__item {
+                display: grid;
+                gap: 0.35rem;
+                padding: 0.85rem 1rem;
+                border: 1px solid var(--admin-border);
+                border-radius: 8px;
+                background: #fbfdff;
+            }
+
+            .legacy-mail-history__item.send-status-badge--sent {
+                border-left: 4px solid #0f766e;
+            }
+
+            .legacy-mail-history__item.send-status-badge--failed {
+                border-left: 4px solid #dc2626;
+                background: #fff8f8;
+            }
+
+            .legacy-mail-history__item.send-status-badge--scheduled {
+                border-left: 4px solid #2563eb;
+            }
+
+            .legacy-mail-history__item.send-status-badge--cancelled {
+                border-left: 4px solid #94a3b8;
+                background: #f8fafc;
+            }
+
+            .legacy-mail-history__item.trigger-badge--manual {
+                border-left: 5px solid #0284c7;
+            }
+
+            .legacy-mail-history__item.trigger-badge--scheduled {
+                border-left: 5px solid #2563eb;
+            }
+
+            .legacy-mail-history__item.trigger-badge--threshold {
+                border-left: 5px solid #f97316;
+            }
+
+            .legacy-mail-history__item > div {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+                align-items: center;
+            }
+
+            .legacy-mail-history__header {
+                justify-content: space-between;
+            }
+
+            .legacy-mail-history__time {
+                color: #172638;
+                font-weight: 700;
+            }
+
+            .legacy-mail-badge {
+                display: inline-flex;
+                align-items: center;
+                min-height: 1.75rem;
+                padding: 0.2rem 0.65rem;
+                border-radius: 999px;
+                font-size: 0.82rem;
+                font-weight: 800;
+                line-height: 1;
+            }
+
+            .legacy-mail-badge--trigger.trigger-badge--manual {
+                color: #075985;
+                background: #e0f2fe;
+                font-size: 0.9rem;
+            }
+
+            .legacy-mail-badge--trigger.trigger-badge--scheduled {
+                color: #3730a3;
+                background: #e0e7ff;
+            }
+
+            .legacy-mail-badge--trigger.trigger-badge--threshold {
+                color: #7c2d12;
+                background: #ffedd5;
+            }
+
+            .legacy-mail-badge--scheduled-waiting {
+                color: #3730a3;
+                background: #e0e7ff;
+            }
+
+            .legacy-mail-badge--status.send-status-badge--sent {
+                color: #047857;
+                background: #d1fae5;
+            }
+
+            .legacy-mail-badge--status.send-status-badge--failed {
+                color: #b91c1c;
+                background: #fee2e2;
+            }
+
+            .legacy-mail-badge--status.send-status-badge--scheduled {
+                color: #1d4ed8;
+                background: #dbeafe;
+            }
+
+            .legacy-mail-badge--status.send-status-badge--cancelled {
+                color: #475569;
+                background: #e2e8f0;
+            }
+
+            .legacy-mail-history__reason {
+                padding-top: 0.25rem;
+                color: #b91c1c;
+                font-size: 0.9rem;
+            }
+
+            .legacy-mail-rule-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .legacy-mail-rule-actions form {
+                margin: 0;
+            }
+
+            .legacy-mail-schedule-list {
+                display: grid;
+                gap: 0.7rem;
+            }
+
+            .legacy-mail-schedule-card {
+                display: grid;
+                grid-template-columns: minmax(220px, 1.1fr) minmax(260px, 1fr) auto;
+                gap: 1rem;
+                align-items: center;
+                padding: 0.9rem 1rem;
+                border: 1px solid #d8e2f0;
+                border-radius: 10px;
+                background: linear-gradient(180deg, #ffffff, #f8fbff);
+            }
+
+            .legacy-mail-schedule-card__main {
+                display: flex;
+                gap: 0.75rem;
+                align-items: center;
+                min-width: 0;
+            }
+
+            .legacy-mail-schedule-card__main strong {
+                display: block;
+                color: #172638;
+                font-size: 1rem;
+                font-weight: 900;
+            }
+
+            .legacy-mail-schedule-card__main span:not(.legacy-mail-badge) {
+                color: #64748b;
+                font-size: 0.86rem;
+            }
+
+            .legacy-mail-fact-list {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0.5rem;
+                margin: 0;
+            }
+
+            .legacy-mail-fact-list div {
+                min-width: 0;
+                padding: 0.55rem 0.65rem;
+                border: 1px solid #e1eaf5;
+                border-radius: 8px;
+                background: #fff;
+            }
+
+            .legacy-mail-fact-list dt {
+                margin-bottom: 0.2rem;
+                color: #0076ad;
+                font-size: 0.76rem;
+                font-weight: 800;
+            }
+
+            .legacy-mail-fact-list dd {
+                margin: 0;
+                color: #1f3345;
+                font-size: 0.92rem;
+                font-weight: 800;
+            }
+
+            .legacy-mail-schedule-card__actions {
+                justify-content: flex-end;
+            }
+
+            .legacy-mail-rule-form {
+                border-top: 1px solid var(--admin-border);
+                padding-top: 0.9rem;
+            }
+
+            .legacy-threshold-list-section {
+                display: grid;
+            }
+
+            .legacy-mail-rule-columns,
+            .legacy-mail-rule-row {
+                display: grid !important;
+                grid-template-columns: minmax(130px, 1fr) minmax(88px, 0.65fr) minmax(92px, 0.75fr) minmax(92px, 0.7fr) minmax(150px, 1.15fr) minmax(165px, 1.25fr);
+                gap: 0.75rem;
+                align-items: center;
+            }
+
+            .legacy-mail-rule-columns {
+                padding: 0.5rem 1rem;
+                border: 1px solid var(--admin-border);
+                border-radius: 8px;
+                color: #0076ad;
+                background: #f6fbff;
+                font-size: 0.86rem;
+                font-weight: 800;
+            }
+
+            .legacy-mail-rule-list {
+                display: grid;
+                gap: 0.45rem;
+            }
+
+            .legacy-mail-rule-card {
+                padding: 0.85rem 1rem;
+                border: 1px solid #e0e7ef;
+                border-left: 5px solid #f97316;
+                border-radius: 10px;
+                background: #fff;
+            }
+
+            .legacy-mail-rule-card--default {
+                background: linear-gradient(90deg, #fff7ed 0, #ffffff 42%);
+            }
+
+            .legacy-mail-rule-row > strong {
+                display: inline-flex;
+                gap: 0.45rem;
+                align-items: center;
+                color: #172638;
+                font-weight: 900;
+            }
+
+            .legacy-mail-rule-dot {
+                width: 0.55rem;
+                height: 0.55rem;
+                border-radius: 999px;
+                background: #f97316;
+            }
+
+            .legacy-mail-rule-count {
+                color: #9a3412;
+                font-weight: 900;
+            }
+
+            .legacy-mail-state-pill {
+                display: inline-flex;
+                justify-content: center;
+                width: fit-content;
+                min-width: 4rem;
+                padding: 0.22rem 0.55rem;
+                border-radius: 999px;
+                font-size: 0.82rem;
+                font-weight: 900;
+            }
+
+            .legacy-mail-state-pill--on {
+                color: #047857;
+                background: #dff8ec;
+            }
+
+            .legacy-mail-state-pill--off {
+                color: #64748b;
+                background: #eef2f7;
+            }
+
+            .legacy-mail-muted {
+                color: #64748b;
+            }
+
+            .schedule-mode-hidden {
+                display: none !important;
+            }
+
+            @media (max-width: 991.98px) {
+                .legacy-mail-section .research-edit-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .legacy-mail-schedule-card,
+                .legacy-mail-rule-columns,
+                .legacy-mail-rule-row {
+                    grid-template-columns: 1fr;
+                }
+
+                .legacy-mail-rule-columns {
+                    display: none !important;
+                }
+
+                .legacy-mail-fact-list {
+                    grid-template-columns: 1fr 1fr 1fr;
+                }
+            }
+
+            @media (max-width: 767.98px) {
+                .legacy-mail-section__head,
+                .legacy-mail-section__head--split {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+
+                .legacy-mail-fact-list {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+        <script>
+            (function setupScheduleModeToggle() {
+                const repeatSelect = document.querySelector('[data-schedule-repeat]');
+                if (!repeatSelect) {
+                    return;
+                }
+                const onceFields = document.querySelectorAll('[data-schedule-once]');
+                const dailyFields = document.querySelectorAll('[data-schedule-daily]');
+
+                function updateScheduleMode() {
+                    const daily = repeatSelect.value === 'true';
+                    onceFields.forEach((field) => field.classList.toggle('schedule-mode-hidden', daily));
+                    dailyFields.forEach((field) => field.classList.toggle('schedule-mode-hidden', !daily));
+                }
+
+                repeatSelect.addEventListener('change', updateScheduleMode);
+                updateScheduleMode();
+            })();
+
+            (function setupDailyTimeInput() {
+                const input = document.querySelector('[data-daily-time-input]');
+                if (!input) {
+                    return;
+                }
+
+                function formatDailyTime(value) {
+                    const digits = value.replace(/\D/g, '').slice(0, 4);
+                    if (digits.length <= 2) {
+                        return digits;
+                    }
+                    return digits.slice(0, 2) + ':' + digits.slice(2);
+                }
+
+                input.addEventListener('input', function () {
+                    input.value = formatDailyTime(input.value);
+                });
+            })();
+
+            (function setupDailyScheduleConfirm() {
+                const form = document.querySelector('.legacy-mail-section--scheduled');
+                const repeatSelect = document.querySelector('[data-schedule-repeat]');
+                const dailyTimeInput = document.querySelector('[data-daily-time-input]');
+                if (!form || !repeatSelect || !dailyTimeInput) {
+                    return;
+                }
+
+                function parseServerDate(value) {
+                    if (!value) {
+                        return null;
+                    }
+                    return new Date(value.length === 16 ? value + ':00' : value);
+                }
+
+                function displayKoreanDateTime(date) {
+                    return (date.getMonth() + 1) + '월 ' +
+                        date.getDate() + '일 ' +
+                        String(date.getHours()).padStart(2, '0') + '시 ' +
+                        String(date.getMinutes()).padStart(2, '0') + '분';
+                }
+
+                form.addEventListener('submit', function (event) {
+                    if (repeatSelect.value !== 'true' || !dailyTimeInput.validity.valid) {
+                        return;
+                    }
+
+                    const minScheduledAt = parseServerDate(form.dataset.minScheduledAt);
+                    const parts = dailyTimeInput.value.split(':');
+                    if (!minScheduledAt || parts.length !== 2) {
+                        return;
+                    }
+
+                    const nextScheduledAt = new Date(minScheduledAt);
+                    nextScheduledAt.setHours(Number(parts[0]), Number(parts[1]), 0, 0);
+                    if (nextScheduledAt >= minScheduledAt) {
+                        return;
+                    }
+
+                    nextScheduledAt.setDate(nextScheduledAt.getDate() + 1);
+                    const confirmed = window.confirm(
+                        '입력한 시간은 오늘 실행 가능한 시간이 아닙니다.\n' +
+                        "다음 예약 발송일은 '" + displayKoreanDateTime(nextScheduledAt) + "' 입니다.\n" +
+                        '예약을 진행하시겠습니까?'
+                    );
+                    if (!confirmed) {
+                        event.preventDefault();
+                    }
+                });
+            })();
+        </script>
+    </th:block>
+</th:block>
+</html>

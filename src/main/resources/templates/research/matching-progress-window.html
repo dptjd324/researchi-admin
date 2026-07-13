@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <title th:text="${pageTitle}">매칭 진행 중</title>
+</head>
+<body>
+<main class="progress-window"
+      th:attr="data-status-url=@{/research/{researchNo}/matching/run-window/status(researchNo=${research.researchNo},jobId=${runTicket.jobId})}">
+    <header class="progress-head">
+        <div>
+            <p class="eyebrow">좌담회/설문 매칭</p>
+            <h1 th:text="|${runTicket.cycleNo()}회차 매칭|">1회차 매칭</h1>
+            <p class="research-title" th:text="${research.researchTitle}">공고 제목</p>
+        </div>
+        <button type="button" class="close-button" onclick="window.close()">닫기</button>
+    </header>
+
+    <section class="condition-panel">
+        <strong>사용 조건</strong>
+        <span th:text="${activeKeywordText}">조건</span>
+    </section>
+
+    <section class="progress-panel" aria-live="polite">
+        <div class="spinner" data-spinner aria-hidden="true"></div>
+        <h2 data-progress-title th:text="${runTicket.status() == 'RUNNING'} ? '신청자 정보를 확인하고 있습니다' : '매칭 작업을 준비하고 있습니다'">
+            매칭 작업을 준비하고 있습니다
+        </h2>
+        <p class="progress-message" data-progress-message>
+            창을 닫아도 작업은 계속됩니다.<br>
+            완료되면 이 화면이 매칭 결과로 자동 전환됩니다.
+        </p>
+
+        <div class="steps" data-progress-steps>
+            <div class="step step--active" data-step="pending">
+                <span>1</span>
+                <b>작업 준비</b>
+            </div>
+            <i></i>
+            <div class="step" data-step="running">
+                <span>2</span>
+                <b>조건 비교</b>
+            </div>
+            <i></i>
+            <div class="step" data-step="completed">
+                <span>3</span>
+                <b>결과 생성</b>
+            </div>
+        </div>
+
+        <div class="failure-actions" data-failure-actions hidden>
+            <form th:action="@{/research/{researchNo}/matching/run-window(researchNo=${research.researchNo})}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <input type="hidden" name="conditionChecked" value="true">
+                <input type="hidden" name="appSex" th:value="${searchForm.appSex}">
+                <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}">
+                <input type="hidden" name="appJob" th:value="${searchForm.appJob}">
+                <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}">
+                <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}">
+                <input type="hidden" name="addComment" th:value="${searchForm.addComment}">
+                <button type="submit">다시 실행</button>
+            </form>
+            <button type="button" class="secondary-button" onclick="window.close()">닫기</button>
+        </div>
+    </section>
+</main>
+
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        min-width: 720px;
+        min-height: 100vh;
+        color: #08243d;
+        background: #f3f8fc;
+        font-family: Arial, "Noto Sans KR", sans-serif;
+    }
+    button {
+        min-height: 2.55rem;
+        border: 0;
+        border-radius: 8px;
+        padding: 0.55rem 1rem;
+        color: #fff;
+        background: #0b7f73;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .progress-window { min-height: 100vh; padding: 1rem; }
+    .progress-head,
+    .condition-panel,
+    .progress-panel {
+        border: 1px solid #c9ddec;
+        border-radius: 8px;
+        background: #fff;
+    }
+    .progress-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .eyebrow {
+        margin: 0 0 0.2rem;
+        color: #0b7f73;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+    h1 { margin: 0; font-size: 1.35rem; }
+    .research-title { margin: 0.35rem 0 0; color: #52647a; line-height: 1.45; }
+    .condition-panel {
+        padding: 0.8rem 0.95rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.5;
+    }
+    .condition-panel strong { margin-right: 0.55rem; color: #0a75a6; }
+    .progress-panel {
+        display: flex;
+        min-height: 420px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem;
+        text-align: center;
+    }
+    .spinner {
+        width: 58px;
+        height: 58px;
+        border: 6px solid #d8eeea;
+        border-top-color: #0b7f73;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { margin: 1.4rem 0 0; font-size: 1.4rem; }
+    .progress-message { margin: 0.75rem 0 0; color: #52647a; line-height: 1.65; }
+    .steps {
+        display: grid;
+        grid-template-columns: 7rem 4rem 7rem 4rem 7rem;
+        align-items: start;
+        justify-content: center;
+        margin-top: 2.1rem;
+    }
+    .steps > i { height: 2px; margin-top: 1.05rem; background: #d7e3ec; }
+    .step { display: grid; justify-items: center; gap: 0.45rem; color: #7b8997; }
+    .step span {
+        display: grid;
+        width: 2.2rem;
+        height: 2.2rem;
+        place-items: center;
+        border-radius: 50%;
+        color: #64748b;
+        background: #e4edf2;
+        font-weight: 800;
+    }
+    .step b { font-size: 0.86rem; }
+    .step--active { color: #075f56; }
+    .step--active span { color: #fff; background: #0b7f73; box-shadow: 0 0 0 5px #dff3ef; }
+    .step--done span { color: #fff; background: #5a9f96; }
+    .failure-actions { display: flex; gap: 0.55rem; margin-top: 1.4rem; }
+    .failure-actions form { margin: 0; }
+    .secondary-button { color: #245064; background: #e6f0f4; }
+    .progress-panel--failed { border-color: #fecaca; background: #fffafa; }
+    .progress-panel--failed h2 { color: #991b1b; }
+    .progress-panel--failed .spinner { display: none; }
+    @media (max-width: 760px) {
+        body { min-width: 0; }
+        .progress-window { padding: 0.65rem; }
+        .progress-panel { min-height: 360px; padding: 1.5rem 0.8rem; }
+        .steps { grid-template-columns: 5rem 2rem 5rem 2rem 5rem; }
+    }
+</style>
+
+<script>
+    (function pollMatchingStatus() {
+        const root = document.querySelector('.progress-window');
+        const panel = document.querySelector('.progress-panel');
+        const title = document.querySelector('[data-progress-title]');
+        const message = document.querySelector('[data-progress-message]');
+        const failureActions = document.querySelector('[data-failure-actions]');
+        const pendingStep = document.querySelector('[data-step="pending"]');
+        const runningStep = document.querySelector('[data-step="running"]');
+        let networkFailureCount = 0;
+
+        function applyRunningState() {
+            title.textContent = '신청자 정보를 확인하고 있습니다';
+            pendingStep.classList.remove('step--active');
+            pendingStep.classList.add('step--done');
+            runningStep.classList.add('step--active');
+        }
+
+        function applyFailure(failReason) {
+            panel.classList.add('progress-panel--failed');
+            title.textContent = '매칭 작업을 완료하지 못했습니다';
+            message.textContent = failReason || '작업 중 오류가 발생했습니다. 다시 실행해 주세요.';
+            failureActions.hidden = false;
+        }
+
+        async function refreshStatus() {
+            try {
+                const response = await fetch(root.dataset.statusUrl, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                if (response.status === 404) {
+                    applyFailure('매칭 작업 정보를 찾을 수 없습니다. 다시 실행해 주세요.');
+                    return;
+                }
+                if (!response.ok) {
+                    throw new Error('status request failed');
+                }
+                const status = await response.json();
+                networkFailureCount = 0;
+                if (status.status === 'COMPLETED') {
+                    window.location.replace(status.resultUrl);
+                    return;
+                }
+                if (status.status === 'FAILED') {
+                    applyFailure(status.failReason);
+                    return;
+                }
+                if (status.status === 'RUNNING') {
+                    applyRunningState();
+                }
+                window.setTimeout(refreshStatus, 2000);
+            } catch (error) {
+                networkFailureCount += 1;
+                message.textContent = '서버와 다시 연결하고 있습니다. 작업은 계속 진행될 수 있습니다.';
+                window.setTimeout(refreshStatus, Math.min(2000 * networkFailureCount, 10000));
+            }
+        }
+
+        if (root) {
+            window.setTimeout(refreshStatus, 500);
+        }
+    }());
+</script>
+</body>
+</html>

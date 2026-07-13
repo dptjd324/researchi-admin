@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">신청서</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css">
+    <link rel="stylesheet" th:href="@{/css/public-ui.css(v=2026061801)}">
+</head>
+<body class="public-body public-body--naver">
+<div class="public-page">
+    <section class="public-header">
+        <h1 class="public-header__title" th:text="${research.researchTitle}">좌담회/설문 제목</h1>
+        <div class="public-period" th:if="${research.closeDateLabel != null}">
+            <div class="public-period__item">
+                <span class="public-period__label">모집 마감</span>
+                <span class="public-period__value" th:text="${research.closeDateLabel}">2026-05-04</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="public-card public-card--info">
+        <div class="public-card__title">공고 안내</div>
+        <div class="public-card__body">
+            <div class="public-description" th:utext="${publicResearchContents}">공고 본문</div>
+        </div>
+    </section>
+
+    <form class="public-form" method="post" th:object="${applicationForm}" th:action="@{/research/{researchNo}/apply(researchNo=${research.researchNo})}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="public-banner public-banner--error" th:each="error : ${#fields.globalErrors()}" th:text="${error}">
+            검증 오류
+        </div>
+
+        <section class="public-card public-card--form">
+            <div class="public-field__required">답변 필수</div>
+            <div class="public-field-grid">
+                <div class="public-field">
+                    <label class="public-field__label">1. 성명</label>
+                    <input class="public-input" type="text" th:field="*{applicantName}" placeholder="이름을 입력해 주세요." required minlength="2" maxlength="30" pattern="([가-힣\s]{2,30}|[A-Za-z\s]{2,30})" title="이름은 한글 또는 영문으로 2자 이상 입력해주세요.">
+                    <div id="applicantNameClientError" class="public-error" hidden>이름은 한글 또는 영문으로 2자 이상 입력해주세요.</div>
+                    <div th:if="${#fields.hasErrors('applicantName')}" th:errors="*{applicantName}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">2. 성별</label>
+                    <div class="public-choice-list">
+                        <label class="public-choice">
+                            <input type="radio" th:field="*{genderCode}" value="1">
+                            <span>남자</span>
+                        </label>
+                        <label class="public-choice">
+                            <input type="radio" th:field="*{genderCode}" value="2">
+                            <span>여자</span>
+                        </label>
+                    </div>
+                    <div th:if="${#fields.hasErrors('genderCode')}" th:errors="*{genderCode}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">3. 생년월일</label>
+                    <input type="hidden" th:field="*{birthDate}" id="birthDate">
+                    <input class="public-input public-input--date" type="text" id="birthDatePicker" inputmode="numeric" autocomplete="bday" maxlength="10" placeholder="예: 2000.02.24">
+                    <div class="public-field__hint">숫자만 입력하면 생년월일 구분점이 자동으로 입력됩니다.</div>
+                    <div th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">4. 나이</label>
+                    <input class="public-input" type="text" th:field="*{ageText}" placeholder="나이를 입력해 주세요.">
+                    <div th:if="${#fields.hasErrors('ageText')}" th:errors="*{ageText}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">5. 직업</label>
+                    <input class="public-input" type="text" th:field="*{jobText}" placeholder="직업을 입력해 주세요.">
+                    <div th:if="${#fields.hasErrors('jobText')}" th:errors="*{jobText}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">6. 회사/학교명</label>
+                    <input class="public-input" type="text" th:field="*{organizationText}" placeholder="회사 또는 학교명을 입력해 주세요.">
+                    <div th:if="${#fields.hasErrors('organizationText')}" th:errors="*{organizationText}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">7. 휴대폰</label>
+                    <input class="public-input" type="tel" th:field="*{mobilePhone}" data-phone-format="true" inputmode="numeric" maxlength="13" placeholder="휴대폰 번호를 입력해 주세요.">
+                    <div th:if="${#fields.hasErrors('mobilePhone')}" th:errors="*{mobilePhone}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">7-1. 이메일</label>
+                    <input class="public-input" type="email" th:field="*{emailAddress}" placeholder="필수 입력">
+                    <div th:if="${#fields.hasErrors('emailAddress')}" th:errors="*{emailAddress}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <label class="public-field__label">7-2. 유선전화</label>
+                    <input class="public-input" type="tel" th:field="*{telPhone}" data-phone-format="true" inputmode="numeric" maxlength="13" placeholder="선택 입력">
+                </div>
+
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">8. 주소</label>
+                    <input class="public-input" type="text" th:field="*{address}" placeholder="거주구 동까지 입력해 주세요.">
+                    <div th:if="${#fields.hasErrors('address')}" th:errors="*{address}" class="public-error">오류</div>
+                </div>
+
+                <div class="public-field">
+                    <label class="public-field__label">8-1. 최근 6개월 이내 참여 이력</label>
+                    <input class="public-input" type="text" th:field="*{priorResearchText}" placeholder="선택 입력">
+                </div>
+
+                <div class="public-field">
+                    <div class="public-field__required">답변 필수</div>
+                    <label class="public-field__label">9. 추가기재사항</label>
+                    <div class="public-extra-group-select" th:if="${applicationFormNoticeGroups != null and #lists.size(applicationFormNoticeGroups) > 1}">
+                        <span class="public-field__hint">해당하는 그룹을 선택한 뒤 표시된 질문만 답변해 주세요.</span>
+                        <label class="public-choice" th:each="group : ${applicationFormNoticeGroups}">
+                            <input type="radio" th:field="*{selectedExtraGroup}" th:value="${group}">
+                            <span th:text="${group}">그룹</span>
+                        </label>
+                        <div th:if="${#fields.hasErrors('selectedExtraGroup')}" th:errors="*{selectedExtraGroup}" class="public-error">오류</div>
+                    </div>
+                    <div class="public-choice-list" th:if="${!#lists.isEmpty(applicationFormNoticeDetails)}">
+                        <div class="public-extra-item public-extra-item--answer"
+                             th:each="noticeItem, iterStat : ${applicationFormNoticeDetails}"
+                             th:attr="data-extra-group=${noticeItem.groupLabel()}">
+                            <span class="public-extra-item__index" th:text="${iterStat.count + '.'}">1.</span>
+                            <div class="public-extra-item__content">
+                                <span class="public-extra-item__group"
+                                      th:if="${noticeItem.groupLabel() != null and !#strings.isEmpty(noticeItem.groupLabel())}"
+                                      th:text="${noticeItem.groupLabel()}">그룹</span>
+                                <span class="public-extra-item__text" th:text="${noticeItem.label()}">추가기재사항</span>
+                                <div th:switch="${noticeItem.type()}">
+                                     <select th:case="'SELECT'"
+                                             class="public-input"
+                                             th:field="*{extraAnswers[__${iterStat.index}__]}"
+                                             required>
+                                        <option value="">선택해 주세요</option>
+                                        <option th:each="option : ${noticeItem.options()}"
+                                                th:value="${option.label()}"
+                                                th:text="${option.label()}">선택지</option>
+                                    </select>
+                                    <div th:case="'RADIO'" class="public-choice-list public-choice-list--inline">
+                                        <label class="public-choice" th:each="option : ${noticeItem.options()}">
+                                            <input type="radio"
+                                                   th:field="*{extraAnswers[__${iterStat.index}__]}"
+                                                   th:value="${option.label()}"
+                                                   required>
+                                            <span th:text="${option.label()}">선택지</span>
+                                        </label>
+                                    </div>
+                                    <div th:case="'CHECKBOX'" class="public-choice-list public-choice-list--inline">
+                                        <input type="hidden"
+                                               th:field="*{extraAnswers[__${iterStat.index}__]}"
+                                               th:attr="data-extra-checkbox-value=${iterStat.index}">
+                                        <label class="public-choice" th:each="option : ${noticeItem.options()}">
+                                            <input type="checkbox"
+                                                   th:value="${option.label()}"
+                                                   th:attr="data-extra-checkbox=${iterStat.index}">
+                                            <span th:text="${option.label()}">선택지</span>
+                                        </label>
+                                    </div>
+                                     <input th:case="*"
+                                            class="public-input"
+                                            type="text"
+                                            th:field="*{extraAnswers[__${iterStat.index}__]}"
+                                            placeholder="답변을 입력해 주세요."
+                                            required>
+                                </div>
+                                <div th:if="${#fields.hasErrors('extraAnswers[' + iterStat.index + ']')}"
+                                     th:errors="*{extraAnswers[__${iterStat.index}__]}"
+                                     class="public-error">오류</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="public-field__hint" th:if="${#lists.isEmpty(applicationFormNoticeDetails)}">
+                        이 공고에는 별도 추가기재사항이 없습니다.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="public-card public-card--form">
+            <div class="public-field-grid public-field-grid--single">
+                <div class="public-field">
+                    <label class="public-field__label">10. 개인정보 수집·이용 및 리서치 안내 수신 동의</label>
+                    <div class="public-consent-box">
+                        <p><strong>리서치아이</strong>는 리서치 신청 접수 및 운영, 향후 리서치 모집 안내를 위해 다음과 같이 개인정보를 처리합니다.</p>
+                        <div class="public-consent-box__section">
+                            <strong>1. 수집·이용 항목</strong>
+                            <span>성명, 성별, 생년월일, 휴대전화번호, 이메일, 직업, 회사/학교, 주소, 추가 기재사항, 신청서 기재 내용 및 설문 답변</span>
+                        </div>
+                        <div class="public-consent-box__section">
+                            <strong>2. 수집·이용 목적</strong>
+                            <span>리서치 신청 접수 및 본인 확인, 대상자 확인 및 선정, 선정 결과·참석 여부·일정·장소·준비사항·사례비 안내, 신청자 조건에 적합한 향후 좌담회·인터뷰·설문조사 모집 및 추천, 위 안내를 위한 SMS·이메일 발송, 관련 문의 및 민원 처리</span>
+                        </div>
+                        <div class="public-consent-box__section">
+                            <strong>3. 보유 및 이용기간</strong>
+                            <span>현재 신청한 리서치 개인정보는 해당 리서치 종료 후 2년까지 보유·이용한 후 지체 없이 파기합니다. 향후 리서치 모집 및 추천에 동의한 경우 관련 개인정보는 동의일로부터 2년 또는 동의 철회일까지 보유·이용하며, 먼저 도래하는 시점에 지체 없이 파기합니다. 다만 관계 법령에 따라 보존할 필요가 있는 경우에는 해당 기간 동안 별도로 보관한 후 파기합니다.</span>
+                        </div>
+                        <div class="public-consent-box__section">
+                            <strong>4. 동의 거부 권리</strong>
+                            <span>개인정보 수집·이용 동의를 거부할 수 있습니다. 필수 동의 거부 시 리서치 신청이 제한되며, 선택 동의 거부에 따른 불이익은 없습니다.</span>
+                        </div>
+                    </div>
+                    <label class="public-choice public-choice--block">
+                        <input type="checkbox" th:field="*{provideYn}">
+                        <span>현재 리서치 신청·운영을 위한 개인정보 수집·이용에 동의합니다. (필수)</span>
+                    </label>
+                    <div th:if="${#fields.hasErrors('provideYnAccepted')}" th:errors="*{provideYnAccepted}" class="public-error">오류</div>
+                    <label class="public-choice public-choice--block">
+                        <input type="checkbox" th:field="*{futureRecruitmentYn}" data-future-recruitment>
+                        <span>향후 리서치 모집·추천을 위한 개인정보 수집·이용에 동의합니다. (선택)</span>
+                    </label>
+                    <div class="public-consent-channels" data-future-channel-group>
+                        <div class="public-consent-channels__title">수신 방법을 한 가지 이상 선택해 주세요.</div>
+                        <label class="public-choice public-choice--block">
+                            <input type="checkbox" th:field="*{notifySmsYn}" data-future-channel>
+                            <span>향후 리서치 모집 안내 SMS 수신에 동의합니다. (선택)</span>
+                        </label>
+                        <label class="public-choice public-choice--block">
+                            <input type="checkbox" th:field="*{notifyEmailYn}" data-future-channel>
+                            <span>향후 리서치 모집 안내 이메일 수신에 동의합니다. (선택)</span>
+                        </label>
+                    </div>
+                    <div th:if="${#fields.hasErrors('futureRecruitmentChannelAccepted')}"
+                         th:errors="*{futureRecruitmentChannelAccepted}"
+                         class="public-error">SMS 또는 이메일 중 최소 한 가지 수신 방법을 선택해 주세요.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="public-card public-card--form" th:if="${captchaEnabled}">
+            <div class="public-field-grid public-field-grid--single">
+                <div class="public-field">
+                    <label class="public-field__label" th:text="${'자동 입력 방지: ' + captchaQuestion}">자동 입력 방지</label>
+                    <input class="public-input" type="text" th:field="*{captchaAnswer}" placeholder="정답을 입력해 주세요.">
+                    <div th:if="${#fields.hasErrors('captchaAnswer')}" th:errors="*{captchaAnswer}" class="public-error">오류</div>
+                </div>
+            </div>
+        </section>
+
+        <label class="visually-hidden">
+            <span>Website</span>
+            <input type="text" th:field="*{website}" autocomplete="off" tabindex="-1">
+        </label>
+
+        <div class="public-submit">
+            <button type="submit" class="public-submit__button">신청서 제출</button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ko.js"></script>
+<script th:src="@{/js/phone-format.js(v=2026052502)}"></script>
+<script>
+    (function ensureApplicationPhoneFormatting() {
+        function formatPhone(value) {
+            var digits = (value || '').replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 3) {
+                return digits;
+            }
+            if (digits.startsWith('02')) {
+                if (digits.length <= 6) {
+                    return digits.slice(0, 2) + '-' + digits.slice(2);
+                }
+                return digits.slice(0, 2) + '-' + digits.slice(2, digits.length - 4) + '-' + digits.slice(-4);
+            }
+            if (digits.length <= 7) {
+                return digits.slice(0, 3) + '-' + digits.slice(3);
+            }
+            return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+        }
+
+        function bindPhoneInput(input) {
+            if (!input || input.dataset.applicationPhoneFormatBound === 'true') {
+                return;
+            }
+            input.dataset.applicationPhoneFormatBound = 'true';
+            input.addEventListener('input', function () {
+                input.value = formatPhone(input.value);
+            });
+            input.addEventListener('blur', function () {
+                input.value = formatPhone(input.value);
+            });
+            if (input.form) {
+                input.form.addEventListener('submit', function () {
+                    input.value = formatPhone(input.value);
+                });
+            }
+            input.value = formatPhone(input.value);
+        }
+
+        function bindApplicationPhoneInputs() {
+            if (typeof window.bindKoreanPhoneInputs === 'function') {
+                window.bindKoreanPhoneInputs(document);
+            }
+            bindPhoneInput(document.getElementById('mobilePhone'));
+            bindPhoneInput(document.getElementById('telPhone'));
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindApplicationPhoneInputs);
+        } else {
+            bindApplicationPhoneInputs();
+        }
+    }());
+
+    (function initializeBirthDateInput() {
+        const hiddenInput = document.getElementById('birthDate');
+        const birthInput = document.getElementById('birthDatePicker');
+        if (!hiddenInput || !birthInput) {
+            return;
+        }
+
+        function formatBirthDisplay(value) {
+            const digits = (value || '').replace(/\D/g, '').slice(0, 8);
+            if (digits.length <= 4) {
+                return digits;
+            }
+            if (digits.length <= 6) {
+                return digits.slice(0, 4) + '.' + digits.slice(4);
+            }
+            return digits.slice(0, 4) + '.' + digits.slice(4, 6) + '.' + digits.slice(6);
+        }
+
+        function syncBirthDateValue() {
+            birthInput.value = formatBirthDisplay(birthInput.value);
+            const digits = birthInput.value.replace(/\D/g, '');
+            hiddenInput.value = digits.length === 8
+                ? digits.slice(0, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6)
+                : '';
+        }
+
+        birthInput.value = formatBirthDisplay(hiddenInput.value);
+        birthInput.addEventListener('input', syncBirthDateValue);
+        birthInput.form?.addEventListener('submit', syncBirthDateValue);
+    }());
+
+    (function initializeApplicantNameValidation() {
+        const nameInput = document.getElementById('applicantName');
+        if (!nameInput) {
+            return;
+        }
+        const message = '이름은 한글 또는 영문으로 2자 이상 입력해주세요.';
+
+        const errorMessage = document.getElementById('applicantNameClientError');
+
+        function validateName() {
+            const value = nameInput.value || '';
+            const compact = value.replace(/\s+/g, '');
+            const valid = compact.length >= 2 && (/^[가-힣\s]+$/.test(value) || /^[A-Za-z\s]+$/.test(value));
+            const shouldShow = value.length > 0 && !valid;
+            nameInput.setCustomValidity(valid ? '' : message);
+            if (errorMessage) {
+                errorMessage.hidden = !shouldShow;
+            }
+        }
+
+        nameInput.addEventListener('input', validateName);
+        nameInput.addEventListener('invalid', validateName);
+        validateName();
+    }());
+
+    (function initializeExtraGroupFilter() {
+        const groupInputs = Array.from(document.querySelectorAll('input[name="selectedExtraGroup"]'));
+        const items = Array.from(document.querySelectorAll('[data-extra-group]'));
+        if (groupInputs.length === 0 || items.length === 0) {
+            return;
+        }
+
+        function applyGroupFilter() {
+            const selected = groupInputs.find((input) => input.checked)?.value || '';
+            items.forEach((item) => {
+                const visible = selected && item.getAttribute('data-extra-group') === selected;
+                item.hidden = !visible;
+                item.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.disabled = !visible;
+                });
+            });
+        }
+
+        groupInputs.forEach((input) => input.addEventListener('change', applyGroupFilter));
+        applyGroupFilter();
+    }());
+
+    (function initializeExtraCheckboxAnswers() {
+        const hiddenFields = Array.from(document.querySelectorAll('[data-extra-checkbox-value]'));
+        if (hiddenFields.length === 0) {
+            return;
+        }
+
+        function syncGroup(index) {
+            const hidden = document.querySelector('[data-extra-checkbox-value="' + index + '"]');
+            if (!hidden) {
+                return;
+            }
+            const checkedValues = Array.from(document.querySelectorAll('[data-extra-checkbox="' + index + '"]:checked'))
+                .map((input) => input.value)
+                .filter(Boolean);
+            hidden.value = checkedValues.join(' / ');
+        }
+
+        hiddenFields.forEach((hidden) => {
+            const index = hidden.getAttribute('data-extra-checkbox-value');
+            const selected = (hidden.value || '').split(/\s*\/\s*/).filter(Boolean);
+            document.querySelectorAll('[data-extra-checkbox="' + index + '"]').forEach((checkbox) => {
+                checkbox.checked = selected.includes(checkbox.value);
+                checkbox.addEventListener('change', () => syncGroup(index));
+            });
+            syncGroup(index);
+        });
+    }());
+
+    (function initializeFutureRecruitmentConsent() {
+        const futureRecruitment = document.querySelector('[data-future-recruitment]');
+        const channelGroup = document.querySelector('[data-future-channel-group]');
+        const channels = Array.from(document.querySelectorAll('[data-future-channel]'));
+        if (!futureRecruitment || !channelGroup || channels.length === 0) {
+            return;
+        }
+        const message = 'SMS 또는 이메일 중 최소 한 가지 수신 방법을 선택해 주세요.';
+
+        function validateChannels() {
+            const valid = !futureRecruitment.checked || channels.some((channel) => channel.checked);
+            futureRecruitment.setCustomValidity(valid ? '' : message);
+            return valid;
+        }
+
+        function syncChannels(clearChannels) {
+            if (!futureRecruitment.checked && clearChannels) {
+                channels.forEach((channel) => {
+                    channel.checked = false;
+                });
+            }
+            channelGroup.classList.toggle('public-consent-channels--active', futureRecruitment.checked);
+            channels.forEach((channel) => {
+                channel.disabled = !futureRecruitment.checked;
+            });
+            validateChannels();
+        }
+
+        channels.forEach((channel) => {
+            channel.addEventListener('change', function () {
+                if (channel.checked) {
+                    futureRecruitment.checked = true;
+                }
+                syncChannels(false);
+            });
+        });
+        futureRecruitment.addEventListener('change', function () {
+            syncChannels(!futureRecruitment.checked);
+        });
+        futureRecruitment.form?.addEventListener('submit', validateChannels);
+
+        if (channels.some((channel) => channel.checked)) {
+            futureRecruitment.checked = true;
+        }
+        syncChannels(false);
+    }());
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.application.mapper.LegacyApplicationExtraAnswerMapper">
+
+    <resultMap id="legacyApplicationExtraAnswerResultMap" type="com.researchi.admin.legacy.application.domain.LegacyApplicationExtraAnswer">
+        <id property="id" column="id"/>
+        <result property="researchNo" column="research_no"/>
+        <result property="researchAppSeq" column="research_app_seq"/>
+        <result property="answerOrder" column="answer_order"/>
+        <result property="questionGroup" column="question_group"/>
+        <result property="questionLabel" column="question_label"/>
+        <result property="answerText" column="answer_text"/>
+        <result property="rawAnswerText" column="raw_answer_text"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.researchi.admin.legacy.application.domain.LegacyApplicationExtraAnswer" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_legacy_application_extra_answer (
+            research_no,
+            research_app_seq,
+            answer_order,
+            question_group,
+            question_label,
+            answer_text,
+            raw_answer_text,
+            created_at
+        ) VALUES (
+            #{researchNo},
+            #{researchAppSeq},
+            #{answerOrder},
+            #{questionGroup},
+            #{questionLabel},
+            #{answerText},
+            #{rawAnswerText},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findByResearchApplication" resultMap="legacyApplicationExtraAnswerResultMap">
+        SELECT *
+        FROM admin_legacy_application_extra_answer
+        WHERE research_no = #{researchNo}
+          AND research_app_seq = #{researchAppSeq}
+        ORDER BY answer_order ASC, id ASC
+    </select>
+
+    <select id="findByResearchNo" resultMap="legacyApplicationExtraAnswerResultMap">
+        SELECT *
+        FROM admin_legacy_application_extra_answer
+        WHERE research_no = #{researchNo}
+        ORDER BY research_app_seq ASC, answer_order ASC, id ASC
+    </select>
+
+    <select id="findResearchAppSeqsByAnswerTerms" resultType="java.lang.Long">
+        SELECT DISTINCT research_app_seq
+        FROM admin_legacy_application_extra_answer
+        WHERE research_app_seq IS NOT NULL
+          AND (
+          <foreach collection="terms" item="term" separator=" OR ">
+              answer_text LIKE CONCAT('%', #{term}, '%')
+              OR raw_answer_text LIKE CONCAT('%', #{term}, '%')
+              OR question_label LIKE CONCAT('%', #{term}, '%')
+          </foreach>
+          )
+        ORDER BY research_app_seq DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

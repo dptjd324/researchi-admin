@@ -1,0 +1,725 @@
+﻿<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <title th:text="${pageTitle}">매칭 실행 결과</title>
+</head>
+<body>
+<main class="matching-window" th:attr="data-preview-mode=${previewMode == true}">
+    <section class="matching-window__head">
+        <div>
+            <p class="eyebrow">좌담회/설문 매칭</p>
+            <h1 th:text="|${result.cycleNo()}회차 실행 결과|">1회차 실행 결과</h1>
+            <p class="research-title" th:text="${research.researchTitle}">Research title</p>
+        </div>
+        <button type="button" onclick="window.close()">닫기</button>
+    </section>
+
+    <section class="metric-grid">
+        <div>
+            <span>처리 신청자</span>
+            <strong th:text="${result.indexedApplicationCount()}">0</strong>
+        </div>
+        <div>
+            <span>생성 조건</span>
+            <strong th:text="${result.insertedKeywordCount()}">0</strong>
+        </div>
+        <div>
+            <span>매칭 결과</span>
+            <strong th:text="${overview.matchedCount()}">0</strong>
+        </div>
+        <div>
+            <span>블랙리스트 제외</span>
+            <strong th:text="${overview.blacklistedExcludedCount()}">0</strong>
+        </div>
+    </section>
+
+    <section class="keyword-panel">
+        <strong>사용 조건</strong>
+        <span th:if="${#lists.isEmpty(overview.activeKeywords())}">조건이 없습니다.</span>
+        <span th:if="${!#lists.isEmpty(overview.activeKeywords())}" th:text="${overview.activeKeywordText()}">조건</span>
+    </section>
+
+    <section class="send-result-panel" th:if="${param.emailSent}">
+        <strong>메일 발송 결과</strong>
+        <span>대상 <b th:text="${param.targetCount != null ? param.targetCount[0] : '0'}">0</b>건</span>
+        <span>발송 <b th:text="${param.emailSentCount != null ? param.emailSentCount[0] : '0'}">0</b>건</span>
+        <span>중복 제외 <b th:text="${param.emailSkippedDuplicateCount != null ? param.emailSkippedDuplicateCount[0] : '0'}">0</b>건</span>
+        <span>실패 <b th:text="${param.emailFailedCount != null ? param.emailFailedCount[0] : '0'}">0</b>건</span>
+    </section>
+
+    <section class="send-result-panel" th:if="${param.smsSent}">
+        <strong>SMS 발송 결과</strong>
+        <span>대상 <b th:text="${param.targetCount != null ? param.targetCount[0] : '0'}">0</b>건</span>
+        <span>발송 <b th:text="${param.sentCount != null ? param.sentCount[0] : '0'}">0</b>건</span>
+        <span>중복 제외 <b th:text="${param.skippedDuplicateCount != null ? param.skippedDuplicateCount[0] : '0'}">0</b>건</span>
+        <span>실패 <b th:text="${param.failedCount != null ? param.failedCount[0] : '0'}">0</b>건</span>
+    </section>
+
+    <section class="send-result-panel send-result-panel--limit" th:if="${param.smsLimitExceeded}">
+        <strong>SMS 발송 제한</strong>
+        <span th:text="${param.message != null ? param.message[0] : 'SMS 발송 한도를 초과했습니다.'}">SMS 발송 한도를 초과했습니다.</span>
+        <span>요청 <b th:text="${param.requestedCount != null ? param.requestedCount[0] : '0'}">0</b>건</span>
+        <span>오늘 <b th:text="${param.dailySentCount != null ? param.dailySentCount[0] : '0'}">0</b>/<b th:text="${param.dailyLimit != null ? param.dailyLimit[0] : '500'}">500</b>건</span>
+        <span>이번 달 <b th:text="${param.monthlySentCount != null ? param.monthlySentCount[0] : '0'}">0</b>/<b th:text="${param.monthlyLimit != null ? param.monthlyLimit[0] : '10000'}">10000</b>건</span>
+    </section>
+
+    <section class="download-panel" th:if="${!#lists.isEmpty(overview.results())}">
+        <strong>결과 다운로드</strong>
+        <form th:action="@{/research/{researchNo}/matching/export-xlsx(researchNo=${research.researchNo})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="appSex" th:value="${searchForm.appSex}" />
+            <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}" />
+            <input type="hidden" name="appJob" th:value="${searchForm.appJob}" />
+            <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}" />
+            <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}" />
+            <input type="hidden" name="addComment" th:value="${searchForm.addComment}" />
+            <button type="submit">엑셀</button>
+        </form>
+        <form th:action="@{/research/{researchNo}/matching/export-txt(researchNo=${research.researchNo})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="appSex" th:value="${searchForm.appSex}" />
+            <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}" />
+            <input type="hidden" name="appJob" th:value="${searchForm.appJob}" />
+            <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}" />
+            <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}" />
+            <input type="hidden" name="addComment" th:value="${searchForm.addComment}" />
+            <button type="submit">텍스트</button>
+        </form>
+    </section>
+
+    <form th:if="${!#lists.isEmpty(overview.results())}"
+          th:action="@{/research/{researchNo}/matching/sms(researchNo=${research.researchNo})}"
+          method="post"
+          class="sms-panel"
+          data-selected-send-form
+          data-send-confirm-form
+          data-send-channel="SMS"
+          data-consent-channel="sms"
+          data-send-scope="selected">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="appSex" th:value="${searchForm.appSex}" />
+        <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}" />
+        <input type="hidden" name="appJob" th:value="${searchForm.appJob}" />
+        <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}" />
+        <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}" />
+        <input type="hidden" name="addComment" th:value="${searchForm.addComment}" />
+        <input type="hidden" name="returnTo" value="run-window" />
+        <div>
+            <strong>SMS 알림</strong>
+            <span>선택한 신청자의 휴대폰 번호로 신청 링크를 발송합니다.</span>
+        </div>
+        <span class="selected-count" data-selected-count>발송 가능 0명</span>
+        <button type="submit" data-selected-send-button disabled>SMS 발송 0명</button>
+    </form>
+
+    <form th:if="${!#lists.isEmpty(overview.results())}"
+          th:action="@{/research/{researchNo}/matching/email(researchNo=${research.researchNo})}"
+          method="post"
+          class="sms-panel email-panel"
+          data-selected-send-form
+          data-send-confirm-form
+          data-send-channel="이메일"
+          data-consent-channel="email"
+          data-send-scope="selected">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="appSex" th:value="${searchForm.appSex}" />
+        <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}" />
+        <input type="hidden" name="appJob" th:value="${searchForm.appJob}" />
+        <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}" />
+        <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}" />
+        <input type="hidden" name="addComment" th:value="${searchForm.addComment}" />
+        <div>
+            <strong>메일 알림</strong>
+            <span>선택한 신청자의 이메일 주소로 신청 링크를 발송합니다.</span>
+        </div>
+        <span class="selected-count" data-selected-count>발송 가능 0명</span>
+        <button type="submit" data-selected-send-button disabled>이메일 발송 0명</button>
+    </form>
+
+    <section class="result-table-wrap" th:if="${!#lists.isEmpty(overview.results())}">
+        <table class="result-table">
+            <thead>
+            <tr>
+                <th class="select-cell">
+                    <input type="checkbox" data-select-all aria-label="현재 매칭 결과 전체 선택">
+                </th>
+                <th>No</th>
+                <th>성명</th>
+                <th>성별</th>
+                <th>나이</th>
+                <th>직업</th>
+                <th>회사/학교</th>
+                <th>휴대폰</th>
+                <th>이메일</th>
+                <th>주소</th>
+                <th>추가기재사항</th>
+                <th>점수</th>
+                <th>매칭 조건</th>
+                <th>발송</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${overview.results()}">
+                <td class="select-cell">
+                    <input type="checkbox"
+                           class="row-select"
+                           data-row-select
+                           th:value="${row.application().researchAppSeq}"
+                           th:attr="aria-label=${row.application().appName + ' 선택'},data-sms-allowed=${row.smsAllowed()},data-email-allowed=${row.emailAllowed()}">
+                </td>
+                <td class="number-cell" th:text="${row.rowNo()}">1</td>
+                <td th:text="${row.application().appName ?: '-'}">성명</td>
+                <td>
+                    <span class="info-chip"
+                          th:classappend="${row.application().appSex == '1'} ? ' info-chip--male' : (${row.application().appSex == '2'} ? ' info-chip--female' : '')"
+                          th:text="${row.application().appSexLabel ?: '-'}">성별</span>
+                </td>
+                <td th:text="${row.application().appAge ?: '-'}">30</td>
+                <td th:text="${row.application().appJob ?: '-'}">직업</td>
+                <td class="compact-text" th:text="${row.application().appCompany ?: '-'}">회사</td>
+                <td class="phone-cell" th:text="${row.application().appHphoneLabel ?: '-'}">010</td>
+                <td class="email-cell" th:text="${row.application().appEmail ?: '-'}">email</td>
+                <td class="compact-text" th:text="${row.application().appAddr ?: '-'}">주소</td>
+                <td class="comment-cell" th:text="${row.application().addComment ?: '-'}">추가기재사항</td>
+                <td><span class="score-chip" th:text="${row.matchScore()}">1</span></td>
+                <td class="keyword-cell" th:text="${row.matchedKeywordText()}">keyword</td>
+                <td class="row-action-cell">
+                    <form th:action="@{/research/{researchNo}/matching/sms(researchNo=${research.researchNo})}"
+                          th:if="${row.smsAllowed()}"
+                          method="post"
+                          data-send-confirm-form
+                          data-send-channel="SMS"
+                          data-send-scope="single">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="hidden" name="appSex" th:value="${searchForm.appSex}" />
+                        <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}" />
+                        <input type="hidden" name="appJob" th:value="${searchForm.appJob}" />
+                        <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}" />
+                        <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}" />
+                        <input type="hidden" name="addComment" th:value="${searchForm.addComment}" />
+                        <input type="hidden" name="returnTo" value="run-window" />
+                        <input type="hidden" name="selectedApplicationIds" th:value="${row.application().researchAppSeq}" />
+                        <button type="submit"
+                                class="row-send-button"
+                                th:classappend="${row.smsSent()} ? ' row-send-button--sent' : ''"
+                                th:disabled="${row.smsSent()}"
+                                th:text="${row.smsSent()} ? 'SMS 완료' : 'SMS'">SMS</button>
+                    </form>
+                    <form th:action="@{/research/{researchNo}/matching/email(researchNo=${research.researchNo})}"
+                          th:if="${row.emailAllowed()}"
+                          method="post"
+                          data-send-confirm-form
+                          data-send-channel="이메일"
+                          data-send-scope="single">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="hidden" name="appSex" th:value="${searchForm.appSex}" />
+                        <input type="hidden" name="appBirth" th:value="${searchForm.appBirth}" />
+                        <input type="hidden" name="appJob" th:value="${searchForm.appJob}" />
+                        <input type="hidden" name="appCompany" th:value="${searchForm.appCompany}" />
+                        <input type="hidden" name="appAddr" th:value="${searchForm.appAddr}" />
+                        <input type="hidden" name="addComment" th:value="${searchForm.addComment}" />
+                        <input type="hidden" name="selectedApplicationIds" th:value="${row.application().researchAppSeq}" />
+                        <button type="submit"
+                                class="row-send-button row-send-button--email"
+                                th:classappend="${row.emailSent()} ? ' row-send-button--sent' : ''"
+                                th:disabled="${row.emailSent()}"
+                                th:text="${row.emailSent()} ? '메일 완료' : '메일'">메일</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section th:if="${#lists.isEmpty(overview.results())}" class="empty-panel">
+        현재 조건에 맞는 매칭 결과가 없습니다.
+    </section>
+</main>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, "Noto Sans KR", sans-serif;
+        color: #08243d;
+        background: #f3f8fc;
+        min-height: 100vh;
+    }
+
+    button {
+        min-height: 2.55rem;
+        border: 0;
+        border-radius: 10px;
+        background: #0b7f73;
+        color: #fff;
+        padding: 0.55rem 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    button:disabled {
+        cursor: not-allowed;
+        opacity: 0.62;
+    }
+
+    .matching-window {
+        min-width: 860px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .matching-window__head,
+    .keyword-panel,
+    .sms-panel,
+    .empty-panel {
+        border: 1px solid #c9ddec;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    .matching-window__head {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .eyebrow {
+        margin: 0 0 0.2rem;
+        color: #0b7f73;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: 1.35rem;
+    }
+
+    .research-title {
+        margin: 0.35rem 0 0;
+        color: #52647a;
+        line-height: 1.45;
+    }
+
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .metric-grid div {
+        border: 1px solid #c9ddec;
+        border-radius: 10px;
+        background: #fff;
+        padding: 0.75rem 0.9rem;
+    }
+
+    .metric-grid span {
+        display: block;
+        color: #0a75a6;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .metric-grid strong {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 1.15rem;
+    }
+
+    .keyword-panel {
+        padding: 0.75rem 0.9rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.5;
+    }
+
+    .keyword-panel strong {
+        color: #0a75a6;
+        margin-right: 0.45rem;
+    }
+
+    .download-panel {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid #c9ddec;
+        border-radius: 10px;
+        background: #fff;
+        padding: 0.75rem 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .download-panel strong {
+        color: #0a75a6;
+        margin-right: auto;
+    }
+
+    .download-panel form {
+        margin: 0;
+    }
+
+    .send-result-panel {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.7rem;
+        border: 1px solid #bbf7d0;
+        border-radius: 10px;
+        background: #f0fdf4;
+        color: #14532d;
+        padding: 0.75rem 0.9rem;
+        margin-bottom: 0.75rem;
+        transition: opacity 0.24s ease, transform 0.24s ease;
+    }
+
+    .send-result-panel strong {
+        margin-right: 0.4rem;
+    }
+
+    .send-result-panel--dismissed {
+        opacity: 0;
+        transform: translateY(-0.35rem);
+        pointer-events: none;
+    }
+
+    .send-result-panel--limit {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #7f1d1d;
+    }
+
+    .sms-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 0.75rem;
+        background: #edf7ff;
+    }
+
+    .sms-panel div {
+        display: grid;
+        gap: 0.2rem;
+    }
+
+    .sms-panel strong {
+        color: #075985;
+    }
+
+    .sms-panel span {
+        color: #52647a;
+        font-size: 0.92rem;
+    }
+
+    .selected-count {
+        margin-left: auto;
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        background: #fff;
+        color: #0f766e;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .email-panel {
+        background: #f7f5ff;
+    }
+
+    .email-panel strong {
+        color: #5b21b6;
+    }
+
+    .result-table-wrap {
+        flex: 1 1 auto;
+        min-height: 335px;
+        overflow: auto;
+        border: 1px solid #c9ddec;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    .result-table {
+        width: 100%;
+        min-width: 1420px;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .result-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f3f9fc;
+        color: #0676a6;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .result-table th,
+    .result-table td {
+        border-bottom: 1px solid #d8e7ef;
+        padding: 0.65rem 0.55rem;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .number-cell,
+    .phone-cell,
+    .email-cell {
+        white-space: nowrap;
+    }
+
+    .select-cell {
+        width: 2.5rem;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .select-cell input {
+        width: 1rem;
+        height: 1rem;
+        accent-color: #0b7f73;
+    }
+
+    .number-cell {
+        text-align: center;
+        color: #64748b;
+    }
+
+    .comment-cell {
+        width: 19rem;
+    }
+
+    .info-chip,
+    .score-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.55rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .info-chip {
+        color: #14537a;
+        background: #eaf6fb;
+    }
+
+    .info-chip--male {
+        color: #155e75;
+        border: 1px solid #bae6fd;
+        background: #e0f2fe;
+    }
+
+    .info-chip--female {
+        color: #9d174d;
+        border: 1px solid #fbcfe8;
+        background: #fce7f3;
+    }
+
+    .score-chip {
+        color: #0f5132;
+        background: #e6f4ec;
+        font-weight: 700;
+    }
+
+    .keyword-cell {
+        color: #0f766e;
+        font-weight: 700;
+    }
+
+    .row-action-cell {
+        width: 9.5rem;
+        white-space: nowrap;
+    }
+
+    .row-action-cell form {
+        display: inline-block;
+        margin: 0 0.25rem 0.25rem 0;
+    }
+
+    .row-send-button {
+        min-height: 2rem;
+        padding: 0.35rem 0.55rem;
+        border-radius: 8px;
+        background: #0b7f73;
+        color: #fff;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+
+    .row-send-button--email {
+        background: #5b21b6;
+    }
+
+    .row-send-button--sent,
+    .row-send-button--sent:disabled {
+        background: #475569;
+        color: #e2e8f0;
+        opacity: 1;
+    }
+
+    .empty-panel {
+        padding: 1rem;
+        color: #52647a;
+    }
+</style>
+<script>
+    (function blockPreviewFormSubmissions() {
+        const previewRoot = document.querySelector('[data-preview-mode]');
+        if (!previewRoot || previewRoot.dataset.previewMode !== 'true') {
+            return;
+        }
+        document.addEventListener('submit', function (event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            alert('미리보기에서는 실제 발송이나 다운로드가 실행되지 않습니다.');
+        }, true);
+    }());
+
+    (function initializeMatchingSelection() {
+        function selectedCheckboxes() {
+            return Array.from(document.querySelectorAll('[data-row-select]:checked'));
+        }
+
+        function selectedValuesForChannel(channel) {
+            return selectedCheckboxes()
+                .filter(function (checkbox) {
+                    return checkbox.dataset[channel + 'Allowed'] === 'true';
+                })
+                .map(function (checkbox) {
+                    return checkbox.value;
+                });
+        }
+
+        function updateSelectionState() {
+            const rowCheckboxes = Array.from(document.querySelectorAll('[data-row-select]'));
+            const selected = selectedCheckboxes();
+            const selectAll = document.querySelector('[data-select-all]');
+            if (selectAll) {
+                selectAll.checked = rowCheckboxes.length > 0 && selected.length === rowCheckboxes.length;
+                selectAll.indeterminate = selected.length > 0 && selected.length < rowCheckboxes.length;
+            }
+            document.querySelectorAll('[data-selected-send-form]').forEach(function (form) {
+                const channel = form.dataset.consentChannel;
+                const channelSelected = selectedValuesForChannel(channel);
+                const count = form.querySelector('[data-selected-count]');
+                const button = form.querySelector('[data-selected-send-button]');
+                const label = channel === 'sms' ? 'SMS 발송' : '이메일 발송';
+                if (count) {
+                    count.textContent = '발송 가능 ' + channelSelected.length + '명';
+                }
+                if (!button) {
+                    return;
+                }
+                button.textContent = label + ' ' + channelSelected.length + '명';
+                button.disabled = channelSelected.length === 0;
+            });
+        }
+
+        function appendSelectedInputs(form, selected) {
+            form.querySelectorAll('input[data-selected-hidden]').forEach(function (input) {
+                input.remove();
+            });
+            selected.forEach(function (value) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selectedApplicationIds';
+                input.value = value;
+                input.dataset.selectedHidden = 'true';
+                form.appendChild(input);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const selectAll = document.querySelector('[data-select-all]');
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    document.querySelectorAll('[data-row-select]').forEach(function (checkbox) {
+                        checkbox.checked = selectAll.checked;
+                    });
+                    updateSelectionState();
+                });
+            }
+
+            document.querySelectorAll('[data-row-select]').forEach(function (checkbox) {
+                checkbox.addEventListener('change', updateSelectionState);
+            });
+
+            document.querySelectorAll('[data-send-confirm-form]').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    const scope = form.dataset.sendScope;
+                    const channel = form.dataset.sendChannel;
+                    let selected = [];
+                    let message = channel === 'SMS'
+                        ? 'SMS를 보내시겠습니까?'
+                        : '이메일을 보내시겠습니까?';
+
+                    if (scope === 'selected') {
+                        selected = selectedValuesForChannel(form.dataset.consentChannel);
+                        if (selected.length === 0) {
+                            event.preventDefault();
+                            alert('발송할 신청자를 선택해 주세요.');
+                            return;
+                        }
+                        message = channel === 'SMS'
+                            ? '선택한 ' + selected.length + '명에게 SMS를 발송하시겠습니까?'
+                            : '선택한 ' + selected.length + '명에게 이메일을 발송하시겠습니까?';
+                    }
+
+                    if (!confirm(message)) {
+                        event.preventDefault();
+                        return;
+                    }
+                    if (scope === 'selected') {
+                        appendSelectedInputs(form, selected);
+                    }
+                });
+            });
+
+            updateSelectionState();
+        });
+    }());
+
+    (function initializeAutoDismissWindowNotifications() {
+        const AUTO_DISMISS_MS = 10000;
+
+        function dismiss(element) {
+            if (!element || element.dataset.autoDismiss === 'false') {
+                return;
+            }
+            element.classList.add('send-result-panel--dismissed');
+            window.setTimeout(function () {
+                element.style.display = 'none';
+            }, 260);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.send-result-panel').forEach(function (element) {
+                window.setTimeout(function () {
+                    dismiss(element);
+                }, AUTO_DISMISS_MS);
+            });
+        });
+    }());
+</script>
+</body>
+</html>

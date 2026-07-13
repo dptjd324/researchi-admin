@@ -1,4 +1,4 @@
-# Researchi Admin
+ # Researchi Admin
 
 ![Java](https://img.shields.io/badge/Java-17-blue)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.x-brightgreen)

@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.legacy.blacklist.mapper.LegacyBlacklistMapper">
+
+    <resultMap id="blacklistResultMap" type="com.researchi.admin.legacy.blacklist.domain.Blacklist">
+        <id property="blacklistNo" column="BLACKLIST_NO"/>
+        <result property="blackUserBirth" column="BLACK_USER_BIRTH"/>
+        <result property="blackUserName" column="BLACK_USER_NAME"/>
+        <result property="blackUserContact" column="BLACK_USER_CONTACT"/>
+        <result property="blackUserComment" column="BLACK_USER_COMMENT"/>
+        <result property="blackYn" column="BLACK_YN"/>
+        <result property="registDt" column="REGIST_DT"/>
+        <result property="modifyDt" column="MODIFY_DT"/>
+    </resultMap>
+
+    <sql id="blacklistColumns">
+        BLACKLIST_NO,
+        BLACK_USER_BIRTH,
+        BLACK_USER_NAME,
+        BLACK_USER_CONTACT,
+        BLACK_USER_COMMENT,
+        BLACK_YN,
+        REGIST_DT,
+        MODIFY_DT
+    </sql>
+
+    <sql id="searchCondition">
+        <if test="keyword != null and keyword != ''">
+            AND (
+                BLACK_USER_NAME LIKE CONCAT('%', #{keyword}, '%')
+                OR BLACK_USER_CONTACT LIKE CONCAT('%', #{keyword}, '%')
+                OR BLACK_USER_BIRTH LIKE CONCAT('%', #{keyword}, '%')
+                OR BLACK_USER_COMMENT LIKE CONCAT('%', #{keyword}, '%')
+                OR CAST(BLACKLIST_NO AS CHAR) = #{keyword}
+            )
+        </if>
+        <if test="birth != null and birth != ''">
+            AND BLACK_USER_BIRTH LIKE CONCAT('%', #{birth}, '%')
+        </if>
+        <if test="name != null and name != ''">
+            AND BLACK_USER_NAME LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="blackYn != null and blackYn != ''">
+            AND BLACK_YN = #{blackYn}
+        </if>
+    </sql>
+
+    <select id="findByBlacklistNo" resultMap="blacklistResultMap">
+        SELECT
+        <include refid="blacklistColumns"/>
+        FROM TB_BLACKLIST_MST
+        WHERE BLACKLIST_NO = #{blacklistNo}
+    </select>
+
+    <select id="findPage" resultMap="blacklistResultMap">
+        SELECT
+        <include refid="blacklistColumns"/>
+        FROM TB_BLACKLIST_MST
+        WHERE 1 = 1
+        <include refid="searchCondition"/>
+        ORDER BY BLACKLIST_NO DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_BLACKLIST_MST
+        WHERE 1 = 1
+        <include refid="searchCondition"/>
+    </select>
+
+    <select id="findNextBlacklistNo" resultType="long">
+        SELECT COALESCE(MAX(BLACKLIST_NO), 0) + 1
+        FROM TB_BLACKLIST_MST
+    </select>
+
+    <insert id="insert" parameterType="com.researchi.admin.legacy.blacklist.domain.Blacklist">
+        INSERT INTO TB_BLACKLIST_MST (
+            BLACKLIST_NO,
+            BLACK_USER_BIRTH,
+            BLACK_USER_NAME,
+            BLACK_USER_CONTACT,
+            BLACK_USER_COMMENT,
+            BLACK_YN,
+            REGIST_DT,
+            MODIFY_DT
+        ) VALUES (
+            #{blacklistNo},
+            #{blackUserBirth},
+            #{blackUserName},
+            #{blackUserContact},
+            #{blackUserComment},
+            #{blackYn},
+            DATE_FORMAT(NOW(), '%Y%m%d'),
+            DATE_FORMAT(NOW(), '%Y%m%d')
+        )
+    </insert>
+
+    <update id="update" parameterType="com.researchi.admin.legacy.blacklist.domain.Blacklist">
+        UPDATE TB_BLACKLIST_MST
+        SET
+            BLACK_USER_BIRTH = #{blackUserBirth},
+            BLACK_USER_NAME = #{blackUserName},
+            BLACK_USER_CONTACT = #{blackUserContact},
+            BLACK_USER_COMMENT = #{blackUserComment},
+            BLACK_YN = #{blackYn},
+            MODIFY_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        WHERE BLACKLIST_NO = #{blacklistNo}
+    </update>
+
+    <update id="updateBlackYn">
+        UPDATE TB_BLACKLIST_MST
+        SET
+            BLACK_YN = #{blackYn},
+            MODIFY_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        WHERE BLACKLIST_NO = #{blacklistNo}
+    </update>
+
+    <delete id="deleteByBlacklistNo">
+        DELETE FROM TB_BLACKLIST_MST
+        WHERE BLACKLIST_NO = #{blacklistNo}
+    </delete>
+
+    <select id="countActiveMatch" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_BLACKLIST_MST
+        WHERE BLACK_YN = 'Y'
+          AND (
+              (#{contact} IS NOT NULL AND #{contact} != '' AND REPLACE(REPLACE(REPLACE(BLACK_USER_CONTACT, '-', ''), ' ', ''), '.', '') = #{contact})
+              OR (
+                  #{name} IS NOT NULL AND #{name} != ''
+                  AND #{birth} IS NOT NULL AND #{birth} != ''
+                  AND BLACK_USER_NAME = #{name}
+                  AND REPLACE(REPLACE(BLACK_USER_BIRTH, '-', ''), '.', '') = #{birth}
+              )
+          )
+    </select>
+</mapper>

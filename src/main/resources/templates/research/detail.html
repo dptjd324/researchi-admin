@@ -1,0 +1,2458 @@
+﻿<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{layout/base :: shell(${pageTitle}, ~{::content})}">
+    <th:block th:fragment="content">
+        <section class="panel research-edit-page admin-data-page">
+            <div class="dashboard-head research-detail-title-row">
+                <div>
+                    <h2 class="h3 mb-2">좌담회/설문 상세</h2>
+                </div>
+            </div>
+
+            <div th:if="${param.created}" class="notice success">등록했습니다.</div>
+            <div th:if="${param.updated}" class="notice success">저장했습니다.</div>
+            <div th:if="${param.hiddenActionBlocked}" class="notice warning">숨김 처리된 공고에서는 매칭과 메일 발송을 사용할 수 없습니다.</div>
+            <div th:if="${hiddenResearch}" class="notice research-hidden-notice">숨김 처리된 공고입니다. 상세 정보와 신청자는 확인할 수 있지만 매칭과 메일 발송은 차단됩니다.</div>
+
+            <form th:action="@{/research/{researchNo}(researchNo=${research.researchNo})}" method="post" th:object="${researchForm}" class="research-edit-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" th:field="*{clientId}" data-research-client-id>
+
+                <div class="research-meta-grid">
+                    <div><strong>CODE</strong><span th:text="${research.researchNo}">46408</span></div>
+                    <div><strong>마감일자</strong><span th:text="${research.closeDateLabel ?: '-'}">2026-05-04</span></div>
+                    <div><strong>신청자조회</strong><span th:text="${'(' + (research.appNewCnt != null ? research.appNewCnt : 0) + '/' + (research.appCnt != null ? research.appCnt : 0) + ')'}">(9/63)</span></div>
+                    <div><strong>등록일자</strong><span th:text="${research.registDateTimeMinuteLabel}">2025-11-07 00:00</span></div>
+                    <div><strong>수정일자</strong><span th:text="${research.modifyDateTimeMinuteLabel}">2025-11-07 00:00</span></div>
+                </div>
+
+                <section class="panel" style="margin-top: 1rem;">
+                    <div class="dashboard-head dashboard-head--row">
+                        <div class="dashboard-head__copy">
+                            <h3 class="h5 mb-2">신청폼 링크</h3>
+                            <p class="dashboard-copy mb-0">모바일에서도 열 수 있는 신청 주소입니다.</p>
+                        </div>
+                        <div class="actions">
+                            <a class="secondary-link" th:href="${publicApplyUrl}" data-public-apply-window>링크 열기</a>
+                            <button type="button" class="secondary-link" onclick="copyResearchApplyUrl('research-detail-public-apply-url', this)">주소 복사</button>
+                        </div>
+                    </div>
+                    <label style="display:block;">
+                        <span>신청 주소</span>
+                        <input id="research-detail-public-apply-url" type="text" th:value="${publicApplyUrl}" readonly>
+                    </label>
+                </section>
+
+                <section class="research-client-helper">
+                    <div>
+                        <span>거래처 선택</span>
+                        <select data-research-client-select>
+                            <option value="">수동 입력 유지</option>
+                            <option th:each="client : ${clientOptions}"
+                                    th:value="${client.id()}"
+                                    th:selected="${researchForm.clientId != null and researchForm.clientId == client.id()}"
+                                    th:text="${client.clientName() + (client.primaryEmail() != null ? ' - ' + client.primaryEmail() : '')}"
+                                    th:attr="data-client-name=${client.clientName()},
+                                             data-contact-name=${client.primaryContactName()},
+                                             data-contact-no=${client.primaryContactNo()},
+                                             data-primary-email=${client.primaryEmail()},
+                                             data-active-emails=${client.emailsSummary()}">거래처</option>
+                        </select>
+                    </div>
+                    <button type="button" class="secondary-link" data-research-client-apply>선택값 적용</button>
+                    <a th:href="@{/clients/new}" class="secondary-link" target="_blank" rel="noopener">거래처 등록</a>
+                    <p class="research-client-helper__message" data-research-client-message hidden>거래처가 변경 또는 등록되었습니다.</p>
+                </section>
+
+                <div class="research-edit-grid">
+                    <label class="research-edit-grid__wide">
+                        <span>좌담회/설문 제목</span>
+                        <input type="text" th:field="*{researchTitle}" />
+                        <small th:if="${#fields.hasErrors('researchTitle')}" th:errors="*{researchTitle}">제목을 입력해 주세요.</small>
+                    </label>
+                    <label>
+                        <span>회사명</span>
+                        <input type="text" th:field="*{companyName}" />
+                    </label>
+                    <label>
+                        <span>담당자명</span>
+                        <input type="text" th:field="*{serverName}" />
+                    </label>
+                    <label>
+                        <span>담당자 연락처</span>
+                        <input type="text" th:field="*{contactNo}" />
+                    </label>
+                    <label>
+                        <span>소개비</span>
+                        <input type="text" th:field="*{brokerageAmt}" />
+                    </label>
+                    <label>
+                        <span>정산 여부</span>
+                        <select th:field="*{calculateYn}">
+                            <option value="">선택</option>
+                            <option value="N">미정산</option>
+                            <option value="Y">정산</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>기타</span>
+                        <input type="text" th:field="*{remark}" />
+                    </label>
+                    <label>
+                        <span>마감일자</span>
+                        <input type="text" th:field="*{closeDate}" placeholder="20260509" class="research-date-input" />
+                        <small th:if="${#fields.hasErrors('closeDate')}" th:errors="*{closeDate}">마감일자를 입력해 주세요.</small>
+                    </label>
+                </div>
+
+                <div class="research-detail-command-row">
+                    <div></div>
+                    <div class="dashboard-actions research-detail-actions">
+                        <a th:href="@{/research/{researchNo}/applications(researchNo=${research.researchNo})}" class="secondary-link">신청자 조회</a>
+                        <a th:if="${!hiddenResearch}" th:href="@{/research/{researchNo}/matching(researchNo=${research.researchNo})}" class="secondary-link">매칭</a>
+                        <a th:if="${!hiddenResearch}" th:href="@{/research/{researchNo}/mail(researchNo=${research.researchNo})}" class="secondary-link">메일</a>
+                        <a th:href="${hiddenResearch} ? @{/research/hidden} : @{/research}" class="secondary-link">목록</a>
+                    </div>
+                </div>
+
+                <div class="research-edit-block">
+                    <div class="research-detail-editor-head">
+                        <div class="research-detail-editor-tools">
+                            <span>좌담회/설문 내용</span>
+                            <div class="research-text-toolbar" data-editor-toolbar="researchContents">
+                                <label>
+                                    <span>글자 크기</span>
+                                    <select data-editor-font-size>
+                                        <option value="">선택</option>
+                                        <option value="4px">4</option>
+                                        <option value="8px">8</option>
+                                        <option value="12px">12</option>
+                                        <option value="16px" selected>16</option>
+                                        <option value="20px">20</option>
+                                        <option value="24px">24</option>
+                                        <option value="28px">28</option>
+                                        <option value="32px">32</option>
+                                    </select>
+                                </label>
+                                <div class="research-color-tool" data-editor-font-color-group>
+                                    <span>글자 색</span>
+                                    <div class="research-color-swatches">
+                                        <button type="button" class="research-color-swatch is-active" data-editor-font-color="black" style="--swatch-color:#111827;" aria-label="black"></button>
+                                        <button type="button" class="research-color-swatch" data-editor-font-color="red" style="--swatch-color:#ff0010;" aria-label="red"></button>
+                                        <button type="button" class="research-color-swatch" data-editor-font-color="blue" style="--swatch-color:#0044ff;" aria-label="blue"></button>
+                                        <button type="button" class="research-color-swatch" data-editor-font-color="green" style="--swatch-color:#245b12;" aria-label="green"></button>
+                                        <button type="button" class="research-color-swatch" data-editor-font-color="yellow" style="--swatch-color:#ffd400;" aria-label="yellow"></button>
+                                    </div>
+                                </div>
+                                <button type="button" class="research-format-button" data-editor-bold title="굵게" aria-label="굵게">
+                                    <strong>가</strong>
+                                </button>
+                                <div class="research-align-tools" aria-label="문단 정렬">
+                                    <button type="button" class="research-align-button" data-editor-align="left" title="왼쪽 정렬" aria-label="왼쪽 정렬">
+                                        <span class="research-align-icon research-align-icon--left"><i></i><i></i><i></i></span>
+                                    </button>
+                                    <button type="button" class="research-align-button" data-editor-align="center" title="가운데 정렬" aria-label="가운데 정렬">
+                                        <span class="research-align-icon research-align-icon--center"><i></i><i></i><i></i></span>
+                                    </button>
+                                    <button type="button" class="research-align-button" data-editor-align="right" title="오른쪽 정렬" aria-label="오른쪽 정렬">
+                                        <span class="research-align-icon research-align-icon--right"><i></i><i></i><i></i></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="research-edit-actions research-detail-save-actions">
+                            <button type="submit">저장</button>
+                        </div>
+                    </div>
+                    <textarea id="researchContents" th:field="*{researchContents}" th:text="${research.researchContents}" rows="14" class="research-raw-textarea"></textarea>
+                    <div id="researchContentsEditor"
+                         class="research-rich-editor"
+                         contenteditable="true"
+                         data-editor-source="researchContents"
+                         th:attr="data-initial-value=${research.researchContents}"
+                         th:text="${research.researchContents}"></div>
+                    <small>링크 문구와 URL을 입력해서 삽입하면 해당 문구만 복사 화면에서 활성 링크로 변환됩니다.</small>
+                </div>
+                <div class="research-link-builder" data-link-target="researchContents">
+                    <label>
+                        <span>링크 문구</span>
+                        <input type="text" data-link-label placeholder="예: 신청하기">
+                    </label>
+                    <label>
+                        <span>URL</span>
+                        <input type="url" data-link-url placeholder="https://example.com/apply">
+                    </label>
+                    <button type="button" class="secondary-link" data-link-insert>본문에 링크 삽입</button>
+                </div>
+                <section class="research-link-preview" th:if="${researchContentsHtml != null and !#strings.isEmpty(researchContentsHtml)}">
+                    <div class="research-link-preview__head">
+                        <h3>본문 링크 미리보기</h3>
+                        <div class="research-link-preview__actions">
+                            <button type="button" class="secondary-link" data-preview-copy>미리보기 복사</button>
+                            <button type="button" class="secondary-link" data-preview-cafe-copy>카페용 복사</button>
+                        </div>
+                    </div>
+                    <div class="research-link-preview__title" th:text="*{researchTitle}">title</div>
+                    <div class="research-link-preview__body" th:utext="${researchContentsHtml}">preview</div>
+                </section>
+
+                <label class="research-edit-block">
+                    <span>좌담회/설문 추가 기재사항</span>
+                    <textarea id="addComment" th:field="*{addComment}" rows="8"
+                              placeholder="[그룹명]&#10;1. 질문 내용&#10;2. 질문 내용&#10;&#10;[다른 그룹명]&#10;1. 질문 내용"></textarea>
+                    <small>그룹이 2개 이상이면 [그룹명] 아래에 번호 목록으로 작성하세요. 그룹이 하나면 번호 목록 또는 기존 / 구분 입력을 사용할 수 있습니다.</small>
+                </label>
+            </form>
+        </section>
+
+        <style>
+            .research-detail-title-row {
+                margin-bottom: 0.75rem;
+            }
+
+            .research-edit-page .research-meta-grid {
+                grid-template-columns: minmax(120px, 0.8fr) minmax(140px, 0.9fr) minmax(150px, 0.9fr) minmax(190px, 1.2fr) minmax(190px, 1.2fr);
+                gap: 0.65rem;
+                padding: 0.85rem;
+                border: 1px solid #d7e5f2;
+                border-radius: 16px;
+                background: linear-gradient(180deg, #ffffff, #f7fbff);
+            }
+
+            .research-edit-page .research-meta-grid div {
+                position: relative;
+                min-height: 4.25rem;
+                padding: 0.85rem 0.95rem 0.8rem 1.05rem;
+                border: 1px solid #d5e3f0;
+                border-radius: 14px;
+                background: #fff;
+                box-shadow: 0 10px 24px rgba(37, 64, 89, 0.05);
+                overflow: hidden;
+            }
+
+            .research-edit-page .research-meta-grid div::before {
+                content: "";
+                position: absolute;
+                inset: 0 auto 0 0;
+                width: 4px;
+                background: #1490be;
+            }
+
+            .research-edit-page .research-meta-grid div:nth-child(2)::before {
+                background: #0f766e;
+            }
+
+            .research-edit-page .research-meta-grid div:nth-child(3)::before {
+                background: #2563eb;
+            }
+
+            .research-edit-page .research-meta-grid div:nth-child(4)::before,
+            .research-edit-page .research-meta-grid div:nth-child(5)::before {
+                background: #64748b;
+            }
+
+            .research-edit-page .research-meta-grid strong {
+                color: #0077a8;
+                font-size: 0.82rem;
+                letter-spacing: 0;
+            }
+
+            .research-edit-page .research-meta-grid span {
+                color: #0f2742;
+                font-size: 0.98rem;
+                font-weight: 800;
+                line-height: 1.3;
+            }
+
+            .research-edit-page .research-meta-grid div:nth-child(2) span {
+                color: #0f766e;
+            }
+
+            .research-edit-page .research-meta-grid div:nth-child(3) span {
+                color: #1d4ed8;
+            }
+
+            .research-detail-command-row {
+                display: grid;
+                grid-template-columns: minmax(260px, 1fr) auto;
+                gap: 1rem;
+                align-items: end;
+                margin: 0.35rem 0 0.7rem;
+            }
+
+            .research-detail-actions {
+                justify-content: flex-end;
+                gap: 0.6rem;
+            }
+
+            .research-detail-actions .secondary-link {
+                min-height: 3rem;
+                padding: 0.65rem 1.25rem;
+                border-radius: 14px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+
+            .research-detail-editor-head {
+                display: grid;
+                grid-template-columns: minmax(520px, 1fr) minmax(220px, 0.46fr);
+                gap: 1rem;
+                align-items: stretch;
+                margin-bottom: 0.65rem;
+            }
+
+            .research-detail-editor-tools > span {
+                display: block;
+                margin-bottom: 0.45rem;
+                color: #1490be;
+                font-weight: 800;
+            }
+
+            .research-detail-save-actions {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                min-height: 6.15rem;
+                margin: 1.55rem 0 0;
+                padding: 1.1rem;
+                border: 1px solid #d4e1ef;
+                border-radius: 14px 14px 0 0;
+                background: #fff;
+            }
+
+            .research-detail-save-actions button {
+                min-width: 5.25rem;
+                min-height: 3.45rem;
+                border-radius: 14px;
+                font-size: 1.15rem;
+                font-weight: 800;
+            }
+
+            .research-hidden-notice {
+                border-color: #f6c66b;
+                background: #fff8ed;
+                color: #9a5800;
+            }
+
+            .research-link-preview {
+                border: 1px solid #d4e1ef;
+                border-radius: 8px;
+                background: #f8fbff;
+                padding: 0.9rem 1rem;
+            }
+
+            .research-link-preview__head {
+                display: flex;
+                justify-content: space-between;
+                gap: 0.75rem;
+                align-items: center;
+                margin-bottom: 0.65rem;
+            }
+
+            .research-link-preview__actions {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 0.45rem;
+            }
+
+            .research-link-preview h3 {
+                margin: 0;
+                color: #1490be;
+                font-size: 0.95rem;
+                font-weight: 700;
+            }
+
+            .research-link-preview__body {
+                color: #24384d;
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 1.25;
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+
+            .research-link-preview__title {
+                margin-bottom: 0.75rem;
+                color: #0f2742;
+                font-size: 1.05rem;
+                font-weight: 700;
+                line-height: 1.45;
+                word-break: keep-all;
+                overflow-wrap: anywhere;
+            }
+
+            .research-link-preview__body span[style*="font-size"] {
+                color: inherit !important;
+                font-weight: inherit !important;
+            }
+
+            .research-link-preview__body a {
+                color: #007b72;
+                font-weight: inherit;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+
+            .research-link-builder {
+                display: grid;
+                grid-template-columns: minmax(140px, 0.35fr) minmax(240px, 1fr) auto;
+                gap: 0.65rem;
+                align-items: end;
+                border: 1px solid #d4e1ef;
+                border-radius: 8px;
+                background: #fbfdff;
+                padding: 0.8rem;
+            }
+
+            .research-link-builder label {
+                display: grid;
+                gap: 0.3rem;
+                margin: 0;
+            }
+
+            .research-link-builder span {
+                color: #1490be;
+                font-size: 0.88rem;
+                font-weight: 700;
+            }
+
+            .research-link-builder input {
+                width: 100%;
+            }
+
+            .research-text-toolbar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                align-items: end;
+                margin-bottom: 0;
+                padding: 0.65rem;
+                border: 1px solid #d4e1ef;
+                border-radius: 8px;
+                background: #fbfdff;
+            }
+
+            .research-text-toolbar label {
+                display: grid;
+                gap: 0.25rem;
+                margin: 0;
+            }
+
+            .research-color-tool {
+                display: grid;
+                gap: 0.25rem;
+            }
+
+            .research-color-swatches {
+                display: flex;
+                gap: 0.35rem;
+                align-items: center;
+                min-height: 2.7rem;
+            }
+
+            .research-color-swatch {
+                width: 2.35rem;
+                height: 2.35rem;
+                border: 1px solid #b7cadb;
+                border-radius: 8px;
+                background: var(--swatch-color);
+                cursor: pointer;
+            }
+
+            .research-color-swatch[data-editor-font-color="yellow"] {
+                border-color: #9a6b05;
+            }
+
+            .research-color-swatch.is-active {
+                outline: 3px solid rgba(20, 144, 190, 0.22);
+                border-color: #1490be;
+            }
+
+            .research-format-button,
+            .research-align-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 2.35rem;
+                height: 2.35rem;
+                border: 1px solid #b7cadb;
+                border-radius: 8px;
+                background: #fff;
+                color: #334155;
+                cursor: pointer;
+            }
+
+            .research-format-button {
+                font-size: 1rem;
+                font-weight: 800;
+            }
+
+            .research-format-button.is-active,
+            .research-align-button.is-active {
+                outline: 3px solid rgba(20, 144, 190, 0.22);
+                border-color: #1490be;
+                color: #007b72;
+            }
+
+            .research-align-tools {
+                display: flex;
+                gap: 0.25rem;
+                align-items: center;
+                min-height: 2.7rem;
+            }
+
+            .research-align-icon {
+                display: grid;
+                gap: 3px;
+                width: 1.15rem;
+            }
+
+            .research-align-icon i {
+                display: block;
+                height: 2px;
+                border-radius: 999px;
+                background: currentColor;
+            }
+
+            .research-align-icon--left i:nth-child(1),
+            .research-align-icon--center i:nth-child(1),
+            .research-align-icon--right i:nth-child(1) {
+                width: 1.15rem;
+            }
+
+            .research-align-icon--left i:nth-child(2),
+            .research-align-icon--right i:nth-child(2) {
+                width: 0.78rem;
+            }
+
+            .research-align-icon--left i:nth-child(3),
+            .research-align-icon--right i:nth-child(3) {
+                width: 0.95rem;
+            }
+
+            .research-align-icon--center i {
+                justify-self: center;
+            }
+
+            .research-align-icon--center i:nth-child(2) {
+                width: 0.78rem;
+            }
+
+            .research-align-icon--center i:nth-child(3) {
+                width: 0.95rem;
+            }
+
+            .research-align-icon--right i {
+                justify-self: end;
+            }
+
+            .research-text-toolbar span {
+                color: #1490be;
+                font-size: 0.85rem;
+                font-weight: 700;
+            }
+
+            .research-text-toolbar select {
+                min-width: 7rem;
+            }
+
+            .research-raw-textarea {
+                display: none;
+            }
+
+            .research-rich-editor {
+                min-height: 22rem;
+                padding: 0.85rem 1rem;
+                border: 1px solid #c7d2e0;
+                border-radius: 0.8rem;
+                background: #fff;
+                color: var(--admin-text);
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 1.65;
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+            }
+
+            .research-rich-editor div,
+            .research-rich-editor p {
+                min-height: 1.65em;
+                white-space: pre-wrap;
+            }
+
+            .research-rich-editor span {
+                color: inherit;
+                font-weight: inherit;
+            }
+
+            .research-rich-editor strong,
+            .research-rich-editor b {
+                font-weight: 700;
+            }
+
+            .research-rich-editor:focus {
+                outline: 0;
+                border-color: rgba(15, 118, 110, 0.5);
+                box-shadow: 0 0 0 0.25rem rgba(15, 118, 110, 0.12);
+            }
+
+            .research-client-helper {
+                display: grid;
+                grid-template-columns: minmax(260px, 1fr) auto auto;
+                gap: 0.65rem;
+                align-items: end;
+                border: 1px solid #d4e1ef;
+                border-radius: 8px;
+                background: #fbfdff;
+                padding: 0.85rem;
+            }
+
+            .research-client-helper > div {
+                display: grid;
+                gap: 0.3rem;
+            }
+
+            .research-client-helper span {
+                color: #1490be;
+                font-weight: 700;
+            }
+
+            .research-client-helper select {
+                width: 100%;
+            }
+
+            .research-client-helper p {
+                grid-column: 1 / -1;
+                margin: 0;
+                color: #64748b;
+                font-size: 0.9rem;
+            }
+
+            .research-client-helper__message {
+                color: #007b72 !important;
+                font-weight: 700;
+            }
+
+            @media (max-width: 860px) {
+                .research-edit-page .research-meta-grid,
+                .research-detail-command-row,
+                .research-detail-editor-head,
+                .research-link-builder,
+                .research-client-helper {
+                    grid-template-columns: 1fr;
+                }
+
+                .research-detail-actions,
+                .research-detail-save-actions {
+                    justify-content: stretch;
+                }
+
+                .research-detail-actions .secondary-link,
+                .research-detail-save-actions button {
+                    width: 100%;
+                }
+            }
+        </style>
+
+        <script>
+            let lastResearchEditorRange = null;
+
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('[data-public-apply-window]').forEach(function (link) {
+                    link.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        const width = 720;
+                        const height = Math.min(860, window.screen.availHeight - 80);
+                        const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
+                        const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+                        const popup = window.open(
+                            link.href,
+                            'researchPublicApply',
+                            'width=' + width + ',height=' + height + ',left=' + left + ',top=' + top + ',menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+                        );
+                        if (popup) {
+                            popup.focus();
+                        }
+                    });
+                });
+
+                document.querySelectorAll('[data-editor-source]').forEach(function (editor) {
+                    const source = document.getElementById(editor.getAttribute('data-editor-source'));
+                    const initialValue = resolveResearchEditorInitialValue(editor, source);
+                    if (source && hasMeaningfulResearchEditorValue(initialValue) && !hasMeaningfulResearchEditorValue(source.value)) {
+                        source.value = initialValue;
+                    }
+                    editor.innerHTML = renderResearchEditorHtml(initialValue);
+                });
+                document.querySelectorAll('[data-editor-toolbar]').forEach(function (toolbar) {
+                    const sizeSelect = toolbar.querySelector('[data-editor-font-size]');
+                    if (sizeSelect && !sizeSelect.value) {
+                        sizeSelect.value = '16px';
+                    }
+                    setResearchToolbarColor(toolbar, 'black');
+                });
+                document.addEventListener('input', function (event) {
+                    const editor = event.target.closest('[data-editor-source]');
+                    if (!editor) {
+                        return;
+                    }
+
+                    syncResearchEditorSource(editor);
+                });
+
+
+                document.addEventListener('paste', function (event) {
+                    const editor = event.target.closest('[data-editor-source]');
+                    if (!editor) {
+                        return;
+                    }
+                    const clipboard = event.clipboardData || window.clipboardData;
+                    const text = clipboard ? clipboard.getData('text/plain') : '';
+                    if (!text) {
+                        return;
+                    }
+                    event.preventDefault();
+                    insertResearchPlainText(editor, text);
+                    syncResearchEditorSource(editor);
+                });
+            });
+
+            document.addEventListener('submit', function (event) {
+                event.target.querySelectorAll('[data-editor-source]').forEach(syncResearchEditorSource);
+            }, true);
+
+            document.addEventListener('selectionchange', function () {
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) {
+                    return;
+                }
+                const range = selection.getRangeAt(0);
+                const editor = findEditorByNode(range.commonAncestorContainer);
+                if (editor && !range.collapsed) {
+                    lastResearchEditorRange = range.cloneRange();
+                    updateResearchToolbarState(editor, range);
+                }
+            });
+
+            document.addEventListener('mousedown', function (event) {
+                if (event.target.closest('[data-editor-align], [data-editor-bold]')) {
+                    event.preventDefault();
+                }
+            });
+
+            document.addEventListener('pointerdown', function (event) {
+                const formattingControl = event.target.closest('[data-editor-font-size], [data-editor-font-color], [data-editor-bold]');
+                if (formattingControl) {
+                    rememberResearchToolbarSelection(formattingControl);
+                }
+                const sizeSelect = event.target.closest('[data-editor-font-size]');
+                if (sizeSelect && sizeSelect.value) {
+                    sizeSelect.dataset.pendingValue = sizeSelect.value;
+                    sizeSelect.value = '';
+                }
+            });
+
+            document.addEventListener('focusin', function (event) {
+                const formattingControl = event.target.closest('[data-editor-font-size], [data-editor-font-color], [data-editor-bold]');
+                if (formattingControl) {
+                    rememberResearchToolbarSelection(formattingControl);
+                }
+            });
+
+            document.addEventListener('click', function (event) {
+                const alignButton = event.target.closest('[data-editor-align]');
+                if (alignButton) {
+                    const toolbar = alignButton.closest('[data-editor-toolbar]');
+                    const editor = toolbar ? findResearchEditor(toolbar.getAttribute('data-editor-toolbar')) : null;
+                    if (editor) {
+                        applyResearchAlign(editor, alignButton.getAttribute('data-editor-align') || 'left');
+                        setResearchToolbarAlign(toolbar, alignButton.getAttribute('data-editor-align') || 'left');
+                    }
+                    return;
+                }
+
+                const boldButton = event.target.closest('[data-editor-bold]');
+                if (boldButton) {
+                    const toolbar = boldButton.closest('[data-editor-toolbar]');
+                    const editor = toolbar ? findResearchEditor(toolbar.getAttribute('data-editor-toolbar')) : null;
+                    if (editor) {
+                        const active = applyResearchBold(editor);
+                        boldButton.classList.toggle('is-active', active);
+                    }
+                    return;
+                }
+
+                const colorButton = event.target.closest('[data-editor-font-color]');
+                if (colorButton) {
+                    const toolbar = colorButton.closest('[data-editor-toolbar]');
+                    const editor = toolbar ? findResearchEditor(toolbar.getAttribute('data-editor-toolbar')) : null;
+                    if (editor) {
+                        applyResearchFontColor(editor, colorButton.getAttribute('data-editor-font-color'));
+                        setResearchToolbarColor(toolbar, colorButton.getAttribute('data-editor-font-color'));
+                    }
+                    return;
+                }
+
+                const button = event.target.closest('[data-link-insert]');
+                if (!button) {
+                    return;
+                }
+                const builder = button.closest('[data-link-target]');
+                const editor = findResearchEditor(builder.getAttribute('data-link-target'));
+                const labelInput = builder.querySelector('[data-link-label]');
+                const urlInput = builder.querySelector('[data-link-url]');
+                if (!editor || !labelInput || !urlInput) {
+                    return;
+                }
+                const label = labelInput.value.trim() || '링크 열기';
+                const url = normalizeResearchLinkUrl(urlInput.value.trim());
+                if (!url) {
+                    urlInput.focus();
+                    return;
+                }
+                insertResearchEditorText(editor, label.replace(/[<>]/g, '') + ' <' + url + '>');
+                labelInput.value = '';
+                urlInput.value = '';
+                editor.focus();
+            });
+
+            document.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-preview-copy]');
+                if (!button) {
+                    return;
+                }
+                const preview = button.closest('.research-link-preview');
+                copyResearchPreview(preview, button);
+            });
+
+            document.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-preview-cafe-copy]');
+                if (!button) {
+                    return;
+                }
+                const preview = button.closest('.research-link-preview');
+                copyResearchPreviewForCafe(preview, button);
+            });
+
+            document.addEventListener('copy', function (event) {
+                const preview = event.target.closest ? event.target.closest('.research-link-preview') : null;
+                if (!preview) {
+                    return;
+                }
+                const text = buildResearchPreviewPlainText(preview);
+                const html = buildResearchPreviewHtml(preview);
+                if (!text) {
+                    return;
+                }
+                event.preventDefault();
+                event.clipboardData.setData('text/plain', text);
+                event.clipboardData.setData('text/html', html);
+            });
+
+            document.addEventListener('change', function (event) {
+                const sizeSelect = event.target.closest('[data-editor-font-size]');
+                if (sizeSelect) {
+                    const toolbar = sizeSelect.closest('[data-editor-toolbar]');
+                    const editor = toolbar ? findResearchEditor(toolbar.getAttribute('data-editor-toolbar')) : null;
+                    const selectedValue = sizeSelect.value || sizeSelect.dataset.pendingValue || '';
+                    if (editor && selectedValue) {
+                        applyResearchFontSize(editor, selectedValue);
+                        sizeSelect.value = selectedValue;
+                        delete sizeSelect.dataset.pendingValue;
+                    }
+                    return;
+                }
+            });
+
+            document.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-research-client-apply]');
+                if (!button) {
+                    return;
+                }
+                const helper = button.closest('.research-client-helper');
+                const select = helper ? helper.querySelector('[data-research-client-select]') : null;
+                const option = select ? select.options[select.selectedIndex] : null;
+                if (!option || !option.value) {
+                    return;
+                }
+                setResearchClientValue('companyName', option.dataset.clientName);
+                setResearchClientValue('serverName', option.dataset.contactName);
+                setResearchClientValue('contactNo', option.dataset.contactNo);
+                setResearchClientValue('remark', option.dataset.activeEmails || option.dataset.primaryEmail);
+                setResearchClientId(helper, option.value);
+                showResearchClientMessage(helper);
+            });
+
+            function setResearchClientId(helper, value) {
+                const form = helper ? helper.closest('form') : null;
+                const field = form ? form.querySelector('[data-research-client-id]') : null;
+                if (field) {
+                    field.value = value || '';
+                }
+            }
+
+            function setResearchClientValue(fieldId, value) {
+                const field = document.getElementById(fieldId);
+                if (field && value) {
+                    field.value = value;
+                }
+            }
+
+            function showResearchClientMessage(helper) {
+                const message = helper ? helper.querySelector('[data-research-client-message]') : null;
+                if (!message) {
+                    return;
+                }
+                message.hidden = false;
+                window.clearTimeout(message.dataset.hideTimer);
+                const timer = window.setTimeout(function () {
+                    message.hidden = true;
+                    delete message.dataset.hideTimer;
+                }, 2500);
+                message.dataset.hideTimer = String(timer);
+            }
+
+            function normalizeResearchLinkUrl(url) {
+                if (!url) {
+                    return '';
+                }
+                if (/^https?:\/\//i.test(url)) {
+                    return url;
+                }
+                return 'https://' + url;
+            }
+
+            function findResearchEditor(sourceId) {
+                return document.querySelector('[data-editor-source="' + sourceId + '"]');
+            }
+
+            function resolveResearchEditorInitialValue(editor, source) {
+                const candidates = [
+                    source ? source.value : '',
+                    editor ? editor.dataset.initialValue : '',
+                    editor ? editor.textContent : '',
+                    readResearchPreviewBodyFallback(editor)
+                ];
+                return candidates.find(hasMeaningfulResearchEditorValue) || '';
+            }
+
+            function hasMeaningfulResearchEditorValue(value) {
+                return Boolean((value || '').replace(/\u00a0/g, ' ').trim());
+            }
+
+            function readResearchPreviewBodyFallback(editor) {
+                const form = editor ? editor.closest('form') : null;
+                const previewBody = form
+                    ? form.querySelector('.research-link-preview__body')
+                    : document.querySelector('.research-link-preview__body');
+                return previewBody ? previewBody.innerText : '';
+            }
+
+            function findEditorByNode(node) {
+                const element = node && node.nodeType === Node.ELEMENT_NODE ? node : node ? node.parentElement : null;
+                return element ? element.closest('[data-editor-source]') : null;
+            }
+
+            function rememberResearchToolbarSelection(control) {
+                const toolbar = control.closest('[data-editor-toolbar]');
+                const editor = toolbar ? findResearchEditor(toolbar.getAttribute('data-editor-toolbar')) : null;
+                const selection = window.getSelection();
+                if (!editor || !selection || selection.rangeCount === 0) {
+                    return;
+                }
+                const range = selection.getRangeAt(0);
+                if (editor.contains(range.commonAncestorContainer) && !range.collapsed) {
+                    lastResearchEditorRange = range.cloneRange();
+                }
+            }
+
+            function setResearchToolbarColor(toolbar, color) {
+                if (!toolbar) {
+                    return;
+                }
+                toolbar.querySelectorAll('[data-editor-font-color]').forEach(function (button) {
+                    button.classList.toggle('is-active', button.getAttribute('data-editor-font-color') === color);
+                });
+            }
+
+            function setResearchToolbarAlign(toolbar, align) {
+                if (!toolbar) {
+                    return;
+                }
+                toolbar.querySelectorAll('[data-editor-align]').forEach(function (button) {
+                    button.classList.toggle('is-active', button.getAttribute('data-editor-align') === align);
+                });
+            }
+
+            function updateResearchToolbarState(editor, range) {
+                const sourceId = editor.getAttribute('data-editor-source');
+                const toolbar = document.querySelector('[data-editor-toolbar="' + sourceId + '"]');
+                if (!toolbar || !range) {
+                    return;
+                }
+                const sizeSelect = toolbar.querySelector('[data-editor-font-size]');
+                if (sizeSelect) {
+                    const fontSize = resolveResearchSelectionStyle(editor, range, 'fontSize');
+                    sizeSelect.value = normalizeResearchFontSize(fontSize) || '16px';
+                }
+                setResearchToolbarColor(toolbar, normalizeResearchColor(resolveResearchSelectionStyle(editor, range, 'color')) || 'black');
+                const boldButton = toolbar.querySelector('[data-editor-bold]');
+                if (boldButton) {
+                    boldButton.classList.toggle('is-active', isResearchSelectionBold(editor, range));
+                }
+                setResearchToolbarAlign(toolbar, resolveResearchSelectionAlign(editor, range) || 'left');
+            }
+
+            function resolveResearchSelectionStyle(editor, range, propertyName) {
+                const element = range.startContainer.nodeType === Node.ELEMENT_NODE
+                    ? range.startContainer
+                    : range.startContainer.parentElement;
+                if (!element || !editor.contains(element)) {
+                    return '';
+                }
+                const styledAncestor = element.closest('[style]');
+                if (styledAncestor && editor.contains(styledAncestor) && styledAncestor.style[propertyName]) {
+                    return styledAncestor.style[propertyName];
+                }
+                return window.getComputedStyle(element)[propertyName] || window.getComputedStyle(editor)[propertyName] || '';
+            }
+
+            function resolveResearchSelectionAlign(editor, range) {
+                const block = findResearchTopBlock(range.startContainer, editor);
+                return block && block.style && block.style.textAlign ? block.style.textAlign : 'left';
+            }
+
+            function isResearchSelectionBold(editor, range) {
+                const selectedFragment = range.cloneContents();
+                if (selectedFragment.querySelector && selectedFragment.querySelector('strong, b')) {
+                    return true;
+                }
+                if (hasResearchBoldTextInRange(editor, range)) {
+                    return true;
+                }
+                const element = range.startContainer.nodeType === Node.ELEMENT_NODE
+                    ? range.startContainer
+                    : range.startContainer.parentElement;
+                if (!element || !editor.contains(element)) {
+                    return false;
+                }
+                return Boolean(element.closest('strong, b'));
+            }
+
+            function hasResearchBoldTextInRange(editor, range) {
+                const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+                let node = walker.nextNode();
+                while (node) {
+                    if (node.textContent && node.textContent.trim() && range.intersectsNode(node)) {
+                        const parent = node.parentElement;
+                        if (parent && parent.closest('strong, b')) {
+                            return true;
+                        }
+                    }
+                    node = walker.nextNode();
+                }
+                return false;
+            }
+
+            function hasResearchExplicitBoldWeight(element) {
+                let current = element;
+                while (current && current.nodeType === Node.ELEMENT_NODE && !current.matches('[data-editor-source]')) {
+                    const weight = current.style && current.style.fontWeight ? current.style.fontWeight : '';
+                    if (weight === 'bold' || parseInt(weight || '', 10) >= 600) {
+                        return true;
+                    }
+                    if (weight === 'normal' || parseInt(weight || '', 10) <= 500) {
+                        return false;
+                    }
+                    current = current.parentElement;
+                }
+                return false;
+            }
+
+            function normalizeResearchFontSize(value) {
+                const size = parseInt(value || '', 10);
+                return [4, 8, 12, 16, 20, 24, 28, 32].includes(size) ? size + 'px' : '';
+            }
+
+            function applyResearchFontSize(editor, fontSize) {
+                return applyResearchInlineFormat(editor, 'size', parseInt(fontSize, 10));
+            }
+
+            function applyResearchFontSizeToBlocks(editor, fontSize) {
+                restoreResearchSelection(editor);
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) {
+                    editor.focus();
+                    return true;
+                }
+                const range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+                    editor.focus();
+                    return true;
+                }
+                const blocks = Array.from(editor.childNodes).filter(function (node) {
+                    return node.nodeType === Node.ELEMENT_NODE && range.intersectsNode(node);
+                });
+                if (blocks.length <= 1) {
+                    return false;
+                }
+                blocks.forEach(function (block) {
+                    clearResearchInlineStyle(block, 'fontSize');
+                    block.style.fontSize = fontSize;
+                });
+                editor.focus();
+                return true;
+            }
+
+            function applyResearchFontColor(editor, color) {
+                return applyResearchInlineFormat(editor, 'color', color);
+            }
+
+            function applyResearchFontColorToBlocks(editor, color) {
+                restoreResearchSelection(editor);
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) {
+                    editor.focus();
+                    return true;
+                }
+                const range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+                    editor.focus();
+                    return true;
+                }
+                const blocks = Array.from(editor.childNodes).filter(function (node) {
+                    return node.nodeType === Node.ELEMENT_NODE && range.intersectsNode(node);
+                });
+                if (blocks.length <= 1) {
+                    return false;
+                }
+                blocks.forEach(function (block) {
+                    clearResearchInlineStyle(block, 'color');
+                    block.style.color = color;
+                });
+                editor.focus();
+                return true;
+            }
+
+            function applyResearchBold(editor) {
+                return applyResearchInlineFormat(editor, 'bold', '');
+            }
+
+            function applyResearchInlineFormat(editor, formatName, formatValue) {
+                const range = resolveResearchEditorRange(editor);
+                if (!range) {
+                    editor.focus();
+                    return false;
+                }
+
+                const source = document.getElementById(editor.getAttribute('data-editor-source'));
+                if (!source) {
+                    return false;
+                }
+
+                // source.value???怨쀪퐨 ?????뺣뼄. ??? renderResearchEditorHtml()揶쎛 筌띾슢諭?DOM????쇰뻻
+                // serialize??롢늺 ?됰슢??怨?/?븐늿肉?節딅┛ ?遺용연 ?????깆뵠 ??롫연 ?대벀由??怨밴묶揶쎛 ??쇰옘??????덈뼄.
+                let rawValue = source.value || serializeResearchEditor(editor);
+                const model = parseResearchRawModel(rawValue);
+                const maxVisibleLength = researchModelVisibleLength(model);
+                const offsets = normalizeResearchSelectionOffsets(editor, range, maxVisibleLength);
+
+                if (offsets.start >= offsets.end) {
+                    editor.focus();
+                    return false;
+                }
+
+                const selectedChars = getResearchModelCharsInRange(model, offsets.start, offsets.end)
+                    .filter(function (item) { return item.char.ch !== '\n'; });
+                if (selectedChars.length === 0) {
+                    editor.focus();
+                    return false;
+                }
+
+                let active = true;
+
+                if (formatName === 'bold') {
+                    const shouldRemoveBold = selectedChars.some(function (item) { return item.char.bold; });
+                    selectedChars.forEach(function (item) {
+                        item.char.bold = !shouldRemoveBold;
+                    });
+                    active = !shouldRemoveBold;
+                } else if (formatName === 'color') {
+                    const color = normalizeResearchFormatColor(formatValue);
+                    if (!color) {
+                        editor.focus();
+                        return false;
+                    }
+                    selectedChars.forEach(function (item) {
+
+                        item.char.color = color;
+                    });
+                    active = true;
+                } else if (formatName === 'size') {
+                    const size = parseInt(formatValue || '', 10);
+                    if (![4, 8, 12, 16, 20, 24, 28, 32].includes(size)) {
+                        editor.focus();
+                        return false;
+                    }
+                    selectedChars.forEach(function (item) {
+                        item.char.fontSize = size;
+                    });
+                    active = true;
+                }
+
+                const nextValue = serializeResearchRawModel(model);
+                source.value = nextValue;
+                editor.innerHTML = renderResearchEditorHtml(nextValue);
+                restoreResearchSelectionByVisibleOffsets(editor, offsets.start, offsets.end);
+                editor.focus();
+                return active;
+            }
+
+            function researchModelVisibleLength(model) {
+                return (model || []).reduce(function (total, line, index) {
+                    return total + (line.chars ? line.chars.length : 0) + (index < model.length - 1 ? 1 : 0);
+                }, 0);
+            }
+
+            function normalizeResearchSelectionOffsets(editor, range, maxVisibleLength) {
+                let offsets = researchSelectionOffsets(editor, range);
+                offsets.start = Math.max(0, Math.min(offsets.start, maxVisibleLength));
+                offsets.end = Math.max(0, Math.min(offsets.end, maxVisibleLength));
+
+                if (isResearchWholeEditorSelected(editor, range) || isResearchRangeEndAtEditorEnd(editor, range)) {
+                    offsets.end = maxVisibleLength;
+                }
+                if (isResearchRangeStartAtEditorStart(editor, range)) {
+                    offsets.start = 0;
+                }
+
+                if (offsets.start > offsets.end) {
+                    return { start: offsets.end, end: offsets.start };
+                }
+                return offsets;
+            }
+
+            function isResearchWholeEditorSelected(editor, range) {
+                const selected = normalizeResearchComparableText(range.toString());
+                const all = normalizeResearchComparableText(editor.innerText || editor.textContent || '');
+                return Boolean(all) && selected === all;
+            }
+
+            function normalizeResearchComparableText(value) {
+                return (value || '')
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\r/g, '\n')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\n+$/g, '');
+            }
+
+            function isResearchRangeStartAtEditorStart(editor, range) {
+                const startRange = document.createRange();
+                startRange.setStart(editor, 0);
+                startRange.setEnd(range.startContainer, range.startOffset);
+                return normalizeResearchComparableText(startRange.toString()).length === 0;
+            }
+
+            function isResearchRangeEndAtEditorEnd(editor, range) {
+                const endRange = document.createRange();
+                endRange.setStart(range.endContainer, range.endOffset);
+                endRange.setEnd(editor, editor.childNodes.length);
+                return normalizeResearchComparableText(endRange.toString()).length === 0;
+            }
+
+            function normalizeResearchFormatColor(color) {
+                const normalized = (color || '').toLowerCase();
+                return ['black', 'blue', 'red', 'green', 'yellow'].includes(normalized) ? normalized : '';
+            }
+
+            function parseResearchRawModel(rawValue) {
+                const normalized = (rawValue || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                return normalized.split('\n').map(function (rawLine) {
+                    const alignMatch = rawLine.match(/^\[align=(left|center|right)]([\s\S]*)\[\/align]$/i);
+                    const align = alignMatch ? alignMatch[1].toLowerCase() : '';
+                    const inlineText = alignMatch ? alignMatch[2] : rawLine;
+                    return {
+                        align: align,
+                        chars: parseResearchInlineChars(inlineText)
+                    };
+                });
+            }
+
+            function parseResearchInlineChars(text) {
+                const chars = [];
+                const state = { bold: false, color: '', fontSize: '' };
+                const stack = { bold: [], color: [], fontSize: [] };
+                let index = 0;
+
+                while (index < (text || '').length) {
+                    const rest = text.slice(index);
+                    let match;
+
+                    if (/^\[bold]/i.test(rest)) {
+                        stack.bold.push(state.bold);
+                        state.bold = true;
+                        index += rest.match(/^\[bold]/i)[0].length;
+                        continue;
+                    }
+                    if (/^\[\/bold]/i.test(rest)) {
+                        state.bold = stack.bold.length ? stack.bold.pop() : false;
+                        index += rest.match(/^\[\/bold]/i)[0].length;
+                        continue;
+                    }
+                    match = rest.match(/^\[color=(black|blue|red|green|yellow)]/i);
+                    if (match) {
+                        stack.color.push(state.color);
+                        state.color = match[1].toLowerCase();
+                        index += match[0].length;
+                        continue;
+                    }
+                    if (/^\[\/color]/i.test(rest)) {
+                        state.color = stack.color.length ? stack.color.pop() : '';
+                        index += rest.match(/^\[\/color]/i)[0].length;
+                        continue;
+                    }
+                    match = rest.match(/^\[size=(4|8|12|14|16|18|20|24|28|32)]/i);
+                    if (match) {
+                        stack.fontSize.push(state.fontSize);
+                        state.fontSize = parseInt(match[1], 10);
+                        index += match[0].length;
+                        continue;
+                    }
+                    if (/^\[\/size]/i.test(rest)) {
+                        state.fontSize = stack.fontSize.length ? stack.fontSize.pop() : '';
+                        index += rest.match(/^\[\/size]/i)[0].length;
+                        continue;
+                    }
+
+                    const htmlLength = researchHtmlTagLengthAt(text, index);
+                    if (htmlLength > 0) {
+                        index += htmlLength;
+                        continue;
+                    }
+
+                    chars.push({
+                        ch: text[index],
+                        bold: Boolean(state.bold),
+                        color: state.color || '',
+                        fontSize: state.fontSize || ''
+                    });
+                    index += 1;
+                }
+
+                return chars;
+            }
+
+            function getResearchModelCharsInRange(model, startOffset, endOffset) {
+                const result = [];
+                let visible = 0;
+                model.forEach(function (line, lineIndex) {
+                    line.chars.forEach(function (char, charIndex) {
+                        if (visible >= startOffset && visible < endOffset) {
+                            result.push({ line: line, lineIndex: lineIndex, char: char, charIndex: charIndex, visibleOffset: visible });
+                        }
+                        visible += 1;
+                    });
+                    if (lineIndex < model.length - 1) {
+                        if (visible >= startOffset && visible < endOffset) {
+                            result.push({ line: line, lineIndex: lineIndex, char: { ch: '\n' }, charIndex: -1, visibleOffset: visible });
+                        }
+                        visible += 1;
+                    }
+                });
+                return result;
+            }
+
+            function serializeResearchRawModel(model) {
+                return model.map(function (line) {
+                    const text = serializeResearchInlineChars(line.chars);
+                    return line.align ? '[align=' + line.align + ']' + text + '[/align]' : text;
+                }).join('\n').replace(/\n+$/, '');
+            }
+
+            function serializeResearchInlineChars(chars) {
+                const segments = [];
+                let current = null;
+
+                (chars || []).forEach(function (char) {
+                    const key = [char.bold ? '1' : '0', char.color || '', char.fontSize || ''].join('|');
+                    if (!current || current.key !== key) {
+                        current = {
+                            key: key,
+                            bold: Boolean(char.bold),
+                            color: char.color || '',
+                            fontSize: char.fontSize || '',
+                            text: ''
+                        };
+                        segments.push(current);
+                    }
+                    current.text += char.ch;
+                });
+
+                return segments.map(function (segment) {
+                    let text = segment.text;
+                    if (!text) {
+                        return '';
+                    }
+                    if (segment.fontSize) {
+                        text = '[size=' + segment.fontSize + ']' + text + '[/size]';
+                    }
+                    if (segment.color) {
+                        text = '[color=' + segment.color + ']' + text + '[/color]';
+                    }
+                    if (segment.bold) {
+                        text = '[bold]' + text + '[/bold]';
+                    }
+                    return text;
+                }).join('');
+            }
+
+            function restoreResearchSelectionByVisibleOffsets(editor, startOffset, endOffset) {
+                const selection = window.getSelection();
+                if (!selection) {
+                    return;
+                }
+                const start = findResearchDomPositionByVisibleOffset(editor, startOffset, false);
+                const end = findResearchDomPositionByVisibleOffset(editor, endOffset, true);
+                if (!start || !end) {
+                    return;
+                }
+                const nextRange = document.createRange();
+                nextRange.setStart(start.node, start.offset);
+                nextRange.setEnd(end.node, end.offset);
+                selection.removeAllRanges();
+                selection.addRange(nextRange);
+                lastResearchEditorRange = nextRange.cloneRange();
+            }
+
+            function findResearchDomPositionByVisibleOffset(editor, targetOffset, preferLineEnd) {
+                let visible = 0;
+                let lastPosition = { node: editor, offset: editor.childNodes.length };
+                const blocks = Array.from(editor.childNodes);
+
+                for (let blockIndex = 0; blockIndex < blocks.length; blockIndex += 1) {
+                    const block = blocks[blockIndex];
+                    const walkerRoot = block.nodeType === Node.ELEMENT_NODE ? block : editor;
+                    const walker = document.createTreeWalker(walkerRoot, NodeFilter.SHOW_TEXT);
+                    let node = block.nodeType === Node.TEXT_NODE ? block : walker.nextNode();
+
+                    while (node) {
+                        const length = node.textContent.length;
+                        if (targetOffset <= visible + length) {
+                            return {
+                                node: node,
+                                offset: Math.max(0, Math.min(length, targetOffset - visible))
+                            };
+                        }
+                        visible += length;
+                        lastPosition = { node: node, offset: length };
+                        node = block.nodeType === Node.TEXT_NODE ? null : walker.nextNode();
+                    }
+
+                    if (blockIndex < blocks.length - 1) {
+                        if (targetOffset === visible) {
+                            return preferLineEnd ? lastPosition : firstTextPositionInBlock(blocks[blockIndex + 1]) || lastPosition;
+                        }
+                        visible += 1;
+                    }
+                }
+
+                return lastPosition;
+            }
+
+            function firstTextPositionInBlock(block) {
+                if (!block) {
+                    return null;
+                }
+                if (block.nodeType === Node.TEXT_NODE) {
+                    return { node: block, offset: 0 };
+                }
+                if (block.nodeType !== Node.ELEMENT_NODE) {
+                    return null;
+                }
+                const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+                const node = walker.nextNode();
+                return node ? { node: node, offset: 0 } : null;
+            }
+
+            function researchSelectionOffsets(editor, range) {
+                return {
+                    start: researchEditorBoundaryVisibleOffset(editor, range.startContainer, range.startOffset),
+                    end: researchEditorBoundaryVisibleOffset(editor, range.endContainer, range.endOffset)
+                };
+            }
+
+            function researchEditorBoundaryVisibleOffset(editor, container, offset) {
+                const blocks = Array.from(editor.childNodes);
+
+                if (container === editor) {
+                    return researchVisibleLengthBeforeBlockIndex(blocks, offset);
+                }
+
+                const block = findResearchTopBlock(container, editor);
+                const blockIndex = blocks.indexOf(block);
+                if (!block || blockIndex < 0) {
+                    return 0;
+                }
+
+                return researchVisibleLengthBeforeBlockIndex(blocks, blockIndex)
+                    + researchTextOffsetInsideBlock(block, container, offset);
+            }
+
+            function researchVisibleLengthBeforeBlockIndex(blocks, blockIndex) {
+                const safeIndex = Math.max(0, Math.min(blockIndex, blocks.length));
+                let total = 0;
+
+                for (let index = 0; index < safeIndex; index += 1) {
+                    total += researchNodeVisibleTextLength(blocks[index]);
+                    if (index < blocks.length - 1) {
+                        total += 1;
+                    }
+                }
+
+                return total;
+            }
+
+            function researchNodeVisibleTextLength(node) {
+                if (!node) {
+                    return 0;
+                }
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return node.textContent.length;
+                }
+                if (node.nodeName === 'BR') {
+                    return 0;
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    return 0;
+                }
+
+                const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+                let total = 0;
+                let textNode = walker.nextNode();
+                while (textNode) {
+                    total += textNode.textContent.length;
+                    textNode = walker.nextNode();
+                }
+                return total;
+            }
+
+            function researchTextOffsetInsideBlock(block, container, offset) {
+                if (!block) {
+                    return 0;
+                }
+
+                if (container === block) {
+                    return Array.from(block.childNodes)
+                        .slice(0, Math.max(0, Math.min(offset, block.childNodes.length)))
+                        .reduce(function (total, child) {
+                            return total + researchNodeVisibleTextLength(child);
+                        }, 0);
+                }
+
+                const range = document.createRange();
+                try {
+                    range.setStart(block, 0);
+                    range.setEnd(container, offset);
+                    return range.toString().length;
+                } catch (error) {
+                    return 0;
+                }
+            }
+
+            function researchVisibleOffsetToRawIndex(rawValue, visibleOffset, skipOpeningMarkers) {
+                let visible = 0;
+                let index = 0;
+                while (index < rawValue.length) {
+                    if (visible === visibleOffset) {
+                        if (skipOpeningMarkers) {
+                            let markerLength = researchOpeningMarkerLengthAt(rawValue, index);
+                            while (markerLength > 0) {
+                                index += markerLength;
+                                markerLength = researchOpeningMarkerLengthAt(rawValue, index);
+                            }
+                        }
+                        return index;
+                    }
+                    const markerLength = researchFormattingMarkerLengthAt(rawValue, index);
+                    if (markerLength > 0) {
+                        index += markerLength;
+                        continue;
+                    }
+                    const htmlLength = researchHtmlTagLengthAt(rawValue, index);
+                    if (htmlLength > 0) {
+                        index += htmlLength;
+                        continue;
+                    }
+                    visible++;
+                    index++;
+                }
+                return rawValue.length;
+            }
+
+            function researchFormattingMarkerLengthAt(value, index) {
+                const rest = value.slice(index);
+                const match = rest.match(new RegExp('^\\[(?:bold|/bold|size=(?:4|8|12|14|16|18|20|24|28|32)|/size|color=(?:black|blue|red|green|yellow)|/color|align=(?:left|center|right)|/align)\\]', 'i'));
+                return match ? match[0].length : 0;
+            }
+
+            function researchOpeningMarkerLengthAt(value, index) {
+                const rest = value.slice(index);
+                const match = rest.match(new RegExp('^\\[(?:bold|size=(?:4|8|12|14|16|18|20|24|28|32)|color=(?:black|blue|red|green|yellow)|align=(?:left|center|right))\\]', 'i'));
+                return match ? match[0].length : 0;
+            }
+
+            function researchHtmlTagLengthAt(value, index) {
+                const match = value.slice(index).match(/^<\/?[A-Za-z][A-Za-z0-9:-]*(?:\s[^<>]*)?\/?>/);
+                return match ? match[0].length : 0;
+            }
+
+            function rawResearchRangeHasBold(rawValue, rawStart, rawEnd) {
+                return researchBoldMarkerPairs(rawValue).some(function (pair) {
+                    return pair.openStart <= rawStart && pair.closeEnd >= rawEnd
+                        || pair.openStart < rawEnd && pair.closeEnd > rawStart;
+                });
+            }
+
+            function removeResearchBoldMarkersInRawRange(rawValue, rawStart, rawEnd) {
+                const removals = [];
+                researchBoldMarkerPairs(rawValue).forEach(function (pair) {
+                    if (pair.openStart <= rawStart && pair.closeEnd >= rawEnd
+                        || pair.openStart < rawEnd && pair.closeEnd > rawStart) {
+                        removals.push([pair.closeStart, pair.closeEnd]);
+                        removals.push([pair.openStart, pair.openEnd]);
+                    }
+                });
+                return removals
+                    .sort(function (a, b) { return b[0] - a[0]; })
+                    .reduce(function (text, removal) {
+                        return text.slice(0, removal[0]) + text.slice(removal[1]);
+                    }, rawValue);
+            }
+
+            function researchBoldMarkerPairs(rawValue) {
+                const markerPattern = /\[bold]|\[\/bold]/ig;
+                const stack = [];
+                const pairs = [];
+                let match;
+                while ((match = markerPattern.exec(rawValue)) !== null) {
+                    if (match[0].toLowerCase() === '[bold]') {
+                        stack.push({
+                            openStart: match.index,
+                            openEnd: markerPattern.lastIndex
+                        });
+                    } else {
+                        const open = stack.pop();
+                        if (open) {
+                            pairs.push({
+                                openStart: open.openStart,
+                                openEnd: open.openEnd,
+                                closeStart: match.index,
+                                closeEnd: markerPattern.lastIndex
+                            });
+                        }
+                    }
+                }
+                return pairs;
+            }
+
+            function applyResearchBoldToBlocks(editor, shouldRemoveBold) {
+                restoreResearchSelection(editor);
+
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) {
+                    return false;
+                }
+
+                const range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+                    return false;
+                }
+
+                const blocks = Array.from(editor.childNodes).filter(function (node) {
+                    return node.nodeType === Node.ELEMENT_NODE && range.intersectsNode(node);
+                });
+
+                if (blocks.length <= 1) {
+                    return false;
+                }
+
+                blocks.forEach(function (block) {
+                    if (shouldRemoveBold) {
+                        block.style.fontWeight = '';
+                        removeResearchBoldInsideElement(block);
+
+                        if (!block.getAttribute('style')) {
+                            block.removeAttribute('style');
+                        }
+                    } else {
+                        block.style.fontWeight = '700';
+                    }
+                });
+
+                editor.focus();
+                return true;
+            }
+
+            function removeResearchBoldFromFragment(fragment) {
+                Array.from(fragment.querySelectorAll('strong, b')).forEach(function (boldElement) {
+                    unwrapResearchElement(boldElement);
+                });
+
+                Array.from(fragment.querySelectorAll('[style]')).forEach(function (element) {
+                    if (!element.style) {
+                        return;
+                    }
+
+                    const weight = element.style.fontWeight;
+                    if (weight === 'bold' || parseInt(weight || '', 10) >= 600) {
+                        element.style.fontWeight = '';
+                    }
+
+                    if (!element.getAttribute('style')) {
+                        element.removeAttribute('style');
+                    }
+                });
+            }
+
+            function removeResearchBoldInsideElement(element) {
+                Array.from(element.querySelectorAll('strong, b')).forEach(function (boldElement) {
+                    unwrapResearchElement(boldElement);
+                });
+
+                Array.from(element.querySelectorAll('[style]')).forEach(function (styledElement) {
+                    if (!styledElement.style) {
+                        return;
+                    }
+
+                    const weight = styledElement.style.fontWeight;
+                    if (weight === 'bold' || parseInt(weight || '', 10) >= 600) {
+                        styledElement.style.fontWeight = '';
+                    }
+
+                    if (!styledElement.getAttribute('style')) {
+                        styledElement.removeAttribute('style');
+                    }
+                });
+            }
+
+            function removeResearchNormalWeightFromFragment(fragment) {
+                Array.from(fragment.querySelectorAll('[style]')).forEach(function (element) {
+                    if (!element.style) {
+                        return;
+                    }
+
+                    const weight = element.style.fontWeight;
+                    if (weight === 'normal' || parseInt(weight || '', 10) <= 500) {
+                        element.style.fontWeight = '';
+                    }
+
+                    if (!element.getAttribute('style')) {
+                        element.removeAttribute('style');
+                    }
+                });
+            }
+
+            function unwrapResearchElement(element) {
+                const parent = element.parentNode;
+                if (!parent) {
+                    return;
+                }
+
+                while (element.firstChild) {
+                    parent.insertBefore(element.firstChild, element);
+                }
+
+                parent.removeChild(element);
+            }
+
+            function normalizeResearchBoldTags(editor) {
+                editor.querySelectorAll('b').forEach(function (element) {
+                    const strong = document.createElement('strong');
+                    while (element.firstChild) {
+                        strong.appendChild(element.firstChild);
+                    }
+                    element.replaceWith(strong);
+                });
+                Array.from(editor.querySelectorAll('[style]')).forEach(function (element) {
+                    if (!isResearchExplicitNormalWeight(element)) {
+                        return;
+                    }
+                    liftResearchElementOutOfBold(element, editor);
+                    element.style.fontWeight = '';
+                    if (!element.getAttribute('style')) {
+                        element.removeAttribute('style');
+                    }
+                });
+                Array.from(editor.querySelectorAll('strong, b')).forEach(function (element) {
+                    if (!element.textContent) {
+                        element.remove();
+                    }
+                });
+            }
+
+            function isResearchExplicitNormalWeight(element) {
+                const weight = element && element.style ? element.style.fontWeight : '';
+                if (!weight) {
+                    return false;
+                }
+                return weight === 'normal' || parseInt(weight, 10) <= 500;
+            }
+
+            function liftResearchElementOutOfBold(element, editor) {
+                while (element.parentElement && element.parentElement !== editor) {
+                    const parent = element.parentElement;
+                    const boldParent = parent.closest('strong, b');
+                    if (!boldParent || !editor.contains(boldParent)) {
+                        return;
+                    }
+                    liftResearchElementOutOfParent(element, parent);
+                }
+            }
+
+            function liftResearchElementOutOfParent(element, parent) {
+                const grandParent = parent.parentNode;
+                if (!grandParent) {
+                    return;
+                }
+                const before = parent.cloneNode(false);
+                const after = parent.cloneNode(false);
+                while (parent.firstChild && parent.firstChild !== element) {
+                    before.appendChild(parent.firstChild);
+                }
+                if (element.parentNode === parent) {
+                    parent.removeChild(element);
+                }
+                while (parent.firstChild) {
+                    after.appendChild(parent.firstChild);
+                }
+                if (before.childNodes.length > 0) {
+                    grandParent.insertBefore(before, parent);
+                }
+                grandParent.insertBefore(element, parent);
+                if (after.childNodes.length > 0) {
+                    grandParent.insertBefore(after, parent);
+                }
+                grandParent.removeChild(parent);
+            }
+
+            function selectResearchNodeContents(node) {
+                const selection = window.getSelection();
+                if (!selection) {
+                    return;
+                }
+                const nextRange = document.createRange();
+                nextRange.selectNodeContents(node);
+                selection.removeAllRanges();
+                selection.addRange(nextRange);
+                lastResearchEditorRange = nextRange.cloneRange();
+            }
+
+            function applyResearchAlign(editor, align) {
+                restoreResearchSelection(editor);
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) {
+                    editor.focus();
+                    return;
+                }
+                const range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+                    editor.focus();
+                    return;
+                }
+                const blocks = Array.from(editor.childNodes).filter(function (node) {
+                    return node.nodeType === Node.ELEMENT_NODE && range.intersectsNode(node);
+                });
+                if (blocks.length === 0) {
+                    const block = findResearchTopBlock(range.commonAncestorContainer, editor);
+                    if (block) {
+                        blocks.push(block);
+                    }
+                }
+                blocks.forEach(function (block) {
+                    if (block.nodeType === Node.ELEMENT_NODE) {
+                        block.style.textAlign = align;
+                    }
+                });
+                editor.focus();
+                syncResearchEditorSource(editor);
+            }
+
+            function wrapResearchSelection(editor, createWrapper) {
+                restoreResearchSelection(editor);
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) {
+                    editor.focus();
+                    return;
+                }
+                const range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+                    editor.focus();
+                    return;
+                }
+                const fragment = range.extractContents();
+                const wrapper = createWrapper(fragment);
+                range.insertNode(wrapper);
+                selection.removeAllRanges();
+                const nextRange = document.createRange();
+                nextRange.selectNodeContents(wrapper);
+                selection.addRange(nextRange);
+                lastResearchEditorRange = nextRange.cloneRange();
+                editor.focus();
+            }
+
+            function clearResearchInlineStyle(root, propertyName) {
+                if (!root || !propertyName) {
+                    return;
+                }
+                const elements = root.nodeType === Node.ELEMENT_NODE
+                    ? [root].concat(Array.from(root.querySelectorAll('*')))
+                    : root.querySelectorAll ? Array.from(root.querySelectorAll('*')) : [];
+                elements.forEach(function (element) {
+                    if (!element.style) {
+                        return;
+                    }
+                    element.style[propertyName] = '';
+                    if (!element.getAttribute('style')) {
+                        element.removeAttribute('style');
+                    }
+                });
+            }
+
+            function syncResearchEditorSource(editor) {
+                const source = document.getElementById(editor.getAttribute('data-editor-source'));
+                if (source) {
+                    normalizeResearchBoldTags(editor);
+                    source.value = serializeResearchEditor(editor);
+                }
+            }
+
+            function restoreResearchSelection(editor) {
+                const selection = window.getSelection();
+                if (!selection) {
+                    return;
+                }
+                if (selection.rangeCount > 0) {
+                    const currentRange = selection.getRangeAt(0);
+                    if (!currentRange.collapsed && editor.contains(currentRange.commonAncestorContainer)) {
+                        lastResearchEditorRange = currentRange.cloneRange();
+                        return;
+                    }
+                }
+                if (!lastResearchEditorRange || !editor.contains(lastResearchEditorRange.commonAncestorContainer)) {
+                    return;
+                }
+                selection.removeAllRanges();
+                selection.addRange(lastResearchEditorRange);
+            }
+
+            function resolveResearchEditorRange(editor) {
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    if (!range.collapsed && editor.contains(range.commonAncestorContainer)) {
+                        lastResearchEditorRange = range.cloneRange();
+                        return range;
+                    }
+                }
+                if (!lastResearchEditorRange || lastResearchEditorRange.collapsed || !editor.contains(lastResearchEditorRange.commonAncestorContainer)) {
+                    return null;
+                }
+                if (selection) {
+                    selection.removeAllRanges();
+                    selection.addRange(lastResearchEditorRange);
+                }
+                return lastResearchEditorRange;
+            }
+
+            function clearResearchEditorSelection() {
+                lastResearchEditorRange = null;
+                const selection = window.getSelection();
+                if (selection) {
+                    selection.removeAllRanges();
+                }
+            }
+
+            function findResearchTopBlock(node, editor) {
+                let current = node && node.nodeType === Node.ELEMENT_NODE ? node : node ? node.parentElement : null;
+                while (current && current.parentElement !== editor) {
+                    current = current.parentElement;
+                }
+                return current && current.parentElement === editor ? current : null;
+            }
+
+            function insertResearchPlainText(editor, text) {
+                editor.focus();
+                restoreResearchSelection(editor);
+                const selection = window.getSelection();
+                const normalizedText = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+                if (!selection || selection.rangeCount === 0) {
+                    document.execCommand('insertText', false, normalizedText);
+                    return;
+                }
+
+                const range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer)) {
+                    document.execCommand('insertText', false, normalizedText);
+                    return;
+                }
+
+                range.deleteContents();
+
+                const fragment = document.createDocumentFragment();
+                const lines = normalizedText.split('\n');
+                lines.forEach(function (line, index) {
+                    if (index > 0) {
+                        fragment.appendChild(document.createElement('br'));
+                    }
+                    if (line) {
+                        fragment.appendChild(document.createTextNode(line));
+                    }
+                });
+
+                const marker = document.createTextNode('');
+                fragment.appendChild(marker);
+                range.insertNode(fragment);
+
+                const nextRange = document.createRange();
+                nextRange.setStart(marker, 0);
+                nextRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(nextRange);
+                lastResearchEditorRange = nextRange.cloneRange();
+            }
+
+            function insertResearchEditorText(editor, text) {
+                insertResearchPlainText(editor, text);
+            }
+
+            function copyResearchPreview(preview, button) {
+                const text = buildResearchPreviewPlainText(preview);
+                const html = buildResearchPreviewHtml(preview);
+                writeResearchPreviewClipboard(text, html, button);
+            }
+
+            function copyResearchPreviewForCafe(preview, button) {
+                const text = buildResearchPreviewPlainText(preview);
+                const html = buildResearchPreviewCafeHtml(preview);
+                writeResearchPreviewClipboard(text, html, button);
+            }
+
+            function writeResearchPreviewClipboard(text, html, button) {
+                if (!text) {
+                    return;
+                }
+                const done = function () {
+                    const previous = button.textContent;
+                    button.textContent = '복사됨';
+                    window.setTimeout(function () {
+                        button.textContent = previous;
+                    }, 1500);
+                };
+                if (navigator.clipboard && window.ClipboardItem) {
+                    navigator.clipboard.write([
+                        new ClipboardItem({
+                            'text/plain': new Blob([text], { type: 'text/plain' }),
+                            'text/html': new Blob([html], { type: 'text/html' })
+                        })
+                    ]).then(done, function () {
+                        fallbackCopyResearchPreview(text, done);
+                    });
+                    return;
+                }
+                fallbackCopyResearchPreview(text, done);
+            }
+
+            function fallbackCopyResearchPreview(text, done) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', 'readonly');
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                textarea.remove();
+                done();
+            }
+
+            function buildResearchPreviewPlainText(preview) {
+                if (!preview) {
+                    return '';
+                }
+                const title = (preview.querySelector('.research-link-preview__title')?.innerText || '').trim();
+                const body = (preview.querySelector('.research-link-preview__body')?.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+                return [title, body].filter(Boolean).join('\n\n');
+            }
+
+            function buildResearchPreviewHtml(preview) {
+                if (!preview) {
+                    return '';
+                }
+                const titleElement = preview.querySelector('.research-link-preview__title');
+                const bodyElement = preview.querySelector('.research-link-preview__body');
+                const title = titleElement ? titleElement.cloneNode(true) : null;
+                const body = bodyElement ? bodyElement.cloneNode(true) : null;
+                if (title) {
+                    title.style.fontSize = '17px';
+                    title.style.fontWeight = '700';
+                    title.style.color = '#0f2742';
+                    title.style.marginBottom = '12px';
+                }
+                if (body) {
+                    body.style.whiteSpace = 'pre-wrap';
+                    body.style.fontSize = '16px';
+                    body.style.fontWeight = '400';
+                    body.style.color = '#24384d';
+                    body.style.lineHeight = '1.25';
+                }
+                return '<div style="white-space:pre-wrap;">'
+                    + (title ? title.outerHTML : '')
+                    + (body ? body.outerHTML : '')
+                    + '</div>';
+            }
+
+            function buildResearchPreviewCafeHtml(preview) {
+                if (!preview) {
+                    return '';
+                }
+                const titleText = preview.querySelector('.research-link-preview__title')?.innerText.trim() || '';
+                const bodyElement = preview.querySelector('.research-link-preview__body');
+                const body = bodyElement ? bodyElement.cloneNode(true) : null;
+                if (body) {
+                    normalizeResearchCafeFontWeights(body);
+                    normalizeResearchCafeColors(body);
+                    simplifyResearchCafeApplyLinks(body);
+                    body.style.whiteSpace = 'pre-wrap';
+                    body.style.fontSize = '16px';
+                    body.style.fontWeight = '400';
+                    body.style.color = '#24384d';
+                    body.style.lineHeight = '1.25';
+                }
+                const titleHtml = titleText
+                    ? '<p style="margin:0 0 12px 0; font-size:17px; font-weight:700; color:#0f2742;">' + escapeResearchClipboardHtml(titleText) + '</p>'
+                    : '';
+                return '<div style="white-space:pre-wrap; font-weight:400;">'
+                    + titleHtml
+                    + (body ? body.outerHTML : '')
+                    + '</div>';
+            }
+
+            function normalizeResearchCafeFontWeights(root) {
+                root.style.fontWeight = '400';
+                root.querySelectorAll('*').forEach(function (element) {
+                    const tagName = element.tagName ? element.tagName.toLowerCase() : '';
+                    element.style.fontWeight = (tagName === 'strong' || tagName === 'b') ? '700' : '400';
+                });
+            }
+
+            function normalizeResearchCafeColors(root) {
+                root.querySelectorAll('span').forEach(function (element) {
+                    const normalized = normalizeResearchColor(element.style && element.style.color);
+                    if (!normalized) {
+                        return;
+                    }
+                    const font = document.createElement('font');
+                    font.setAttribute('color', researchColorToCss(normalized));
+                    font.style.color = researchColorToCss(normalized);
+                    font.style.fontWeight = element.style.fontWeight || '400';
+                    if (element.style.fontSize) {
+                        font.style.fontSize = element.style.fontSize;
+                    }
+                    while (element.firstChild) {
+                        font.appendChild(element.firstChild);
+                    }
+                    element.replaceWith(font);
+                });
+            }
+
+            function simplifyResearchCafeApplyLinks(root) {
+                root.querySelectorAll('a').forEach(function (link) {
+                    const label = (link.textContent || '').trim();
+                    if (label !== '신청하기') {
+                        return;
+                    }
+                    const wrapper = link.closest('div');
+                    link.removeAttribute('class');
+                    link.style.display = 'inline';
+                    link.style.minWidth = '';
+                    link.style.padding = '';
+                    link.style.background = '';
+                    link.style.border = '';
+                    link.style.boxShadow = '';
+                    link.style.color = '#0044ff';
+                    link.style.fontSize = '28px';
+                    link.style.lineHeight = '1.3';
+                    link.style.fontWeight = '700';
+                    link.style.textAlign = 'center';
+                    link.style.textDecoration = 'underline';
+                    if (wrapper) {
+                        wrapper.style.textAlign = 'center';
+                        wrapper.style.margin = '16px 0';
+                    }
+                });
+            }
+
+            function escapeResearchClipboardHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function renderResearchEditorHtml(rawValue) {
+                const model = parseResearchRawModel(rawValue);
+                return model.map(function (line) {
+                    const style = line.align ? ' style="text-align:' + line.align + '"' : '';
+                    const content = line.chars.length ? renderResearchInlineChars(line.chars) : '<br>';
+                    return '<div' + style + '>' + content + '</div>';
+                }).join('');
+            }
+
+            function renderResearchEditorInline(text) {
+                return renderResearchInlineChars(parseResearchInlineChars(stripResearchStoredHtmlTags(text || '')));
+            }
+
+            function renderResearchInlineChars(chars) {
+                const segments = [];
+                let current = null;
+
+                (chars || []).forEach(function (char) {
+                    const key = [char.bold ? '1' : '0', char.color || '', char.fontSize || ''].join('|');
+                    if (!current || current.key !== key) {
+                        current = {
+                            key: key,
+                            bold: Boolean(char.bold),
+                            color: char.color || '',
+                            fontSize: char.fontSize || '',
+                            text: ''
+                        };
+                        segments.push(current);
+                    }
+                    current.text += char.ch;
+                });
+
+                return segments.map(function (segment) {
+                    let html = escapeResearchEditorHtml(segment.text);
+                    if (segment.bold) {
+                        html = '<strong>' + html + '</strong>';
+                    }
+                    if (segment.color) {
+                        html = '<span style="color:' + researchColorToCss(segment.color) + '; font-weight: inherit;">' + html + '</span>';
+                    }
+                    if (segment.fontSize) {
+                        html = '<span style="font-size:' + segment.fontSize + 'px;">' + html + '</span>';
+                    }
+                    return html;
+                }).join('');
+            }
+
+            function stripResearchStoredHtmlTags(value) {
+                return (value || '').replace(/<\/?[A-Za-z][A-Za-z0-9:-]*(?:\s[^<>]*)?\/?>/g, '');
+            }
+
+            function serializeResearchEditor(editor) {
+                return Array.from(editor.childNodes).map(serializeResearchBlock).join('\n').replace(/\n+$/, '');
+            }
+
+            function serializeResearchBlock(node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return node.textContent;
+                }
+                if (node.nodeName === 'BR') {
+                    return '';
+                }
+                if (isEmptyResearchBlock(node)) {
+                    return '';
+                }
+                const align = node.style && node.style.textAlign;
+                const state = researchFormatStateFromNode(node, {
+                    bold: false,
+                    fontSize: '',
+                    color: ''
+                });
+                const text = serializeResearchRuns(researchTextRuns(Array.from(node.childNodes), state)).replace(/\u00a0/g, ' ');
+                return align ? '[align=' + align + ']' + text + '[/align]' : text;
+            }
+
+            function isEmptyResearchBlock(node) {
+                return node
+                    && (node.nodeName === 'DIV' || node.nodeName === 'P')
+                    && Array.from(node.childNodes).every(function (child) {
+                        return child.nodeName === 'BR'
+                            || (child.nodeType === Node.TEXT_NODE && child.textContent === '');
+                    });
+            }
+
+            function researchTextRuns(nodes, inheritedState) {
+                return nodes.flatMap(function (node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return [{
+                            text: node.textContent,
+                            bold: inheritedState.bold,
+                            fontSize: inheritedState.fontSize,
+                            color: inheritedState.color
+                        }];
+                    }
+                    if (node.nodeName === 'BR') {
+                        return [{
+                            text: '\n',
+                            bold: inheritedState.bold,
+                            fontSize: inheritedState.fontSize,
+                            color: inheritedState.color
+                        }];
+                    }
+                    if (node.nodeName === 'DIV' || node.nodeName === 'P') {
+                        return [{
+                            text: '\n' + serializeResearchBlock(node),
+                            bold: false,
+                            fontSize: '',
+                            color: ''
+                        }];
+                    }
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        return [];
+                    }
+                    const state = researchFormatStateFromNode(node, inheritedState);
+                    return researchTextRuns(Array.from(node.childNodes), state);
+                });
+            }
+
+            function researchFormatStateFromNode(node, inheritedState) {
+                const state = {
+                    bold: inheritedState.bold,
+                    fontSize: inheritedState.fontSize,
+                    color: inheritedState.color
+                };
+                if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+                    return state;
+                }
+                const fontSize = node.style && node.style.fontSize ? parseInt(node.style.fontSize, 10) : null;
+                const color = normalizeResearchColor(node.style && node.style.color);
+                if (fontSize) {
+                    state.fontSize = fontSize;
+                }
+                if (color) {
+                    state.color = color;
+                }
+                // ?대벀由?????癒?탵?怨? ???쐭筌띻낱釉?<strong>/<b>筌??醫듚??뺣뼄.
+                // ?紐??癒?퐣 ?븐늿肉?節? span style="font-weight:..."???대벀由경에????館釉?쭖?                // ??깃맒筌?獄쏅떽??遺얜쑓???癒?짗??곗쨮 [bold]揶쎛 ??룸┛???얜챷?ｅ첎? 獄쏆뮇源??뺣뼄.
+                if (node.nodeName === 'STRONG' || node.nodeName === 'B') {
+                    state.bold = true;
+                }
+                return state;
+            }
+
+            function serializeResearchRuns(runs) {
+                return runs.map(function (run) {
+                    let text = run.text || '';
+                    if (!text) {
+                        return '';
+                    }
+                    if (run.fontSize) {
+                        text = '[size=' + run.fontSize + ']' + text + '[/size]';
+                    }
+                    if (run.color) {
+                        text = '[color=' + run.color + ']' + text + '[/color]';
+                    }
+                    if (run.bold) {
+                        text = '[bold]' + text + '[/bold]';
+                    }
+                    return text;
+                }).join('');
+            }
+
+            function isResearchNodeBold(node) {
+                if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+                    return false;
+                }
+                if (node.nodeName === 'STRONG' || node.nodeName === 'B') {
+                    return true;
+                }
+                const weight = node.style && node.style.fontWeight;
+                return weight === 'bold' || parseInt(weight || '', 10) >= 600;
+            }
+
+            function researchColorToCss(color) {
+                const normalized = (color || '').toLowerCase();
+                if (normalized === 'blue') {
+                    return '#0044ff';
+                }
+                if (normalized === 'red') {
+                    return '#ff0010';
+                }
+                if (normalized === 'green') {
+                    return '#245b12';
+                }
+                if (normalized === 'yellow') {
+                    return '#ffd400';
+                }
+                return '#111827';
+            }
+
+            function normalizeResearchColor(value) {
+                const color = (value || '').replace(/\s+/g, '').toLowerCase();
+                if (!color) {
+                    return '';
+                }
+                if (color === 'blue' || color === '#0044ff' || color === '#0066cc' || color === 'rgb(0,68,255)' || color === 'rgb(0,102,204)') {
+                    return 'blue';
+                }
+                if (color === 'red' || color === '#ff0010' || color === '#dc2626' || color === 'rgb(255,0,16)' || color === 'rgb(220,38,38)') {
+                    return 'red';
+                }
+                if (color === 'green' || color === '#245b12' || color === 'rgb(36,91,18)') {
+                    return 'green';
+                }
+                if (color === 'yellow' || color === '#ffd400' || color === '#ca8a04' || color === 'rgb(255,212,0)' || color === 'rgb(202,138,4)') {
+                    return 'yellow';
+                }
+                if (color === 'black' || color === '#111827' || color === '#000000' || color === 'rgb(17,24,39)' || color === 'rgb(0,0,0)') {
+                    return 'black';
+                }
+                return '';
+            }
+
+            function escapeResearchEditorHtml(value) {
+                return value
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function copyResearchApplyUrl(inputId, trigger) {
+                const input = document.getElementById(inputId);
+                if (!input) {
+                    return;
+                }
+                const fallbackCopy = function () {
+                    input.focus();
+                    input.select();
+                    input.setSelectionRange(0, input.value.length);
+                    document.execCommand('copy');
+                };
+                const markCopied = function () {
+                    if (trigger) {
+                        trigger.textContent = '복사됨';
+                        window.setTimeout(function () { trigger.textContent = '주소 복사'; }, 1500);
+                    }
+                };
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(input.value).then(markCopied, function () {
+                        fallbackCopy();
+                        markCopied();
+                    });
+                    return;
+                }
+                fallbackCopy();
+                markCopied();
+            }
+        </script>
+    </th:block>
+</th:block>
+</html>

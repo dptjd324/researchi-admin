@@ -103,6 +103,16 @@ body.public-body--naver {
     background: #f8fbfd;
 }
 
+.public-body--naver .public-banner--error {
+    border-color: #f5a3a3;
+    background: #fff1f1;
+    color: #b42318;
+}
+
+.public-body--naver .public-error {
+    color: #b42318;
+}
+
 .public-page {
     width: min(100%, 760px);
     margin: 0 auto;
@@ -501,6 +511,48 @@ body.public-body--naver {
     color: var(--public-muted);
     font-size: 13px;
     line-height: 1.6;
+}
+
+.public-consent-box p {
+    margin: 0 0 4px;
+}
+
+.public-consent-box__section {
+    display: grid;
+    gap: 2px;
+}
+
+.public-consent-box__section strong {
+    color: var(--public-text);
+}
+
+.public-consent-box + .public-choice--block,
+.public-choice--block + .public-choice--block {
+    margin-top: 10px;
+}
+
+.public-consent-channels {
+    display: grid;
+    gap: 8px;
+    margin: 10px 0 0 28px;
+    padding-left: 14px;
+    border-left: 2px solid var(--public-border);
+    opacity: 0.62;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.public-consent-channels--active {
+    border-left-color: var(--public-green);
+    opacity: 1;
+}
+
+.public-consent-channels__title {
+    color: var(--public-muted);
+    font-size: 13px;
+}
+
+.public-consent-channels .public-choice--block {
+    margin-top: 0;
 }
 
 .public-error {

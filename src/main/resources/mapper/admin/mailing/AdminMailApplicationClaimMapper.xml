@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.researchi.admin.mailing.mapper.AdminMailApplicationClaimMapper">
+
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO admin_mail_application_claim (
+            research_no,
+            application_id,
+            send_job_id
+        ) VALUES (
+            #{researchNo},
+            #{applicationId},
+            #{sendJobId}
+        )
+    </insert>
+
+    <select id="findClaimedApplicationIds" resultType="long">
+        SELECT application_id
+        FROM admin_mail_application_claim
+        WHERE research_no = #{researchNo}
+    </select>
+
+    <delete id="deleteBySendJobId">
+        DELETE FROM admin_mail_application_claim
+        WHERE send_job_id = #{sendJobId}
+    </delete>
+
+    <delete id="deleteExpired">
+        DELETE claim
+        FROM admin_mail_application_claim claim
+        LEFT JOIN admin_mail_send_job job ON job.id = claim.send_job_id
+        WHERE claim.claimed_at &lt; #{expiryBefore}
+          AND (job.id IS NULL OR job.send_status != 'SENT')
+    </delete>
+</mapper>

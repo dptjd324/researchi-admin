@@ -35,12 +35,14 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
         try (Connection connection = adminDataSource.getConnection()) {
             ensureAdminClientTables(connection);
             ensureAdminResearchClientLinkTable(connection);
+            ensureAdminResearchVisibilityTable(connection);
             ensureAdminMailSendJobColumns(connection);
             ensureAdminMailApplicationClaimTable(connection);
             ensureAdminExportLogColumns(connection);
             ensureAdminNotificationLogColumns(connection);
             ensureAdminLegacyRevisionLogTable(connection);
             ensureAdminLegacyApplicationExtraAnswerTable(connection);
+            ensureAdminLegacyApplicationConsentTable(connection);
             ensureAdminLegacyApplicationKeywordTable(connection);
             ensureAdminLegacyApplicationSearchIndexTable(connection);
             ensureAdminLegacyMatchingTables(connection);
@@ -119,6 +121,30 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                     UNIQUE KEY uk_admin_research_client_link_research_no (research_no)
                 )
                 """
+        );
+    }
+
+    private void ensureAdminResearchVisibilityTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_research_visibility",
+                """
+                CREATE TABLE admin_research_visibility (
+                    research_no BIGINT PRIMARY KEY,
+                    hidden_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    hidden_by BIGINT NULL,
+                    hidden_at DATETIME NULL,
+                    restored_by BIGINT NULL,
+                    restored_at DATETIME NULL,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+        );
+        addColumnIfMissing(
+                connection,
+                "admin_research_visibility",
+                "updated_at",
+                "ALTER TABLE admin_research_visibility ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER restored_at"
         );
     }
 
@@ -294,6 +320,33 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "admin_legacy_application_extra_answer",
                 "question_group",
                 "ALTER TABLE admin_legacy_application_extra_answer ADD COLUMN question_group VARCHAR(255) NULL AFTER answer_order"
+        );
+    }
+
+    private void ensureAdminLegacyApplicationConsentTable(Connection connection) throws Exception {
+        createTableIfMissing(
+                connection,
+                "admin_legacy_application_consent",
+                """
+                CREATE TABLE admin_legacy_application_consent (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    research_no BIGINT NOT NULL,
+                    research_app_seq BIGINT NOT NULL,
+                    required_privacy_yn CHAR(1) NOT NULL,
+                    future_recruitment_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    sms_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    email_yn CHAR(1) NOT NULL DEFAULT 'N',
+                    consent_version VARCHAR(50) NOT NULL,
+                    notice_snapshot LONGTEXT NOT NULL,
+                    consented_at DATETIME NOT NULL,
+                    future_consent_expires_at DATETIME NULL,
+                    withdrawn_at DATETIME NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_admin_legacy_app_consent_research_app (research_no, research_app_seq),
+                    KEY idx_admin_legacy_app_consent_active (future_recruitment_yn, withdrawn_at, future_consent_expires_at),
+                    KEY idx_admin_legacy_app_consent_app_seq (research_app_seq)
+                )
+                """
         );
     }
 
@@ -701,6 +754,13 @@ public class AdminSchemaBootstrap implements ApplicationRunner {
                 "idx_admin_research_client_link_client_research",
                 List.of("client_id", "research_no"),
                 "CREATE INDEX idx_admin_research_client_link_client_research ON admin_research_client_link (client_id, research_no)"
+        );
+        createIndexIfMissing(
+                connection,
+                "admin_research_visibility",
+                "idx_admin_research_visibility_hidden",
+                List.of("hidden_yn", "hidden_at", "research_no"),
+                "CREATE INDEX idx_admin_research_visibility_hidden ON admin_research_visibility (hidden_yn, hidden_at, research_no)"
         );
     }
 
