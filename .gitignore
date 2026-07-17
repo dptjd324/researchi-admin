@@ -48,6 +48,9 @@ out/
 *.iml
 .vscode/
 
+# Isolated development worktrees
+.worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
