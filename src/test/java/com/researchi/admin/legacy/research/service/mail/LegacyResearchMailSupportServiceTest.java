@@ -16,8 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -27,6 +31,11 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LegacyResearchMailSupportServiceTest {
+
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-08-10T15:05:00Z"),
+            ZoneId.of("Asia/Seoul")
+    );
 
     @Mock
     private AdminMailTemplateMapper adminMailTemplateMapper;
@@ -45,31 +54,32 @@ class LegacyResearchMailSupportServiceTest {
 
     @Test
     void validateScheduledAtAcceptsTwoMinutesLater() {
-        service().validateScheduledAt(LocalDateTime.now().plusMinutes(3).truncatedTo(ChronoUnit.MINUTES));
+        service(FIXED_CLOCK).validateScheduledAt(
+                LocalDateTime.now(FIXED_CLOCK).plusMinutes(3).truncatedTo(ChronoUnit.MINUTES)
+        );
     }
 
     @Test
     void validateScheduledAtRejectsLessThanTwoMinutesLater() {
-        LocalDateTime tooSoon = LocalDateTime.now().plusMinutes(1).truncatedTo(ChronoUnit.MINUTES);
+        LocalDateTime tooSoon = LocalDateTime.now(FIXED_CLOCK).plusMinutes(1).truncatedTo(ChronoUnit.MINUTES);
 
-        assertThatThrownBy(() -> service().validateScheduledAt(tooSoon))
+        assertThatThrownBy(() -> service(FIXED_CLOCK).validateScheduledAt(tooSoon))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("최소 2분");
     }
 
     @Test
     void resolveDailyScheduledAtUsesTodayWhenTimeIsSafelyFuture() {
-        LocalDateTime requested = LocalDateTime.now().plusHours(1).truncatedTo(ChronoUnit.MINUTES);
-        LocalDateTime resolved = service().resolveDailyScheduledAt(requested.toLocalTime());
+        LocalDateTime resolved = service(FIXED_CLOCK).resolveDailyScheduledAt(LocalTime.of(23, 5));
 
-        assertThat(resolved.toLocalDate()).isEqualTo(requested.toLocalDate());
+        assertThat(resolved.toLocalDate()).isEqualTo(LocalDate.of(2026, 8, 11));
     }
 
     @Test
     void resolveDailyScheduledAtUsesTomorrowWhenTimeAlreadyPassed() {
-        LocalDateTime resolved = service().resolveDailyScheduledAt(LocalTime.now().minusHours(1).truncatedTo(ChronoUnit.MINUTES));
+        LocalDateTime resolved = service(FIXED_CLOCK).resolveDailyScheduledAt(LocalTime.MIDNIGHT);
 
-        assertThat(resolved.toLocalDate()).isEqualTo(LocalDateTime.now().plusDays(1).toLocalDate());
+        assertThat(resolved.toLocalDate()).isEqualTo(LocalDate.of(2026, 8, 12));
     }
 
     @Test
@@ -107,6 +117,10 @@ class LegacyResearchMailSupportServiceTest {
     }
 
     private LegacyResearchMailSupportService service() {
+        return service(Clock.systemDefaultZone());
+    }
+
+    private LegacyResearchMailSupportService service(Clock clock) {
         return new LegacyResearchMailSupportService(
                 adminMailTemplateMapper,
                 adminMailSendJobMapper,
@@ -114,7 +128,8 @@ class LegacyResearchMailSupportServiceTest {
                 adminMailApplicationClaimMapper,
                 researchApplicationMapper,
                 researchApplicationService,
-                adminActionLogService
+                adminActionLogService,
+                clock
         );
     }
 }
