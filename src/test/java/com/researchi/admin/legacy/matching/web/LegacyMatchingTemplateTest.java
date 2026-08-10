@@ -16,6 +16,7 @@ import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
+import java.io.IOException;
 import java.util.List;
 import java.nio.charset.StandardCharsets;
 
@@ -25,8 +26,7 @@ class LegacyMatchingTemplateTest {
 
     @Test
     void matchingRunWindowConfirmsSelectedAndSingleNotifications() throws Exception {
-        String template = new ClassPathResource("templates/research/matching-run-window.html")
-                .getContentAsString(StandardCharsets.UTF_8);
+        String template = matchingRunWindowTemplate();
 
         assertThat(StringUtils.countOccurrencesOf(template, "data-send-confirm-form")).isEqualTo(5);
         assertThat(StringUtils.countOccurrencesOf(template, "data-send-scope=\"selected\"")).isEqualTo(2);
@@ -71,8 +71,7 @@ class LegacyMatchingTemplateTest {
 
     @Test
     void matchingRunWindowBlocksEveryFormSubmissionInPreviewMode() throws Exception {
-        String template = new ClassPathResource("templates/research/matching-run-window.html")
-                .getContentAsString(StandardCharsets.UTF_8);
+        String template = matchingRunWindowTemplate();
 
         assertThat(template)
                 .contains("data-preview-mode")
@@ -81,6 +80,13 @@ class LegacyMatchingTemplateTest {
                 .contains("event.preventDefault()")
                 .contains("event.stopImmediatePropagation()")
                 .contains("미리보기에서는 실제 발송이나 다운로드가 실행되지 않습니다.");
+    }
+
+    private String matchingRunWindowTemplate() throws IOException {
+        return new ClassPathResource("templates/research/matching-run-window.html")
+                .getContentAsString(StandardCharsets.UTF_8)
+                .replace("\r\n", "\n")
+                .replace('\r', '\n');
     }
 
     @Test
