@@ -18,8 +18,10 @@ import com.researchi.admin.mailing.mapper.AdminMailSendJobMapper;
 import com.researchi.admin.mailing.mapper.AdminMailSendTargetMapper;
 import com.researchi.admin.mailing.mapper.AdminMailTemplateMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -49,7 +51,9 @@ public class LegacyResearchMailSupportService {
     private final ResearchApplicationMapper researchApplicationMapper;
     private final ResearchApplicationService researchApplicationService;
     private final AdminActionLogService adminActionLogService;
+    private final Clock clock;
 
+    @Autowired
     public LegacyResearchMailSupportService(
             AdminMailTemplateMapper adminMailTemplateMapper,
             AdminMailSendJobMapper adminMailSendJobMapper,
@@ -59,6 +63,28 @@ public class LegacyResearchMailSupportService {
             ResearchApplicationService researchApplicationService,
             AdminActionLogService adminActionLogService
     ) {
+        this(
+                adminMailTemplateMapper,
+                adminMailSendJobMapper,
+                adminMailSendTargetMapper,
+                adminMailApplicationClaimMapper,
+                researchApplicationMapper,
+                researchApplicationService,
+                adminActionLogService,
+                Clock.systemDefaultZone()
+        );
+    }
+
+    LegacyResearchMailSupportService(
+            AdminMailTemplateMapper adminMailTemplateMapper,
+            AdminMailSendJobMapper adminMailSendJobMapper,
+            AdminMailSendTargetMapper adminMailSendTargetMapper,
+            AdminMailApplicationClaimMapper adminMailApplicationClaimMapper,
+            ResearchApplicationMapper researchApplicationMapper,
+            ResearchApplicationService researchApplicationService,
+            AdminActionLogService adminActionLogService,
+            Clock clock
+    ) {
         this.adminMailTemplateMapper = adminMailTemplateMapper;
         this.adminMailSendJobMapper = adminMailSendJobMapper;
         this.adminMailSendTargetMapper = adminMailSendTargetMapper;
@@ -66,6 +92,7 @@ public class LegacyResearchMailSupportService {
         this.researchApplicationMapper = researchApplicationMapper;
         this.researchApplicationService = researchApplicationService;
         this.adminActionLogService = adminActionLogService;
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     public String defaultAttachmentType() {
@@ -186,7 +213,7 @@ public class LegacyResearchMailSupportService {
     }
 
     public LocalDateTime minimumScheduledAt() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime minimum = now.plusMinutes(2).truncatedTo(ChronoUnit.MINUTES);
         return minimum.isBefore(now.plusMinutes(2)) ? minimum.plusMinutes(1) : minimum;
     }
@@ -195,7 +222,7 @@ public class LegacyResearchMailSupportService {
         if (dailyScheduledTime == null) {
             throw new IllegalArgumentException("매일 발송 시간을 입력해 주세요.");
         }
-        LocalDateTime candidate = LocalDateTime.now()
+        LocalDateTime candidate = LocalDateTime.now(clock)
                 .withHour(dailyScheduledTime.getHour())
                 .withMinute(dailyScheduledTime.getMinute())
                 .withSecond(0)
@@ -237,7 +264,7 @@ public class LegacyResearchMailSupportService {
         if (researchNo == null || applicationIds == null || applicationIds.isEmpty() || sendJobId == null) {
             return List.of();
         }
-        adminMailApplicationClaimMapper.deleteExpired(LocalDateTime.now().minusMinutes(CLAIM_EXPIRY_MINUTES));
+        adminMailApplicationClaimMapper.deleteExpired(LocalDateTime.now(clock).minusMinutes(CLAIM_EXPIRY_MINUTES));
         List<Long> claimedIds = new java.util.ArrayList<>();
         for (Long applicationId : applicationIds.stream().filter(Objects::nonNull).distinct().toList()) {
             if (adminMailApplicationClaimMapper.insertIgnore(researchNo, applicationId, sendJobId) > 0) {
@@ -393,7 +420,7 @@ public class LegacyResearchMailSupportService {
         variables.put("applicationCount", String.valueOf(applicationCount));
         variables.put("attachmentType", attachmentType.name());
         variables.put("triggerType", "LEGACY_MANUAL");
-        variables.put("sentAt", LocalDateTime.now().format(MAIL_DT));
+        variables.put("sentAt", LocalDateTime.now(clock).format(MAIL_DT));
         return variables;
     }
 
