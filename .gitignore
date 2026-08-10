@@ -68,6 +68,16 @@ src/main/resources/application-dev.yml
 src/main/resources/application-prod.yml
 src/main/resources/application-secrets.yml
 
+# Encrypted recovery working files and reports
+secrets/*.plain.yml
+secrets/*.dec.yml
+.recovery-work/
+gitleaks-report.json
+gitleaks-report.sarif
+*.age
+*.sha256
+.superpowers/sdd/
+
 # Files
 uploads/
 exports/
